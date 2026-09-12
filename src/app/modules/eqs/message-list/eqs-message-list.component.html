@@ -1,0 +1,110 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">{{ queueName }} &mdash; Messages ({{ total$ | async }})</span>
+        <button (click)="sendMessage()" [matTooltipShowDelay]="1000" aria-label="Send" mat-icon-button
+                matTooltip="Send a message to this queue">
+            <mat-icon>send</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the message list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="purgeQueue()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">clear_all</span>
+                </mat-icon>
+                <span>Purge queue</span>
+            </button>
+            <mat-divider/>
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="messageId">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The ID the server gave the message">Message ID</th>
+                        <td *matCellDef="let message" mat-cell>
+                            <div class="with-icon">
+                                <span class="ern">{{ message.messageId }}</span>
+                                <button [cdkCopyToClipboard]="message.messageId" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy to clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="body">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The first line of the body">Body</th>
+                        <td *matCellDef="let message" mat-cell>{{ preview(message.body) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="status">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Whether the message is available, in flight or delayed">Status
+                        </th>
+                        <td *matCellDef="let message" mat-cell>{{ message.status }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="size">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Size of the body">Size</th>
+                        <td *matCellDef="let message" mat-cell>{{ byteConversion(message.size) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="receivedCount">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="How often the message has been received. Past the queue's maximum it goes to the DLQ.">
+                            Received
+                        </th>
+                        <td *matCellDef="let message" mat-cell>{{ message.receivedCount }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the message arrived">Created</th>
+                        <td *matCellDef="let message" mat-cell>{{ dateConversion(message.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let message" mat-cell>
+                            <button [cdkCopyToClipboard]="message.body" [matTooltipShowDelay]="1000"
+                                    aria-label="Copy body" mat-icon-button matTooltip="Copy the whole body">
+                                <mat-icon>content_paste</mat-icon>
+                            </button>
+                            <button (click)="deleteMessage(message)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete this message">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">This queue is empty.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

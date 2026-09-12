@@ -1,0 +1,11 @@
+<h2 mat-dialog-title>Auto Reload</h2>
+<mat-dialog-content class="mat-typography">
+    <mat-form-field style="width: 100%">
+        <mat-label>Auto Reload (s)</mat-label>
+        <input (keyup.enter)="save()" [(ngModel)]="autoReload" matInput type="number">
+    </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close tabindex="-1">Cancel</button>
+    <button (click)="save()" mat-button>Save</button>
+</mat-dialog-actions>

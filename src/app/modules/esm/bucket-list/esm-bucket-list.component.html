@@ -1,0 +1,156 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Buckets ({{ total$ | async }})</span>
+        <button (click)="createBucket()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create a new bucket">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the bucket list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/esm']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ESM counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Bucket name">Name</th>
+                        <td *matCellDef="let bucket" mat-cell>
+                            <div class="with-icon">
+                                <mat-nav-list>
+                                    <a mat-list-item routerLink="./objects/{{ bucket.ern }}">{{ bucket.name }}</a>
+                                </mat-nav-list>
+                                <button [cdkCopyToClipboard]="bucket.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="objects">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Objects in the bucket">Objects</th>
+                        <td *matCellDef="let bucket" mat-cell>{{ bucket.objects }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="size">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Total size of those objects">Size</th>
+                        <td *matCellDef="let bucket" mat-cell>{{ byteConversion(bucket.size) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="encrypted">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Whether new objects are encrypted, and under which key">Encrypted
+                        </th>
+                        <td *matCellDef="let bucket" mat-cell
+                            [matTooltip]="bucket.encryptionKeyErn || 'Not encrypted'">
+                            {{ bucket.encrypted ? 'yes' : 'no' }}
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the bucket was created">Created</th>
+                        <td *matCellDef="let bucket" mat-cell>{{ dateConversion(bucket.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="modified">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it last changed">Modified</th>
+                        <td *matCellDef="let bucket" mat-cell>{{ dateConversion(bucket.modified) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let bucket" mat-cell>
+                            <button [matTooltipShowDelay]="1000" aria-label="Objects" mat-icon-button
+                                    matTooltip="Show the objects in the bucket"
+                                    routerLink="./objects/{{ bucket.ern }}">
+                                <mat-icon>list</mat-icon>
+                            </button>
+                            <button [matMenuTriggerFor]="bucketmenu" [matTooltipShowDelay]="1000"
+                                    aria-label="Bucket menu" mat-icon-button matTooltip="More...">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu #bucketmenu="matMenu" xPosition="before">
+                                <button (click)="renameBucket(bucket)" mat-menu-item>
+                                    <mat-icon>drive_file_rename_outline</mat-icon>
+                                    <span>Rename bucket</span>
+                                </button>
+                                @if (bucket.encrypted) {
+                                    <button (click)="disableEncryption(bucket)" mat-menu-item
+                                            matTooltip="Objects already encrypted stay readable">
+                                        <mat-icon>no_encryption</mat-icon>
+                                        <span>Disable encryption</span>
+                                    </button>
+                                } @else {
+                                    <button (click)="enableEncryption(bucket)" mat-menu-item>
+                                        <mat-icon>lock</mat-icon>
+                                        <span>Enable encryption</span>
+                                    </button>
+                                }
+                                <button (click)="purgeBucket(bucket)" mat-menu-item
+                                        matTooltip="Delete every object and keep the bucket">
+                                    <mat-icon>clear_all</mat-icon>
+                                    <span>Purge bucket</span>
+                                </button>
+                                <mat-divider/>
+                                <button (click)="deleteBucket(bucket)" mat-menu-item
+                                        matTooltip="Delete the bucket. It has to be empty.">
+                                    <mat-icon>delete</mat-icon>
+                                    <span>Delete bucket</span>
+                                </button>
+                            </mat-menu>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No buckets here.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

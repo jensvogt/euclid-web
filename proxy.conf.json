@@ -1,0 +1,11 @@
+{
+  "/euclid": {
+    "target": "https://localhost:5566",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/euclid": ""
+    }
+  }
+}

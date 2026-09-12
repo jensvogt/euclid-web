@@ -1,0 +1,64 @@
+/**
+ * The look every list view shares, held in one file the nine of them point at.
+ *
+ * Component styles are scoped to the component that declares them, so pointing several components at one
+ * stylesheet is how they end up looking the same rather than nearly the same.
+ */
+
+.euclid-table {
+  width: 100%;
+  height: 100%;
+}
+
+:host {
+  position: relative;
+  width: 100%;
+  height: 30%;
+  margin-top: 0;
+  padding-bottom: 33%;
+}
+
+.fill-remaining-space {
+  flex: 1 1 auto;
+  padding-top: 6px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  font-size: x-large;
+}
+
+.table-container {
+  max-height: calc(100vh - 10px);
+  overflow: auto;
+}
+
+.with-icon {
+  display: flex;
+  align-items: center;
+}
+
+.copy-icon {
+  display: inline-flex;
+  vertical-align: bottom;
+  font-size: 16px !important;
+}
+
+.mat-column-actions {
+  width: 160px;
+}
+
+.ern {
+  font-family: monospace;
+  font-size: small;
+}
+
+/* A value fetched on demand and shown above the table - see the secret list. */
+.revealed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin: 0 8px 8px 8px;
+  background: #fff8e1;
+  border-radius: 4px;
+  overflow-x: auto;
+}

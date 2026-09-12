@@ -1,0 +1,107 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Accounts ({{ total$ | async }})</span>
+        <button (click)="createAccount()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create an account. Administrator only.">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the account list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eam-namespace-list']" aria-label="Namespaces"
+                mat-icon-button matTooltip="Namespaces">
+            <mat-icon>folder_managed</mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="accountId">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The account ID everything else is scoped to">Account
+                        </th>
+                        <td *matCellDef="let account" mat-cell>
+                            <div class="with-icon">
+                                <span>{{ account.accountId }}</span>
+                                <button [cdkCopyToClipboard]="account.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                        mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Account name">Name</th>
+                        <td *matCellDef="let account" mat-cell>{{ account.name }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="description">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="What it is for">Description</th>
+                        <td *matCellDef="let account" mat-cell>{{ account.description || '-' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it was created">Created</th>
+                        <td *matCellDef="let account" mat-cell>{{ dateConversion(account.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let account" mat-cell>
+                            <button (click)="deleteAccount(account)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete the account. It must have nothing left under it.">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No accounts found.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

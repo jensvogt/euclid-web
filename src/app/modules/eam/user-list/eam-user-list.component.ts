@@ -1,0 +1,105 @@
+import {Component, inject} from '@angular/core';
+import type {User} from 'euclid-ndk';
+
+import {dateConversion} from '../../../shared/date-utils.component';
+import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
+import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
+import {ListFeature} from '../../../shared/list/list-feature';
+import {EuclidSessionService} from '../../../services/euclid-session.service';
+import {EamService} from '../service/eam.service';
+import {eamUserListFeature} from './state/eam-user-list.state';
+
+/** The users, and what each of them has been granted. */
+@Component({
+    selector: 'eam-user-list',
+    templateUrl: './eam-user-list.component.html',
+    styleUrls: ['../../../shared/list/list.component.scss'],
+    standalone: true,
+    imports: [EUCLID_LIST_IMPORTS],
+})
+export class EamUserListComponent extends EuclidListComponent<User> {
+
+    override readonly feature: ListFeature<User> = eamUserListFeature;
+    override readonly columns = ['userId', 'email', 'accountId', 'grants', 'created', 'actions'];
+
+    protected readonly dateConversion = dateConversion;
+
+    /** The account to offer as the default in the grant dialogs, which is the one the session is in. */
+    private readonly accountId = inject(EuclidSessionService).session?.accountId ?? '';
+
+    constructor(private readonly eamService: EamService) {
+        super();
+    }
+
+    /** The account and region default to the session's own, which is what the server does with them too. */
+    createUser(): void {
+        this.addThen(
+            'Create user',
+            [
+                {name: 'userId', label: 'User ID', required: true},
+                {name: 'password', label: 'Password', type: 'password', required: true},
+                {name: 'email', label: 'Email'},
+                {name: 'isAdmin', label: 'Administrator', type: 'boolean'},
+            ],
+            values => this.eamService.register(
+                String(values['userId']),
+                String(values['password']),
+                String(values['email']),
+                Boolean(values['isAdmin']),
+            ),
+            'User created',
+        );
+    }
+
+    /** Granting a namespace is per account, so the dialog asks for both rather than assuming the session's. */
+    grantAccess(user: User): void {
+        this.addThen(
+            'Grant ' + user.userId + ' access to a namespace',
+            [
+                {name: 'accountId', label: 'Account', required: true, value: this.accountId},
+                {name: 'namespace', label: 'Namespace', required: true},
+            ],
+            values => this.eamService.grantNamespaceAccess(
+                user.ern,
+                String(values['accountId']),
+                String(values['namespace']),
+            ),
+            'Access granted',
+        );
+    }
+
+    revokeAccess(user: User): void {
+        this.addThen(
+            'Revoke ' + user.userId + "'s access to a namespace",
+            [
+                {name: 'accountId', label: 'Account', required: true, value: this.accountId},
+                {name: 'namespace', label: 'Namespace', required: true},
+            ],
+            values => this.eamService.revokeNamespaceAccess(
+                user.ern,
+                String(values['accountId']),
+                String(values['namespace']),
+            ),
+            'Access revoked',
+        );
+    }
+
+    deleteUser(user: User): void {
+        this.confirmThen(
+            {title: 'Delete user', message: `Delete ${user.userId}? This cannot be undone.`},
+            this.eamService.deleteUser(user.userId),
+            'User deleted',
+        );
+    }
+
+    /** A user's grants as one line: the accounts, and the namespaces within each. */
+    grants(user: User): string {
+        const grants = user.accountGrants ?? [];
+        if (grants.length === 0) {
+            return '-';
+        }
+        return grants
+            .map(grant => grant.accountId + (grant.namespaces?.length ? ' (' + grant.namespaces.join(', ') + ')' : '') + (grant.isAdmin ? ' admin' : ''))
+            .join('; ');
+    }
+}

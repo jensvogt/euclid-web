@@ -1,0 +1,140 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Routes ({{ total$ | async }})</span>
+        <button (click)="createRoute()" [matTooltipShowDelay]="1000" aria-label="Publish" mat-icon-button
+                matTooltip="Publish a path that reaches an application">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the route list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eag-listener-list']" aria-label="Listeners"
+                mat-icon-button matTooltip="The ports the gateway is listening on">
+            <mat-icon>settings_ethernet</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eag']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EAG counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="createModuleRoute()" mat-menu-item
+                    matTooltip="Publish a path that reaches one action of a euclid module">
+                <mat-icon>hub</mat-icon>
+                <span>Publish a module route</span>
+            </button>
+            <mat-divider/>
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Path prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="path">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The published path. Matched on whole segments.">Path
+                        </th>
+                        <td *matCellDef="let route" mat-cell>
+                            <div class="with-icon">
+                                <span class="ern">{{ route.path }}</span>
+                                <button [cdkCopyToClipboard]="route.path" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                        mat-icon-button matTooltip="Copy the path to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="target">
+                        <th *matHeaderCellDef mat-header-cell
+                            matTooltip="What the path reaches: an application, or one action of a module">Reaches
+                        </th>
+                        <td *matCellDef="let route" mat-cell [matTooltip]="route.routeId">{{ target(route) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="methods">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Methods allowed. Empty means all of them.">
+                            Methods
+                        </th>
+                        <td *matCellDef="let route" mat-cell>{{ route.methods?.length ? route.methods.join(', ') : 'all' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="authentication">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="How requests on this path authenticate">Auth
+                        </th>
+                        <td *matCellDef="let route" mat-cell>{{ route.authentication }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="active">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Whether the gateway is serving it">Active
+                        </th>
+                        <td *matCellDef="let route" mat-cell>{{ route.active ? 'yes' : 'no' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="modified">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it last changed">Modified</th>
+                        <td *matCellDef="let route" mat-cell>{{ dateConversion(route.modified) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let route" mat-cell>
+                            <button (click)="toggleActive(route)" [matTooltipShowDelay]="1000" aria-label="Activate"
+                                    mat-icon-button
+                                    matTooltip="Take it out of service, or put it back. Nothing else about it changes.">
+                                <mat-icon>{{ route.active ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                            </button>
+                            <button (click)="deleteRoute(route)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete the route">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No routes published here.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

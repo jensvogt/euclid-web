@@ -1,0 +1,16 @@
+/* Global styles. */
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* A dialog opened with panelClass 'full-screen-modal' sizes itself rather than being capped. */
+.full-screen-modal .mat-mdc-dialog-container {
+  max-width: none;
+}
+

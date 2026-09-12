@@ -1,0 +1,44 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">{{ module?.label ?? target }} &mdash; Monitoring</span>
+        @if (module) {
+            <button [matTooltipShowDelay]="1000" [routerLink]="module.route" aria-label="List"
+                    mat-icon-button matTooltip="Back to the module's resources">
+                <mat-icon>list</mat-icon>
+            </button>
+        }
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the metrics again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        <div class="charts">
+            <div class="chart" [options]="gaugeOptions" echarts></div>
+            <div class="chart" [options]="historyOptions" echarts></div>
+        </div>
+        <table [dataSource]="samples" class="mat-elevation-z8 metrics-table" mat-table>
+            <ng-container matColumnDef="name">
+                <th *matHeaderCellDef mat-header-cell>Metric</th>
+                <td *matCellDef="let sample" mat-cell>{{ sample.name }}</td>
+            </ng-container>
+            <ng-container matColumnDef="type">
+                <th *matHeaderCellDef mat-header-cell matTooltip="A gauge is a reading; a rate is per second">Type</th>
+                <td *matCellDef="let sample" mat-cell>{{ sample.type }}</td>
+            </ng-container>
+            <ng-container matColumnDef="value">
+                <th *matHeaderCellDef mat-header-cell>Value</th>
+                <td *matCellDef="let sample" mat-cell>{{ sample.value }}</td>
+            </ng-container>
+            <tr *matHeaderRowDef="columns" mat-header-row></tr>
+            <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+            <tr *matNoDataRow class="mat-row">
+                <td [attr.colspan]="columns.length" class="mat-cell">This module reported no metrics.</td>
+            </tr>
+        </table>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

@@ -1,0 +1,100 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Access Keys ({{ total$ | async }})</span>
+        <button (click)="createAccessKey()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create an access key. The secret is shown once and never again.">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the key list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eam-user-list']" aria-label="Users" mat-icon-button
+                matTooltip="Users">
+            <mat-icon>people</mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            @if (created) {
+                <div class="revealed">
+                    <span class="ern">{{ created.accessKeyId }} &nbsp; {{ created.secretAccessKey }}</span>
+                    <button [cdkCopyToClipboard]="created.secretAccessKey" aria-label="Copy" mat-icon-button
+                            matTooltip="Copy the secret. This is the only time it is shown.">
+                        <mat-icon>content_copy</mat-icon>
+                    </button>
+                    <button (click)="dismiss()" aria-label="Dismiss" mat-icon-button matTooltip="Dismiss">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                </div>
+            }
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="accessKeyId">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The key ID a signature is made under">Key ID</th>
+                        <td *matCellDef="let key" mat-cell>
+                            <div class="with-icon">
+                                <span class="ern">{{ key.accessKeyId }}</span>
+                                <button [cdkCopyToClipboard]="key.accessKeyId" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy to clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="active">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Whether signatures made with it still verify">
+                            Active
+                        </th>
+                        <td *matCellDef="let key" mat-cell>{{ key.active ? 'yes' : 'no' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="createdAt">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="When the key was created">Created</th>
+                        <td *matCellDef="let key" mat-cell>{{ dateConversion(key.createdAt) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let key" mat-cell>
+                            <button (click)="deleteAccessKey(key)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete this key">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">You have no access keys.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

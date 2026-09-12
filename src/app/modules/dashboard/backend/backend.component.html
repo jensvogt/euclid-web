@@ -1,0 +1,21 @@
+<h2 mat-dialog-title>Backend</h2>
+<mat-dialog-content class="mat-typography">
+    <mat-list>
+        <mat-list-item>Endpoint: <span class="value">{{ endpoint }}</span></mat-list-item>
+        <mat-list-item>Build configuration: <span class="value">{{ configuration }}</span></mat-list-item>
+        <mat-list-item>User: <span class="value">{{ session.session?.userId || '-' }}</span></mat-list-item>
+        <mat-list-item>Account: <span class="value">{{ session.session?.accountId || '-' }}</span></mat-list-item>
+        <mat-list-item>Region: <span class="value">{{ session.session?.region || '-' }}</span></mat-list-item>
+        <mat-list-item>Namespace: <span class="value">{{ session.namespace || '(account root)' }}</span></mat-list-item>
+        <mat-list-item>Access key: <span class="value">{{ session.session?.accessKeyId || '-' }}</span></mat-list-item>
+        <mat-list-item>Administrator: <span class="value">{{ session.session?.isAdmin ? 'yes' : 'no' }}</span></mat-list-item>
+    </mat-list>
+    <p class="note">
+        The endpoint is a same-origin path. The gateway itself sits behind it &mdash; <code>proxy.conf.json</code>
+        in development, nginx in a container &mdash; because euclid's CORS does not allow the
+        <code>x-euclid-*</code> headers every request carries.
+    </p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Close</button>
+</mat-dialog-actions>

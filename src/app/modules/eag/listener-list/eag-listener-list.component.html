@@ -1,0 +1,79 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Listeners ({{ total$ | async }})</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the listener list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eag-route-list']" aria-label="Routes" mat-icon-button
+                matTooltip="The paths the gateway publishes">
+            <mat-icon>alt_route</mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <div class="table-container">
+                <table [dataSource]="(items$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
+                    <ng-container matColumnDef="namespace">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The namespace this listener serves">Namespace</th>
+                        <td *matCellDef="let listener" mat-cell>{{ listener.namespace || '(account root)' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="port">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The port it listens on">Port</th>
+                        <td *matCellDef="let listener" mat-cell>{{ listener.port }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="protocol">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="http or https">Protocol</th>
+                        <td *matCellDef="let listener" mat-cell>{{ listener.protocol }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="serving">
+                        <th *matHeaderCellDef mat-header-cell
+                            matTooltip="Whether the gateway has this listener open, as against merely configured">
+                            Serving
+                        </th>
+                        <td *matCellDef="let listener" mat-cell>{{ listener.serving ? 'yes' : 'no' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="certificateName">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The certificate it presents, for an https listener">
+                            Certificate
+                        </th>
+                        <td *matCellDef="let listener" mat-cell
+                            [matTooltip]="listener.certificate?.subject ?? ''">
+                            {{ listener.certificateName || '-' }}
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="expires">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="When that certificate expires">Expires</th>
+                        <td *matCellDef="let listener" mat-cell>
+                            {{ dateConversion(listener.certificate?.notAfter) }}
+                            @if (expired(listener)) {
+                                <mat-icon class="copy-icon" matTooltip="This certificate has expired">warning</mat-icon>
+                            }
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">The gateway reports no listeners.</td>
+                    </tr>
+                </table>
+            </div>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

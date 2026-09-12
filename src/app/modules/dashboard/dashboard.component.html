@@ -1,0 +1,114 @@
+<mat-card class="mat-elevation-z4">
+    <mat-card-content>
+        <div class="wrapper">
+            <mat-card class="mat-elevation-z4">
+                <mat-card-header>
+                    <mat-card-title>Access &amp; Storage</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                    <mat-grid-list cols="2" rowHeight="200px">
+                        <mat-grid-tile [colspan]="1" [rowspan]="1">
+                            <div class="tile">
+                                <mat-nav-list>
+                                    <a routerLink="/eam-user-list" mat-list-item>Users (EAM)</a>
+                                    <a routerLink="/eam-group-list" mat-list-item>User Groups</a>
+                                    <a routerLink="/eam-account-list" mat-list-item>Accounts</a>
+                                    <a routerLink="/eam-namespace-list" mat-list-item>Namespaces</a>
+                                </mat-nav-list>
+                            </div>
+                        </mat-grid-tile>
+                        <mat-grid-tile [colspan]="1" [rowspan]="1">
+                            <div class="tile">
+                                <mat-nav-list>
+                                    <a routerLink="/eam-access-key-list" mat-list-item>Access Keys</a>
+                                    <a routerLink="/esm-bucket-list" mat-list-item>Buckets (ESM)</a>
+                                    <a routerLink="/ekv-table-list" mat-list-item>Tables (EKV)</a>
+                                    <a routerLink="/ess-secret-list" mat-list-item>Secrets (ESS)</a>
+                                </mat-nav-list>
+                            </div>
+                        </mat-grid-tile>
+                    </mat-grid-list>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="mat-elevation-z4">
+                <mat-card-header>
+                    <mat-card-title>Messaging &amp; Keys</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                    <mat-grid-list cols="2" rowHeight="200px">
+                        <mat-grid-tile [colspan]="1" [rowspan]="1">
+                            <div class="tile">
+                                <mat-nav-list>
+                                    <a routerLink="/eqs-queue-list" mat-list-item>Queues (EQS)</a>
+                                    <a routerLink="/ens-topic-list" mat-list-item>Topics (ENS)</a>
+                                </mat-nav-list>
+                            </div>
+                        </mat-grid-tile>
+                        <mat-grid-tile [colspan]="1" [rowspan]="1">
+                            <div class="tile">
+                                <mat-nav-list>
+                                    <a routerLink="/ekm-key-list" mat-list-item>Keys (EKM)</a>
+                                    <a routerLink="/ekm-certificate-list" mat-list-item>Certificates</a>
+                                </mat-nav-list>
+                            </div>
+                        </mat-grid-tile>
+                    </mat-grid-list>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="mat-elevation-z4">
+                <mat-card-header>
+                    <mat-card-title>Platform &amp; Gateway</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                    <mat-nav-list>
+                        <a routerLink="/eap-application-list" mat-list-item>Applications (EAP)</a>
+                        <a routerLink="/eag-route-list" mat-list-item>Routes (EAG)</a>
+                        <a routerLink="/eag-listener-list" mat-list-item>Listeners</a>
+                    </mat-nav-list>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="mat-elevation-z4">
+                <mat-card-header>
+                    <mat-card-title>Monitoring</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                    <mat-grid-list cols="2" rowHeight="200px">
+                        <mat-grid-tile [colspan]="1" [rowspan]="1">
+                            <div class="tile">
+                                <mat-nav-list>
+                                    @for (module of modules.slice(0, 5); track module.target) {
+                                        <a [routerLink]="'/metrics/' + module.target" mat-list-item>{{ module.label }}</a>
+                                    }
+                                </mat-nav-list>
+                            </div>
+                        </mat-grid-tile>
+                        <mat-grid-tile [colspan]="1" [rowspan]="1">
+                            <div class="tile">
+                                <mat-nav-list>
+                                    @for (module of modules.slice(5); track module.target) {
+                                        <a [routerLink]="'/metrics/' + module.target" mat-list-item>{{ module.label }}</a>
+                                    }
+                                </mat-nav-list>
+                            </div>
+                        </mat-grid-tile>
+                    </mat-grid-list>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="mat-elevation-z4">
+                <mat-card-header>
+                    <mat-card-title>Session</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                    <mat-list>
+                        <mat-list-item>User: {{ session.session?.userId }}</mat-list-item>
+                        <mat-list-item>Account: {{ session.session?.accountId }}</mat-list-item>
+                        <mat-list-item>Region: {{ session.session?.region }}</mat-list-item>
+                        <mat-list-item>Namespace: {{ session.namespace || '(account root)' }}</mat-list-item>
+                        <mat-list-item>Administrator: {{ session.session?.isAdmin ? 'yes' : 'no' }}</mat-list-item>
+                    </mat-list>
+                </mat-card-content>
+            </mat-card>
+        </div>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

@@ -1,0 +1,21 @@
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-gap: 10px;
+  background-color: #fff;
+  color: #444;
+  padding: 10px;
+}
+
+.tile {
+  margin-left: -10px;
+  width: 100%;
+  height: 100%;
+}
+
+.footer {
+  display: flex;
+  width: 50%;
+  font-size: x-small;
+  color: black;
+}

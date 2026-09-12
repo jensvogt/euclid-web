@@ -1,0 +1,15 @@
+<h2 mat-dialog-title>Namespace</h2>
+<mat-dialog-content class="mat-typography">
+    <mat-form-field class="field">
+        <mat-label>Namespace</mat-label>
+        <input (keyup.enter)="save()" [(ngModel)]="namespace" matInput name="namespace">
+        <mat-hint>Empty is the account root &mdash; a scope like any other, not "all of them".</mat-hint>
+    </mat-form-field>
+    @if (error) {
+        <p class="error">{{ error }}</p>
+    }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close tabindex="-1">Cancel</button>
+    <button (click)="save()" [disabled]="busy" mat-button>Switch</button>
+</mat-dialog-actions>

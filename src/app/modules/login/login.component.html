@@ -1,0 +1,33 @@
+<div class="login-wrapper">
+    <mat-card appearance="outlined" class="login-card mat-elevation-z4">
+        <mat-card-header>
+            <mat-card-title>Sign in to euclid</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+            <mat-form-field class="field">
+                <mat-label>User</mat-label>
+                <input (keyup.enter)="login()" [(ngModel)]="userId" autocomplete="username" matInput name="userId">
+            </mat-form-field>
+            <mat-form-field class="field">
+                <mat-label>Password</mat-label>
+                <input (keyup.enter)="login()" [(ngModel)]="password" autocomplete="current-password" matInput
+                       name="password" type="password">
+            </mat-form-field>
+            <mat-form-field class="field">
+                <mat-label>Namespace</mat-label>
+                <input (keyup.enter)="login()" [(ngModel)]="namespace" matInput name="namespace">
+                <mat-hint>Empty is the account root, which is a scope like any other.</mat-hint>
+            </mat-form-field>
+            @if (error) {
+                <p class="error">{{ error }}</p>
+            }
+        </mat-card-content>
+        <mat-card-actions align="end">
+            @if (busy) {
+                <mat-progress-spinner diameter="24" mode="indeterminate"/>
+            }
+            <button (click)="login()" [disabled]="!valid || busy" mat-flat-button>Sign in</button>
+        </mat-card-actions>
+        <div class="endpoint">Backend: {{ endpoint }}</div>
+    </mat-card>
+</div>

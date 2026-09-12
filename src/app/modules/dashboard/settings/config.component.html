@@ -1,0 +1,21 @@
+<h2 mat-dialog-title>About</h2>
+<mat-dialog-content class="mat-typography">
+    <p>
+        <strong>euclid-web</strong> &mdash; an Angular admin UI for the
+        <a href="https://github.com/jensvogt/euclid" rel="noreferrer" target="_blank">euclid</a> server.
+    </p>
+    <p class="small">
+        The browser speaks euclid's own protocol: one POST per call, with the module in
+        <code>x-euclid-target</code> and the operation in <code>x-euclid-action</code>, authenticated with the
+        bearer token <code>eam:login</code> handed back. The item shapes are euclid-ndk's, imported as types.
+    </p>
+    <mat-list>
+        @for (module of modules; track module.target) {
+            <mat-list-item>{{ module.label }}</mat-list-item>
+        }
+    </mat-list>
+    <p class="small">Build configuration: <code>{{ environment.name }}</code></p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Close</button>
+</mat-dialog-actions>

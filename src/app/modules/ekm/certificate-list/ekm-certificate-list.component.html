@@ -1,0 +1,117 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Certificates ({{ total$ | async }})</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the certificate list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/ekm-key-list']" aria-label="Keys" mat-icon-button
+                matTooltip="Keys">
+            <mat-icon>key</mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Certificate name">Name</th>
+                        <td *matCellDef="let certificate" mat-cell>
+                            <div class="with-icon">
+                                <span>{{ certificate.name }}</span>
+                                <button [cdkCopyToClipboard]="certificate.certificate" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy PEM" mat-icon-button matTooltip="Copy the PEM to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="subject">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Who it is for">Subject</th>
+                        <td *matCellDef="let certificate" mat-cell
+                            [matTooltip]="certificate.subjectAltNames?.join(', ') ?? ''">{{ certificate.subject }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="issuer">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Who signed it">Issuer</th>
+                        <td *matCellDef="let certificate" mat-cell>{{ certificate.issuer }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="notAfter">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it expires">Expires</th>
+                        <td *matCellDef="let certificate" mat-cell>
+                            {{ dateConversion(certificate.notAfter) }}
+                            @if (expired(certificate)) {
+                                <mat-icon class="copy-icon" matTooltip="This certificate has expired">warning</mat-icon>
+                            }
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="generated">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Whether euclid generated it or it was imported">Generated
+                        </th>
+                        <td *matCellDef="let certificate" mat-cell>{{ certificate.generated ? 'yes' : 'imported' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let certificate" mat-cell>
+                            <button [cdkCopyToClipboard]="certificate.fingerprint" [matTooltipShowDelay]="1000"
+                                    aria-label="Copy fingerprint" mat-icon-button matTooltip="Copy the fingerprint">
+                                <mat-icon>fingerprint</mat-icon>
+                            </button>
+                            <button (click)="deleteCertificate(certificate)" [matTooltipShowDelay]="1000"
+                                    aria-label="Delete" mat-icon-button matTooltip="Delete this certificate">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No certificates stored.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

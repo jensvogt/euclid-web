@@ -1,0 +1,160 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Topics ({{ total$ | async }})</span>
+        <button (click)="createTopic()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create a new topic">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the topic list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ens']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ENS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="purgeAllTopics()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">clear_all</span>
+                </mat-icon>
+                <span>Purge all topics</span>
+            </button>
+            <mat-divider/>
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Topic name">Name</th>
+                        <td *matCellDef="let topic" mat-cell>
+                            <div class="with-icon">
+                                <mat-nav-list>
+                                    <a mat-list-item routerLink="./messages/{{ topic.ern }}">{{ topic.name }}</a>
+                                </mat-nav-list>
+                                <button [cdkCopyToClipboard]="topic.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="messages">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Messages the topic is holding">
+                            Messages
+                        </th>
+                        <td *matCellDef="let topic" mat-cell>{{ topic.messages }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="size">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Total size of those messages">Size</th>
+                        <td *matCellDef="let topic" mat-cell>{{ byteConversion(topic.size) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="status">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Whether the topic is delivering. A stopped topic holds what is published to it.">
+                            Status
+                        </th>
+                        <td *matCellDef="let topic" mat-cell>{{ topic.status }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="retentionPeriod">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="How long published messages are kept">Retention
+                        </th>
+                        <td *matCellDef="let topic" mat-cell>{{ retention(topic.retentionPeriod) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the topic was created">Created</th>
+                        <td *matCellDef="let topic" mat-cell>{{ dateConversion(topic.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let topic" mat-cell>
+                            <button (click)="publishMessage(topic)" [matTooltipShowDelay]="1000" aria-label="Publish"
+                                    mat-icon-button matTooltip="Publish a message to the topic">
+                                <mat-icon>campaign</mat-icon>
+                            </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Messages" mat-icon-button
+                                    matTooltip="Show the messages the topic kept"
+                                    routerLink="./messages/{{ topic.ern }}">
+                                <mat-icon>list</mat-icon>
+                            </button>
+                            <button [matMenuTriggerFor]="topicmenu" [matTooltipShowDelay]="1000"
+                                    aria-label="Topic menu" mat-icon-button matTooltip="More...">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu #topicmenu="matMenu" xPosition="before">
+                                <button (click)="toggleTopic(topic)" mat-menu-item
+                                        matTooltip="A stopped topic holds what is published; starting it releases the lot.">
+                                    <mat-icon>{{ topic.status === 'STOPPED' ? 'play_arrow' : 'pause' }}</mat-icon>
+                                    <span>{{ topic.status === 'STOPPED' ? 'Start topic' : 'Stop topic' }}</span>
+                                </button>
+                                <button (click)="setRetention(topic)" mat-menu-item>
+                                    <mat-icon>schedule</mat-icon>
+                                    <span>Retention period</span>
+                                </button>
+                                <button (click)="purgeTopic(topic)" mat-menu-item>
+                                    <mat-icon>clear_all</mat-icon>
+                                    <span>Purge topic</span>
+                                </button>
+                                <mat-divider/>
+                                <button (click)="deleteTopic(topic)" mat-menu-item>
+                                    <mat-icon>delete</mat-icon>
+                                    <span>Delete topic</span>
+                                </button>
+                            </mat-menu>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No topics here.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

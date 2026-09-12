@@ -1,0 +1,121 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Namespaces ({{ total$ | async }})</span>
+        <button (click)="createNamespace()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create a namespace. Requires admin rights on the account.">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the namespace list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eam-account-list']" aria-label="Accounts" mat-icon-button
+                matTooltip="Accounts">
+            <mat-icon>account_balance</mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="What a bare name is unique within">Name
+                        </th>
+                        <td *matCellDef="let namespace" mat-cell>
+                            <div class="with-icon">
+                                <span>{{ namespace.name }}</span>
+                                @if (namespace.name === active) {
+                                    <mat-icon class="copy-icon" matTooltip="The namespace this session is scoped to">
+                                        check_circle
+                                    </mat-icon>
+                                }
+                                <button [cdkCopyToClipboard]="namespace.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="accountId">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The account it belongs to">
+                            Account
+                        </th>
+                        <td *matCellDef="let namespace" mat-cell>{{ namespace.accountId }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="description">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="What it is for">Description</th>
+                        <td *matCellDef="let namespace" mat-cell>{{ namespace.description || '-' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it was created">Created</th>
+                        <td *matCellDef="let namespace" mat-cell>{{ dateConversion(namespace.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let namespace" mat-cell>
+                            <button (click)="switchTo(namespace)" [disabled]="namespace.name === active"
+                                    [matTooltipShowDelay]="1000" aria-label="Switch" mat-icon-button
+                                    matTooltip="Scope this session to the namespace. Reloads the page.">
+                                <mat-icon>login</mat-icon>
+                            </button>
+                            <button (click)="deleteNamespace(namespace)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete the namespace. No grants may remain on it.">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">
+                            This account has no namespaces. Everything lives at the account root.
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

@@ -1,0 +1,149 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Users ({{ total$ | async }})</span>
+        <button (click)="createUser()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create a user in this account">
+            <mat-icon>person_add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the user list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eam']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EAM counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button mat-menu-item routerLink="/eam-group-list">
+                <mat-icon>group</mat-icon>
+                <span>User groups</span>
+            </button>
+            <button mat-menu-item routerLink="/eam-account-list">
+                <mat-icon>account_balance</mat-icon>
+                <span>Accounts</span>
+            </button>
+            <button mat-menu-item routerLink="/eam-namespace-list">
+                <mat-icon>folder_managed</mat-icon>
+                <span>Namespaces</span>
+            </button>
+            <button mat-menu-item routerLink="/eam-access-key-list">
+                <mat-icon>vpn_key</mat-icon>
+                <span>Access keys</span>
+            </button>
+            <mat-divider/>
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                    <ng-container matColumnDef="userId">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="User ID">User</th>
+                        <td *matCellDef="let user" mat-cell>
+                            <div class="with-icon">
+                                <span>{{ user.userId }}</span>
+                                <button [cdkCopyToClipboard]="user.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                        mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="email">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The email address, which can be logged in with in place of the ID">Email
+                        </th>
+                        <td *matCellDef="let user" mat-cell>{{ user.email || '-' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="accountId">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The account the user belongs to">
+                            Account
+                        </th>
+                        <td *matCellDef="let user" mat-cell>{{ user.accountId }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="grants">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The accounts and namespaces this user may reach">
+                            Grants
+                        </th>
+                        <td *matCellDef="let user" mat-cell>{{ grants(user) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the user was created">Created</th>
+                        <td *matCellDef="let user" mat-cell>{{ dateConversion(user.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let user" mat-cell>
+                            <button (click)="grantAccess(user)" [matTooltipShowDelay]="1000" aria-label="Grant"
+                                    mat-icon-button matTooltip="Grant access to a namespace">
+                                <mat-icon>add_moderator</mat-icon>
+                            </button>
+                            <button [matMenuTriggerFor]="usermenu" [matTooltipShowDelay]="1000" aria-label="User menu"
+                                    mat-icon-button matTooltip="More...">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu #usermenu="matMenu" xPosition="before">
+                                <button (click)="revokeAccess(user)" mat-menu-item>
+                                    <mat-icon>remove_moderator</mat-icon>
+                                    <span>Revoke namespace access</span>
+                                </button>
+                                <mat-divider/>
+                                <button (click)="deleteUser(user)" mat-menu-item>
+                                    <mat-icon>person_remove</mat-icon>
+                                    <span>Delete user</span>
+                                </button>
+                            </mat-menu>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No users found.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

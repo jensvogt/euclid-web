@@ -1,0 +1,29 @@
+@use '@angular/material' as mat;
+
+mat-toolbar {
+  background: #004a9f;
+  color: white;
+}
+
+.input-parent {
+  // What makes the field short enough to sit in the toolbar.
+  @include mat.form-field-density(-6);
+
+  // The density above also sets --mat-form-field-filled-label-display: none - below a certain height
+  // Material drops a filled field's label - which would leave an unlabelled box that looks like it does
+  // nothing. Put it back, and give it the room to sit above the text. After the mixin on purpose: this is
+  // overriding what the mixin just set, so it has to come second.
+  --mat-form-field-filled-label-display: block;
+
+  .mat-mdc-form-field-infix {
+    padding-top: 18px;
+    padding-bottom: 2px;
+  }
+}
+
+.scope {
+  font-size: small;
+  opacity: 0.85;
+  padding-right: 12px;
+  white-space: nowrap;
+}
