@@ -90,16 +90,23 @@ export class EsmBucketListComponent extends EuclidListComponent<Bucket> {
         );
     }
 
-    /** Deleting needs an empty bucket, so the message says which of the two the user probably wants. */
+    /**
+     * Deletes the bucket and everything in it.
+     *
+     * The objects go too - the server stopped refusing a bucket that has them - so the message counts
+     * them rather than offering to purge first, which is now a way of doing half of this. A bucket with
+     * objects is emptied in the background and stays listed until that finishes, which is worth saying
+     * here: a list that still shows it a moment later is not a delete that failed.
+     */
     deleteBucket(bucket: Bucket): void {
         this.confirmThen(
             {
                 title: 'Delete bucket',
                 message: bucket.objects > 0
-                    ? `${bucket.name} still holds ${bucket.objects} objects, and the server will refuse to delete it. Purge it first.`
+                    ? `Delete ${bucket.name} and the ${bucket.objects} objects in it? This cannot be undone, and the bucket stays listed until the server has worked through them.`
                     : `Delete ${bucket.name}? This cannot be undone.`,
             },
-            this.esmService.deleteBucket(bucket.ern),
+            this.esmService.deleteBucket(bucket.ern, bucket.objects > 0),
             'Bucket deleted',
         );
     }

@@ -1,0 +1,199 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Queue &mdash; {{ queueName }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eqs-queue-list', 'messages', ern]" aria-label="Messages"
+                mat-icon-button matTooltip="Show the messages on the queue">
+            <mat-icon>list</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the queue again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eqs']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EQS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (queue$ | async; as queue) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="queuemenu" [matTooltipShowDelay]="1000" aria-label="Queue menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #queuemenu="matMenu" xPosition="before">
+                        <button (click)="sendMessage(queue)" mat-menu-item>
+                            <mat-icon>send</mat-icon>
+                            <span>Send a message</span>
+                        </button>
+                        <button (click)="toggleQueue(queue)" mat-menu-item
+                                matTooltip="Messages already in flight are unaffected either way">
+                            <mat-icon>{{ queue.status === stopped ? 'play_arrow' : 'pause' }}</mat-icon>
+                            <span>{{ queue.status === stopped ? 'Start queue' : 'Stop queue' }}</span>
+                        </button>
+                        <button (click)="setVisibility(queue)" mat-menu-item>
+                            <mat-icon>visibility_off</mat-icon>
+                            <span>Visibility timeout</span>
+                        </button>
+                        <button (click)="setDelay(queue)" mat-menu-item>
+                            <mat-icon>schedule</mat-icon>
+                            <span>Delivery delay</span>
+                        </button>
+                        <button (click)="setMaxMessageLength(queue)" mat-menu-item>
+                            <mat-icon>straighten</mat-icon>
+                            <span>Maximum message length</span>
+                        </button>
+                        <button (click)="redrive(queue)" mat-menu-item
+                                matTooltip="Only meaningful for a dead-letter queue">
+                            <mat-icon>undo</mat-icon>
+                            <span>Redrive</span>
+                        </button>
+                        <button (click)="purgeQueue(queue)" mat-menu-item
+                                matTooltip="Delete every message and keep the queue">
+                            <mat-icon>clear_all</mat-icon>
+                            <span>Purge queue</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteQueue(queue)" mat-menu-item
+                                matTooltip="Delete the queue and everything on it">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete queue</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Name</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="queue.name" class="text">{{ queue.name }}</span>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="queue.ern" class="text ern">{{ queue.ern }}</span>
+                            <button [cdkCopyToClipboard]="queue.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Owner</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="queue.owner" class="text">{{ queue.owner || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="A stopped queue hands nothing out">Status</span>
+                        <span class="value">
+                            <span class="text">{{ queue.status || '-' }}</span>
+                            <button (click)="toggleQueue(queue)" [matTooltipShowDelay]="1000" aria-label="Start or stop"
+                                    mat-icon-button
+                                    [matTooltip]="queue.status === stopped ? 'Start handing messages out again' : 'Stop handing messages out'">
+                                <mat-icon class="inline-icon">{{ queue.status === stopped ? 'play_arrow' : 'pause' }}</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="Waiting to be received">Available</span>
+                        <span class="value">
+                            <span class="text">{{ queue.available }}</span>
+                            <button [matTooltipShowDelay]="1000" [routerLink]="['/eqs-queue-list', 'messages', ern]"
+                                    aria-label="Messages" mat-icon-button matTooltip="Show the messages on the queue">
+                                <mat-icon class="inline-icon">list</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="Received and not yet deleted, so hidden from everyone else">
+                            In flight
+                        </span>
+                        <span class="value"><span class="text">{{ queue.invisible }}</span></span>
+
+                        <span class="property" matTooltip="Held back by the delivery delay">Delayed</span>
+                        <span class="value"><span class="text">{{ queue.delayed }}</span></span>
+
+                        <span class="property">Size</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="queue.size + ' bytes'"
+                                  class="text">{{ byteConversion(queue.size) }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="How long a received message stays hidden">Visibility</span>
+                        <span class="value">
+                            <span class="text">{{ queue.visibility }} s</span>
+                            <button (click)="setVisibility(queue)" [matTooltipShowDelay]="1000" aria-label="Visibility"
+                                    mat-icon-button matTooltip="Change the visibility timeout">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="How long a sent message is held back before it can be received">
+                            Delivery delay
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ queue.delay }} s</span>
+                            <button (click)="setDelay(queue)" [matTooltipShowDelay]="1000" aria-label="Delay"
+                                    mat-icon-button matTooltip="Change the delivery delay">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Max message length</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="queue.maxMessageLength + ' bytes'"
+                                  class="text">{{ byteConversion(queue.maxMessageLength) }}</span>
+                            <button (click)="setMaxMessageLength(queue)" [matTooltipShowDelay]="1000"
+                                    aria-label="Max message length" mat-icon-button
+                                    matTooltip="Change the largest message the queue accepts">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="How often a message may be received before it goes to the DLQ">
+                            Max receives
+                        </span>
+                        <span class="value"><span class="text">{{ queue.maxReceiveCount }}</span></span>
+
+                        <span class="property" matTooltip="Where messages go once they have been received too often">
+                            Dead letter queue
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="queue.deadLetterQueueErn"
+                                  class="text ern">{{ queue.deadLetterQueueErn || '-' }}</span>
+                            @if (queue.deadLetterQueueErn) {
+                                <button [matTooltipShowDelay]="1000"
+                                        [routerLink]="['/eqs-queue-list', 'queue', queue.deadLetterQueueErn]"
+                                        aria-label="Dead letter queue" mat-icon-button
+                                        matTooltip="Show the dead letter queue">
+                                    <mat-icon class="inline-icon">open_in_new</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property" matTooltip="What messages are delivered at unless they say otherwise">
+                            Priority
+                        </span>
+                        <span class="value"><span class="text">{{ queue.priority || '-' }}</span></span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(queue.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(queue.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <resource-tags (add)="addTag(queue)" (edit)="editTag(queue, $event)" (remove)="deleteTag(queue, $event)"
+                           [resource]="queue.name" [tags]="queue.tags"/>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the queue...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

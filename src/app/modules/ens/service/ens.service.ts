@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
-import {Observable} from 'rxjs';
-import type {Topic, TopicMessage} from 'euclid-ndk';
+import {map, Observable} from 'rxjs';
+import type {Subscription, Topic, TopicMessage} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, PageQuery, pagePayload, Page} from '../../../services/euclid-http.service';
 import {EuclidSessionService} from '../../../services/euclid-session.service';
@@ -8,6 +8,13 @@ import {EuclidSessionService} from '../../../services/euclid-session.service';
 export const TARGET = 'ens';
 
 export const DEFAULT_MAX_MESSAGE_LENGTH = 1024 * 1024;
+
+/** What a subscription delivers to, and what {@link EnsService.subscribe} names the two kinds by. */
+export const QUEUE = 'SQS';
+export const TOPIC = 'SNS';
+
+/** What {@link Topic.status} reads while a topic is holding rather than fanning out. */
+export const STOPPED = 'STOPPED';
 
 /** What the installation's own retention setting means when a topic asks for no particular one. */
 export const INSTALLATION_RETENTION = 0;
@@ -23,6 +30,20 @@ export class EnsService {
 
     listTopics(query: ListQuery): Observable<Page<Topic>> {
         return this.http.page<Topic>(TARGET, 'list-topics', 'topics', listPayload(query, 'name'));
+    }
+
+    /**
+     * One topic, by ERN.
+     *
+     * What comes back is what a listing describes each of its own with, so this is the single-topic form
+     * of a listing rather than another view of one. By ERN rather than by name, which `get-topic` also
+     * takes: a details page was reached from a listing that already said which topic it meant, and a name
+     * would be resolved again in the session's own namespace.
+     */
+    getTopic(ern: string): Observable<Topic> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-topic', {ern: ern}).pipe(
+            map((response: Record<string, unknown>) => response['topic'] as Topic),
+        );
     }
 
     createTopic(name: string, maxMessageLength = DEFAULT_MAX_MESSAGE_LENGTH): Observable<unknown> {
@@ -49,6 +70,39 @@ export class EnsService {
 
     setTopicRetention(ern: string, retentionPeriod: number): Observable<unknown> {
         return this.http.call(TARGET, 'set-topic-retention', {ern: ern, retentionPeriod: retentionPeriod});
+    }
+
+    /** The largest message the topic accepts, in bytes. The server refuses zero and below. */
+    setTopicMaxMessageLength(ern: string, maxMessageLength: number): Observable<unknown> {
+        return this.http.call(TARGET, 'set-topic-max-message-length', {
+            ern: ern,
+            maxMessageLength: maxMessageLength,
+        });
+    }
+
+    /**
+     * Fans messages out again, to every subscriber the topic has now.
+     *
+     * Not a repair of a failed delivery: a subscriber that received one the first time receives it again,
+     * so this is for a subscription that was added or fixed after the fact. `background` has the server
+     * answer as soon as it has taken the work on, which a topic of any size wants.
+     */
+    resendMessages(ern: string, messageId = '', background = true): Observable<unknown> {
+        return this.http.call(TARGET, 'resend-messages', {ern: ern, messageId: messageId, async: background});
+    }
+
+    /** Tags a topic. A key that is already tagged keeps its value - {@link setTopicTag} overwrites. */
+    addTopicTag(ern: string, key: string, value: string): Observable<unknown> {
+        return this.http.call(TARGET, 'add-topic-tag', {ern: ern, key: key, value: value});
+    }
+
+    /** Sets the value of a tag the topic already has - which is what editing one is. */
+    setTopicTag(ern: string, key: string, value: string): Observable<unknown> {
+        return this.http.call(TARGET, 'set-topic-tag', {ern: ern, key: key, value: value});
+    }
+
+    deleteTopicTag(ern: string, key: string): Observable<unknown> {
+        return this.http.call(TARGET, 'delete-topic-tag', {ern: ern, key: key});
     }
 
     purgeTopic(ern: string): Observable<unknown> {
@@ -87,11 +141,47 @@ export class EnsService {
     }
 
     /** Every subscription on a topic. An array rather than a page - a topic has a handful. */
-    listSubscriptions(topicErn: string): Observable<unknown[]> {
-        return this.http.all<unknown>(TARGET, 'list-subscriptions', 'subscriptions', {topicErn: topicErn});
+    listSubscriptions(topicErn: string): Observable<Subscription[]> {
+        return this.http.all<Subscription>(TARGET, 'list-subscriptions', 'subscriptions', {topicErn: topicErn});
     }
 
+    /**
+     * Delivers what arrives at this topic onward to a queue or another topic, from now on.
+     *
+     * Not idempotent: a second subscription to the same target means that target receives every message
+     * twice, so what is already there is worth looking at first - which is what the details page shows.
+     */
+    subscribe(topicErn: string, targetErn: string, targetType = QUEUE): Observable<unknown> {
+        return this.http.call(TARGET, 'subscribe', {
+            sourceErn: topicErn,
+            type: targetType,
+            targetErn: targetErn,
+        });
+    }
+
+    /** Removes a subscription, by the subscription's own ERN - not the topic's, and not the target's. */
     unsubscribe(ern: string): Observable<unknown> {
         return this.http.call(TARGET, 'unsubscribe', {ern: ern});
     }
+}
+
+/**
+ * The topic's name out of its ERN, which is the last segment of one.
+ *
+ * A view that was handed an ERN by a route has no topic to read the name off until the server answers,
+ * and a heading that says nothing until then is worse than one taken from the address.
+ */
+export function topicNameOf(ern: string): string {
+    return ern.substring(ern.lastIndexOf(':') + 1);
+}
+
+/** The retention period as something readable, since 0 and -1 both mean something other than a duration. */
+export function retentionLabel(seconds: number): string {
+    if (seconds === RETENTION_FOREVER) {
+        return 'forever';
+    }
+    if (seconds === INSTALLATION_RETENTION) {
+        return 'installation default';
+    }
+    return seconds + 's';
 }

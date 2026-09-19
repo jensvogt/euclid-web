@@ -1,0 +1,164 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Bucket &mdash; {{ bucketName }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/esm-bucket-list', 'objects', ern]" aria-label="Objects"
+                mat-icon-button matTooltip="Show the objects in the bucket">
+            <mat-icon>list</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the bucket again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/esm']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ESM counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (bucket$ | async; as bucket) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="bucketmenu" [matTooltipShowDelay]="1000" aria-label="Bucket menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #bucketmenu="matMenu" xPosition="before">
+                        <button (click)="renameBucket(bucket)" mat-menu-item>
+                            <mat-icon>drive_file_rename_outline</mat-icon>
+                            <span>Rename bucket</span>
+                        </button>
+                        @if (bucket.encrypted) {
+                            <button (click)="disableEncryption(bucket)" mat-menu-item
+                                    matTooltip="Objects already encrypted stay readable">
+                                <mat-icon>no_encryption</mat-icon>
+                                <span>Disable encryption</span>
+                            </button>
+                        } @else {
+                            <button (click)="enableEncryption(bucket)" mat-menu-item>
+                                <mat-icon>lock</mat-icon>
+                                <span>Enable encryption</span>
+                            </button>
+                        }
+                        <button (click)="toggleInternal(bucket)" mat-menu-item
+                                matTooltip="An internal bucket is left out of ordinary listings">
+                            <mat-icon>{{ bucket.internal ? 'visibility' : 'visibility_off' }}</mat-icon>
+                            <span>{{ bucket.internal ? 'Make visible' : 'Mark as internal' }}</span>
+                        </button>
+                        <button (click)="purgeBucket(bucket)" mat-menu-item
+                                matTooltip="Delete every object and keep the bucket">
+                            <mat-icon>clear_all</mat-icon>
+                            <span>Purge bucket</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteBucket(bucket)" mat-menu-item
+                                matTooltip="Delete the bucket and every object in it">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete bucket</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Name</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.name" class="text">{{ bucket.name }}</span>
+                            <button (click)="renameBucket(bucket)" [matTooltipShowDelay]="1000" aria-label="Rename"
+                                    mat-icon-button matTooltip="Rename the bucket">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.ern" class="text ern">{{ bucket.ern }}</span>
+                            <button [cdkCopyToClipboard]="bucket.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Owner</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.owner" class="text">{{ bucket.owner || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="One of euclid's own buckets rather than somebody's">Internal</span>
+                        <span class="value">
+                            <span class="text">{{ bucket.internal ? 'yes' : 'no' }}</span>
+                            <button (click)="toggleInternal(bucket)" [matTooltipShowDelay]="1000" aria-label="Internal"
+                                    mat-icon-button
+                                    matTooltip="An internal bucket is left out of ordinary listings">
+                                <mat-icon class="inline-icon">{{ bucket.internal ? 'visibility' : 'visibility_off' }}</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Objects</span>
+                        <span class="value">
+                            <span class="text">{{ bucket.objects }}</span>
+                            <button [matTooltipShowDelay]="1000" [routerLink]="['/esm-bucket-list', 'objects', ern]"
+                                    aria-label="Objects" mat-icon-button matTooltip="Show the objects in the bucket">
+                                <mat-icon class="inline-icon">list</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Size</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.size + ' bytes'"
+                                  class="text">{{ byteConversion(bucket.size) }}</span>
+                        </span>
+
+                        <span class="property">Encrypted</span>
+                        <span class="value">
+                            <span class="text">{{ bucket.encrypted ? 'yes' : 'no' }}</span>
+                            @if (bucket.encrypted) {
+                                <button (click)="disableEncryption(bucket)" [matTooltipShowDelay]="1000"
+                                        aria-label="Disable encryption" mat-icon-button
+                                        matTooltip="Stop encrypting new objects. The ones already encrypted stay readable.">
+                                    <mat-icon class="inline-icon">no_encryption</mat-icon>
+                                </button>
+                            } @else {
+                                <button (click)="enableEncryption(bucket)" [matTooltipShowDelay]="1000"
+                                        aria-label="Enable encryption" mat-icon-button
+                                        matTooltip="Encrypt every object written from now on">
+                                    <mat-icon class="inline-icon">lock</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <!-- Shown even when there is none, so that "no" is answered by the dash beside it. -->
+                        <span class="property" matTooltip="The EKM key new objects are written under">Encryption key</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.encryptionKeyErn"
+                                  class="text ern">{{ bucket.encryptionKeyErn || '-' }}</span>
+                            @if (bucket.encryptionKeyErn) {
+                                <button [cdkCopyToClipboard]="bucket.encryptionKeyErn" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the key ERN to the clipboard">
+                                    <mat-icon class="inline-icon">content_copy</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(bucket.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(bucket.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <resource-tags (add)="addTag(bucket)" (edit)="editTag(bucket, $event)"
+                           (remove)="deleteTag(bucket, $event)" [resource]="bucket.name" [tags]="bucket.tags"/>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the bucket...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

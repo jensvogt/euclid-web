@@ -1,0 +1,177 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Object &mdash; {{ key }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/esm-bucket-list', 'objects', bucketErn]"
+                aria-label="Objects" mat-icon-button matTooltip="Back to the bucket's objects">
+            <mat-icon>list</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the object again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/esm']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ESM counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (object$ | async; as object) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="objectmenu" [matTooltipShowDelay]="1000" aria-label="Object menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #objectmenu="matMenu" xPosition="before">
+                        <button (click)="renameObject(object)" mat-menu-item
+                                matTooltip="Give it another key in this bucket">
+                            <mat-icon>drive_file_rename_outline</mat-icon>
+                            <span>Rename object</span>
+                        </button>
+                        <button (click)="copyObject(object)" mat-menu-item
+                                matTooltip="Copy it elsewhere and leave this one where it is">
+                            <mat-icon>content_copy</mat-icon>
+                            <span>Copy object</span>
+                        </button>
+                        <button (click)="moveObject(object)" mat-menu-item
+                                matTooltip="Move it elsewhere, which may be another bucket">
+                            <mat-icon>drive_file_move</mat-icon>
+                            <span>Move object</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteObject(object)" mat-menu-item
+                                matTooltip="Delete the object. This cannot be undone.">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete object</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Key</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.key" class="text">{{ object.key }}</span>
+                            <button [cdkCopyToClipboard]="object.key" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the key to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                            <button (click)="renameObject(object)" [matTooltipShowDelay]="1000" aria-label="Rename"
+                                    mat-icon-button matTooltip="Rename the object">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.ern" class="text ern">{{ object.ern }}</span>
+                            <button [cdkCopyToClipboard]="object.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Bucket</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.bucketErn"
+                                  class="text">{{ bucketName }}</span>
+                            <button [matTooltipShowDelay]="1000"
+                                    [routerLink]="['/esm-bucket-list', 'bucket', object.bucketErn]"
+                                    aria-label="Bucket" mat-icon-button matTooltip="Show the bucket it is in">
+                                <mat-icon class="inline-icon">open_in_new</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What the server says about the stored bytes">Status</span>
+                        <span class="value"><span class="text">{{ object.status || '-' }}</span></span>
+
+                        <span class="property">Size</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.size + ' bytes'"
+                                  class="text">{{ byteConversion(object.size) }}</span>
+                        </span>
+
+                        <span class="property">Content type</span>
+                        <span class="value"><span class="text">{{ object.contentType || '-' }}</span></span>
+
+                        <span class="property">Encrypted</span>
+                        <span class="value"><span class="text">{{ object.encrypted ? 'yes' : 'no' }}</span></span>
+
+                        <span class="property" matTooltip="The checksum euclid stored with the object">MD5</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.md5Sum"
+                                  class="text ern">{{ object.md5Sum || '-' }}</span>
+                            @if (object.md5Sum) {
+                                <button [cdkCopyToClipboard]="object.md5Sum" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the checksum to the clipboard">
+                                    <mat-icon class="inline-icon">content_copy</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(object.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(object.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Attributes ({{ (attributes$ | async)?.length ?? 0 }})</span>
+                    <button (click)="addAttribute(object)" [matTooltipShowDelay]="1000" aria-label="Add attribute"
+                            mat-icon-button matTooltip="Add an attribute to the object">
+                        <mat-icon>add</mat-icon>
+                    </button>
+                </mat-card-header>
+                <mat-card-content>
+                    <table [dataSource]="(attributes$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
+                        <ng-container matColumnDef="name">
+                            <th *matHeaderCellDef mat-header-cell>Name</th>
+                            <td *matCellDef="let attribute" mat-cell>{{ attribute.name }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="value">
+                            <th *matHeaderCellDef mat-header-cell>Value</th>
+                            <td *matCellDef="let attribute" mat-cell>{{ attribute.value }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="type">
+                            <th *matHeaderCellDef mat-header-cell
+                                matTooltip="The type euclid stores the value under">Type
+                            </th>
+                            <td *matCellDef="let attribute" mat-cell>{{ attribute.type }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="actions">
+                            <th *matHeaderCellDef mat-header-cell>Actions</th>
+                            <td *matCellDef="let attribute" mat-cell>
+                                <button (click)="editAttribute(object, attribute)" [matTooltipShowDelay]="1000"
+                                        aria-label="Edit" mat-icon-button matTooltip="Change the value">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+                                <button (click)="deleteAttribute(object, attribute)" [matTooltipShowDelay]="1000"
+                                        aria-label="Delete" mat-icon-button matTooltip="Remove the attribute">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </td>
+                        </ng-container>
+                        <tr *matHeaderRowDef="attributeColumns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: attributeColumns;" mat-row></tr>
+                        <tr *matNoDataRow class="mat-row">
+                            <td [attr.colspan]="attributeColumns.length" class="mat-cell">This object has no attributes.</td>
+                        </tr>
+                    </table>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the object...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

@@ -49,10 +49,6 @@
                             </div>
                         </td>
                     </ng-container>
-                    <ng-container matColumnDef="body">
-                        <th *matHeaderCellDef mat-header-cell matTooltip="The first line of the body">Body</th>
-                        <td *matCellDef="let message" mat-cell>{{ preview(message.body) }}</td>
-                    </ng-container>
                     <ng-container matColumnDef="status">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header
                             matTooltip="Whether the message is available, in flight or delayed">Status

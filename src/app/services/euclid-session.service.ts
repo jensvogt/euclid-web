@@ -71,6 +71,18 @@ export class EuclidSessionService {
         return session !== null && isTokenValid(session.token);
     }
 
+    /**
+     * How long this session has left, in seconds. Zero when there is none, or it has already gone.
+     *
+     * Worth asking before something that takes a while: a token is valid for as long as it is valid
+     * whatever is in flight, and an upload of a few thousand parts can outlive one. Nothing here renews
+     * it - only {@link login} does, and only with a password.
+     */
+    get secondsLeft(): number {
+        const expiry = expiryOf(this.session?.token ?? '');
+        return expiry === null ? 0 : Math.max(0, Math.round(expiry - Date.now() / 1000));
+    }
+
     /** The namespace every namespace-scoped call is restricted to. Empty means the account root. */
     get namespace(): string {
         return this.session?.namespace ?? '';
@@ -106,6 +118,18 @@ export class EuclidSessionService {
                 return session;
             }),
         );
+    }
+
+    /**
+     * Logs in again as whoever this session is for.
+     *
+     * The one way back from an expired token: euclid has no refresh action, and this UI holds nothing it
+     * could re-authenticate with by itself - the password is not kept and the secret access key is
+     * dropped at login. So the password is asked for again, and everything else about the session - the
+     * user, the namespace - carries over.
+     */
+    reLogin(password: string): Observable<EuclidSession> {
+        return this.login(this.session?.userId ?? '', password);
     }
 
     /** Forgets the session. The token stays valid at the server until it expires. */
@@ -190,16 +214,21 @@ export class EuclidSessionService {
  * itself here would only be refused a moment later.
  */
 export function isTokenValid(token: string): boolean {
+    const expiry = expiryOf(token);
+    return expiry !== null && Date.now() / 1000 < expiry;
+}
+
+/** A JWT's `exp` as the seconds it holds, or null when there is not one to read. */
+function expiryOf(token: string): number | null {
     const parts = token.split('.');
     if (parts.length < 2) {
-        return false;
+        return null;
     }
     try {
         const payload = JSON.parse(decodeBase64Url(parts[1]));
-        const expiry = payload?.exp;
-        return typeof expiry === 'number' && Date.now() / 1000 < expiry;
+        return typeof payload?.exp === 'number' ? payload.exp : null;
     } catch {
-        return false;
+        return null;
     }
 }
 

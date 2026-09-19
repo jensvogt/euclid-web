@@ -111,6 +111,11 @@
                                     routerLink="./messages/{{ topic.ern }}">
                                 <mat-icon>list</mat-icon>
                             </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show and edit the topic"
+                                    routerLink="./topic/{{ topic.ern }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button [matMenuTriggerFor]="topicmenu" [matTooltipShowDelay]="1000"
                                     aria-label="Topic menu" mat-icon-button matTooltip="More...">
                                 <mat-icon>more_vert</mat-icon>

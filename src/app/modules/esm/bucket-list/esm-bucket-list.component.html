@@ -98,6 +98,11 @@
                                     routerLink="./objects/{{ bucket.ern }}">
                                 <mat-icon>list</mat-icon>
                             </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show and edit the bucket"
+                                    routerLink="./bucket/{{ bucket.ern }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button [matMenuTriggerFor]="bucketmenu" [matTooltipShowDelay]="1000"
                                     aria-label="Bucket menu" mat-icon-button matTooltip="More...">
                                 <mat-icon>more_vert</mat-icon>
@@ -126,7 +131,7 @@
                                 </button>
                                 <mat-divider/>
                                 <button (click)="deleteBucket(bucket)" mat-menu-item
-                                        matTooltip="Delete the bucket. It has to be empty.">
+                                        matTooltip="Delete the bucket and every object in it">
                                     <mat-icon>delete</mat-icon>
                                     <span>Delete bucket</span>
                                 </button>

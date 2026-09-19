@@ -1,0 +1,110 @@
+<h2 mat-dialog-title>Upload to {{ data.bucketName }}</h2>
+<mat-dialog-content class="mat-typography">
+
+    <!-- The input itself is never shown: a file picker is a button everywhere except in HTML. -->
+    <input #picker (change)="pick($event)" hidden type="file">
+    <div class="chosen">
+        <button (click)="picker.click()" [disabled]="phase !== 'choosing'" mat-stroked-button type="button">
+            Choose file
+        </button>
+        @if (file) {
+            <span class="file">{{ file.name }} &mdash; {{ byteConversion(file.size) }}</span>
+        } @else {
+            <span class="file empty">No file chosen</span>
+        }
+    </div>
+
+    <mat-form-field class="field" subscriptSizing="dynamic">
+        <mat-label>Key</mat-label>
+        <input (keyup.enter)="send()" (ngModelChange)="keyChanged()" [(ngModel)]="key"
+               [disabled]="phase !== 'choosing'" matInput name="key" type="text">
+        <mat-hint>What the object is called in the bucket. Slashes are part of the name, not directories.</mat-hint>
+    </mat-form-field>
+
+    @if (keyWarning) {
+        <p class="warning">
+            The key travels in an HTTP header, which carries ASCII. Anything outside it may arrive at the
+            server differently from how it reads here.
+        </p>
+    }
+
+    <mat-form-field class="field" subscriptSizing="dynamic">
+        <mat-label>Content type</mat-label>
+        <input (keyup.enter)="send()" [(ngModel)]="contentType" [disabled]="phase !== 'choosing' || multipart"
+               matInput name="contentType" type="text">
+        @if (multipart) {
+            <mat-hint>Not sent for a file this size: nothing in the multipart sequence carries one, so the
+                server decides.
+            </mat-hint>
+        } @else {
+            <mat-hint>What the object is, as it will be stored and served back.</mat-hint>
+        }
+    </mat-form-field>
+
+    @if (multipart && phase === 'choosing') {
+        <p class="note">
+            This goes up in {{ partCount }} parts of {{ partSizeLabel }}, four at a time &mdash; the same
+            pieces euclid's other clients cut a file this size into.
+        </p>
+    }
+
+    @if (sessionWarning) {
+        <p class="warning">
+            Your session runs out in {{ minutesLeft }} minutes, and an upload this size may take longer. If
+            it does, this asks for your password and carries on from the part it stopped at.
+        </p>
+    }
+
+    @if (phase === 'uploading') {
+        <div class="progress">
+            <mat-progress-bar [mode]="total > 1 ? 'determinate' : 'indeterminate'" [value]="percentage"/>
+            <span class="progress-text">
+                @if (total > 1) {
+                    Part {{ done }} of {{ total }} &mdash; {{ percentage }}%
+                } @else {
+                    Sending...
+                }
+            </span>
+        </div>
+    }
+
+    @if (phase === 'expired') {
+        <div class="expired">
+            <p class="warning">
+                Your session ran out while this was uploading. The {{ total - outstanding }} parts already
+                sent are still held by the server &mdash; sign in again and this carries on with the
+                remaining {{ outstanding }}.
+            </p>
+            <mat-form-field class="field" subscriptSizing="dynamic">
+                <mat-label>Password for {{ userId }}</mat-label>
+                <input (keyup.enter)="signInAndResume()" [(ngModel)]="password" autocomplete="current-password"
+                       matInput name="password" type="password">
+            </mat-form-field>
+        </div>
+    }
+
+    @if (error && phase !== 'expired') {
+        <p class="failed">{{ error }}</p>
+    }
+    @if (phase === 'failed' && outstanding > 0 && outstanding < total) {
+        <p class="note">
+            {{ total - outstanding }} of {{ total }} parts are already up. Retrying sends the
+            {{ outstanding }} that are not.
+        </p>
+    }
+
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button (click)="cancel()" mat-button tabindex="-1">Cancel</button>
+    @switch (phase) {
+        @case ('failed') {
+            <button (click)="resume()" mat-button>Retry</button>
+        }
+        @case ('expired') {
+            <button (click)="signInAndResume()" [disabled]="!password" mat-button>Sign in and resume</button>
+        }
+        @default {
+            <button (click)="send()" [disabled]="!valid" mat-button>Upload</button>
+        }
+    }
+</mat-dialog-actions>

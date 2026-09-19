@@ -2,6 +2,11 @@ import {Routes} from '@angular/router';
 import {provideEffects} from '@ngrx/effects';
 import {provideState} from '@ngrx/store';
 
+import {
+    eqsQueueDetailsFeatureKey,
+    eqsQueueDetailsReducer,
+    loadQueue$,
+} from './queue-details/state/eqs-queue-details.state';
 import {eqsQueueListFeature, loadQueues$} from './queue-list/state/eqs-queue-list.state';
 import {eqsMessageListFeature, loadMessages$} from './message-list/state/eqs-message-list.state';
 
@@ -17,13 +22,19 @@ export const eqsRoutes: Routes = [
         providers: [
             provideState(eqsQueueListFeature.featureKey, eqsQueueListFeature.reducer),
             provideState(eqsMessageListFeature.featureKey, eqsMessageListFeature.reducer),
-            provideEffects({loadQueues$, loadMessages$}),
+            provideState(eqsQueueDetailsFeatureKey, eqsQueueDetailsReducer),
+            provideEffects({loadQueues$, loadMessages$, loadQueue$}),
         ],
         children: [
             {
                 path: '',
                 title: 'EQS Queues',
                 loadComponent: () => import('./queue-list/eqs-queue-list.component').then(m => m.EqsQueueListComponent),
+            },
+            {
+                path: 'queue/:queueErn',
+                title: 'EQS Queue',
+                loadComponent: () => import('./queue-details/eqs-queue-details.component').then(m => m.EqsQueueDetailsComponent),
             },
             {
                 path: 'messages/:queueErn',

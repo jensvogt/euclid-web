@@ -7,7 +7,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {EqsService} from '../service/eqs.service';
+import {EqsService, queueNameOf} from '../service/eqs.service';
 import {eqsMessageListFeature} from './state/eqs-message-list.state';
 
 /**
@@ -26,7 +26,10 @@ import {eqsMessageListFeature} from './state/eqs-message-list.state';
 export class EqsMessageListComponent extends EuclidListComponent<QueueMessage> {
 
     override readonly feature: ListFeature<QueueMessage> = eqsMessageListFeature;
-    override readonly columns = ['messageId', 'body', 'status', 'size', 'receivedCount', 'created', 'actions'];
+    // No body column: a message body is arbitrarily large and rarely one line, so a preview of one was
+    // never enough to read and always enough to crowd out the fields that tell two messages apart. The
+    // copy button in the row is how the whole of it is got at.
+    override readonly columns = ['messageId', 'status', 'size', 'receivedCount', 'created', 'actions'];
 
     /** The queue being looked into, which the template shows and every action below names. */
     queueErn = '';
@@ -49,7 +52,7 @@ export class EqsMessageListComponent extends EuclidListComponent<QueueMessage> {
 
     /** The queue's name out of its ERN, for a heading that is readable. */
     get queueName(): string {
-        return this.queueErn.substring(this.queueErn.lastIndexOf(':') + 1);
+        return queueNameOf(this.queueErn);
     }
 
     sendMessage(): void {
@@ -79,11 +82,5 @@ export class EqsMessageListComponent extends EuclidListComponent<QueueMessage> {
             this.eqsService.purgeQueue(this.queueErn),
             'Queue purged',
         );
-    }
-
-    /** The first line of a body, so a table row stays a row. */
-    preview(body: string): string {
-        const firstLine = (body ?? '').split('\n')[0];
-        return firstLine.length > 120 ? firstLine.substring(0, 120) + '...' : firstLine;
     }
 }

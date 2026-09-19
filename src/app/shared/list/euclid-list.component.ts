@@ -1,7 +1,5 @@
 import {Directive, inject, OnDestroy, OnInit} from '@angular/core';
-import {Location} from '@angular/common';
-import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
-import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatDialogConfig} from '@angular/material/dialog';
 import {PageEvent} from '@angular/material/paginator';
 import {Sort} from '@angular/material/sort';
 import {Store} from '@ngrx/store';
@@ -9,8 +7,7 @@ import {interval, Observable, Subscription} from 'rxjs';
 
 import {SortColumn} from '../sorting/sorting.component';
 import {AutoReloadComponent, MIN_AUTO_RELOAD_MS} from '../autoreload/auto-reload.component';
-import {ConfirmData, ConfirmDialog} from '../confirm/confirm.component';
-import {ResourceAddData, ResourceAddDialog, ResourceField} from '../resource-add/resource-add.component';
+import {EuclidResourceComponent} from '../resource/euclid-resource.component';
 import {ListFeature} from './list-feature';
 
 /**
@@ -24,14 +21,14 @@ import {ListFeature} from './list-feature';
  * It is dispatched with each load, so the store still holds what the view is showing - which is what the
  * paginator and the prefix box bind to - but the view does not have to wait for a round trip through the
  * store to know what it is about to ask for.
+ *
+ * Acting on a row - confirming, asking for fields, reporting what the server said - is
+ * {@link EuclidResourceComponent}'s, because a detail view does the same things to the same resources.
  */
 @Directive()
-export abstract class EuclidListComponent<T> implements OnInit, OnDestroy {
+export abstract class EuclidListComponent<T> extends EuclidResourceComponent implements OnInit, OnDestroy {
 
     protected readonly store = inject(Store);
-    protected readonly dialog = inject(MatDialog);
-    protected readonly snackBar = inject(MatSnackBar);
-    protected readonly location = inject(Location);
 
     /** The store slice this view reads and writes. */
     abstract readonly feature: ListFeature<T>;
@@ -46,8 +43,6 @@ export abstract class EuclidListComponent<T> implements OnInit, OnDestroy {
      * euclid sorts by its own name. A column absent from here is sent as it is named.
      */
     protected readonly sortFields: Record<string, string> = {};
-
-    lastUpdate: Date = new Date();
 
     items$!: Observable<T[]>;
     total$!: Observable<number>;
@@ -95,7 +90,7 @@ export abstract class EuclidListComponent<T> implements OnInit, OnDestroy {
     }
 
     /** Asks the server for the page this view is currently describing. */
-    load(): void {
+    override load(): void {
         this.lastUpdate = new Date();
         this.store.dispatch(this.feature.actions.load({
             prefix: this.prefixValue,
@@ -105,14 +100,6 @@ export abstract class EuclidListComponent<T> implements OnInit, OnDestroy {
             sortDirection: this.sortColumn.direction,
             parent: this.parent,
         }));
-    }
-
-    refresh(): void {
-        this.load();
-    }
-
-    back(): void {
-        this.location.back();
     }
 
     setPrefix(): void {
@@ -159,62 +146,6 @@ export abstract class EuclidListComponent<T> implements OnInit, OnDestroy {
                 this.startAutoReload(parseInt(result, 10));
             }
         });
-    }
-
-    // -- what a row action needs -------------------------------------------------------------------
-
-    /**
-     * Runs one action, reloads, and says what happened.
-     *
-     * Every mutation in these views ends the same way - the list is now wrong, and the user wants to know
-     * it worked - and an error has to reach the snackbar rather than only the console, because the server's
-     * sentence is the only thing that says which of several things went wrong.
-     */
-    protected run(action: Observable<unknown>, message: string): void {
-        action.subscribe({
-            next: () => {
-                this.load();
-                this.snackBar.open(message, 'Done', {duration: 5000});
-            },
-            error: (error: Error) => this.snackBar.open(error.message, 'Failed', {duration: 10000}),
-        });
-    }
-
-    /** The same, behind a confirmation, for what cannot be undone. */
-    protected confirmThen(confirm: ConfirmData, action: Observable<unknown>, message: string): void {
-        const dialogConfig = new MatDialogConfig();
-        dialogConfig.autoFocus = true;
-        dialogConfig.width = '30%';
-        dialogConfig.minWidth = '320px';
-        dialogConfig.data = confirm;
-
-        this.dialog.open(ConfirmDialog, dialogConfig).afterClosed().subscribe(confirmed => {
-            if (confirmed) {
-                this.run(action, message);
-            }
-        });
-    }
-
-    /** Asks for the fields a create action takes, and hands them to `create` if the user went through with it. */
-    protected addThen(
-        title: string,
-        fields: ResourceField[],
-        create: (values: Record<string, string | number | boolean>) => Observable<unknown>,
-        message: string,
-    ): void {
-        const dialogConfig = new MatDialogConfig();
-        dialogConfig.disableClose = true;
-        dialogConfig.autoFocus = true;
-        dialogConfig.width = '32%';
-        dialogConfig.minWidth = '360px';
-        dialogConfig.data = {title: title, fields: fields} as ResourceAddData;
-
-        this.dialog.open(ResourceAddDialog, dialogConfig).afterClosed()
-            .subscribe((values: Record<string, string | number | boolean> | undefined) => {
-                if (values) {
-                    this.run(create(values), message);
-                }
-            });
     }
 
     private startAutoReload(period: number): void {

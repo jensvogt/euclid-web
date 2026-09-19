@@ -120,6 +120,11 @@
                                     routerLink="./messages/{{ queue.ern }}">
                                 <mat-icon>list</mat-icon>
                             </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show and edit the queue"
+                                    routerLink="./queue/{{ queue.ern }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button [matMenuTriggerFor]="queuemenu" [matTooltipShowDelay]="1000"
                                     aria-label="Queue menu" mat-icon-button matTooltip="More...">
                                 <mat-icon>more_vert</mat-icon>

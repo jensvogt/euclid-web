@@ -42,8 +42,16 @@
   font-size: 16px !important;
 }
 
+/*
+ * Room for four icon buttons, and no wrapping whatever the count.
+ *
+ * `nowrap` as well as the width because the width is what a column asks for rather than what it gets: a
+ * button that does not fit wraps onto a second line and makes that one row twice the height of its
+ * neighbours, which is how a table full of them ends up looking broken.
+ */
 .mat-column-actions {
-  width: 160px;
+  width: 200px;
+  white-space: nowrap;
 }
 
 .ern {
@@ -61,4 +69,12 @@
   background: #fff8e1;
   border-radius: 4px;
   overflow-x: auto;
+}
+
+/* A row the server has not finished with - an object still being assembled, and so not yet whole. */
+.unfinished {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff8e1;
+  font-size: small;
 }

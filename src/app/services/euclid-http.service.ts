@@ -48,9 +48,48 @@ export class EuclidHttpService {
      *
      * Deliberately not narrowed to the actions this UI knows: a server that gains an action is reachable
      * without a release here, which is the same bargain euclid-ndk's `ModuleClient.call` strikes.
+     *
+     * `headers` are the few that euclid carries beside the payload rather than in it - a transfer
+     * declares up front how many parts it is about to send at once, so the gateway can ramp toward that
+     * rather than discover it.
      */
-    call<T>(target: string, action: string, payload: Record<string, unknown> = {}): Observable<T> {
-        return this.http.post<T>(this.url, payload, {headers: this.session.requestHeaders(target, action)}).pipe(
+    call<T>(
+        target: string,
+        action: string,
+        payload: Record<string, unknown> = {},
+        headers: Record<string, string> = {},
+    ): Observable<T> {
+        let sent = this.session.requestHeaders(target, action);
+        for (const [name, value] of Object.entries(headers)) {
+            sent = sent.set(name, value);
+        }
+        return this.http.post<T>(this.url, payload, {headers: sent}).pipe(
+            catchError((error: HttpErrorResponse) => throwError(() => euclidError(target, action, error))),
+        );
+    }
+
+    /**
+     * One of the actions whose body is bytes rather than JSON, described by its headers instead.
+     *
+     * euclid carries a few actions this way - `put-object` and the multipart parts either side of it -
+     * because a body that is the object cannot also be the request. What would have been fields travels
+     * in `x-euclid-*` headers, and the content type is the object's own rather than the request's
+     * description of a JSON document.
+     *
+     * Same-origin (see the class note), so the extra headers cost no preflight. The answer is still JSON:
+     * `put-object` describes what it stored.
+     */
+    postBytes<T>(
+        target: string,
+        action: string,
+        data: Blob,
+        headers: Record<string, string> = {},
+    ): Observable<T> {
+        let sent = this.session.requestHeaders(target, action).set('Content-Type', 'application/octet-stream');
+        for (const [name, value] of Object.entries(headers)) {
+            sent = sent.set(name, value);
+        }
+        return this.http.post<T>(this.url, data, {headers: sent}).pipe(
             catchError((error: HttpErrorResponse) => throwError(() => euclidError(target, action, error))),
         );
     }
@@ -106,12 +145,36 @@ export function listPayload(query: ListQuery, defaultSortColumn: string): Record
 }
 
 /**
+ * A refusal, with the status still readable on it.
+ *
+ * The message is what reaches the snackbar, and the status is what a caller decides by: a part of a
+ * transfer is worth sending again when the server was briefly unwell and never when it has said the
+ * request itself is wrong.
+ */
+export class EuclidError extends Error {
+    constructor(message: string, readonly status: number) {
+        super(message);
+        this.name = 'EuclidError';
+    }
+}
+
+/** Whether this is the kind of failure that sending the same request again might get past. */
+export function isTransient(error: unknown): boolean {
+    return error instanceof EuclidError && (error.status >= 500 || error.status === 0);
+}
+
+/** Whether the server refused the credentials rather than the request. */
+export function isUnauthorized(error: unknown): boolean {
+    return error instanceof EuclidError && error.status === 401;
+}
+
+/**
  * The server's own reason for refusing, rather than Angular's description of the status code.
  *
  * euclid answers a refusal with `{"error": "..."}`, and that sentence is the only thing that says which
  * of the several things that can go wrong actually did - so it is what reaches the snackbar.
  */
-function euclidError(target: string, action: string, error: HttpErrorResponse): Error {
+function euclidError(target: string, action: string, error: HttpErrorResponse): EuclidError {
     const reason = typeof error.error?.error === 'string' ? error.error.error : error.message;
-    return new Error(`${target}:${action} failed (${error.status}): ${reason}`);
+    return new EuclidError(`${target}:${action} failed (${error.status}): ${reason}`, error.status);
 }

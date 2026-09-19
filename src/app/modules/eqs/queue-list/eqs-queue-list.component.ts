@@ -6,7 +6,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {DEFAULT_MAX_RETRIES, DEFAULT_VISIBILITY, EqsService} from '../service/eqs.service';
+import {DEFAULT_MAX_RETRIES, DEFAULT_VISIBILITY, EqsService, STOPPED} from '../service/eqs.service';
 import {eqsQueueListFeature} from './state/eqs-queue-list.state';
 
 /** The queues in the current namespace: how deep each is, and what can be done about it. */
@@ -89,7 +89,7 @@ export class EqsQueueListComponent extends EuclidListComponent<Queue> {
 
     /** Stops the queue handing messages out, or starts it again. Messages in flight are unaffected either way. */
     toggleQueue(queue: Queue): void {
-        const stopped = queue.status === 'STOPPED';
+        const stopped = queue.status === STOPPED;
         this.run(
             stopped ? this.eqsService.startQueue(queue.ern) : this.eqsService.stopQueue(queue.ern),
             stopped ? 'Queue started' : 'Queue stopped',

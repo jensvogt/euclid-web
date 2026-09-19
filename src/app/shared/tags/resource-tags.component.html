@@ -1,0 +1,39 @@
+<mat-card appearance="outlined" class="section">
+    <mat-card-header>
+        <span class="section-title">Tags ({{ rows.length }})</span>
+        <button (click)="add.emit()" [matTooltip]="'Add a tag to ' + resource" [matTooltipShowDelay]="1000"
+                aria-label="Add tag" mat-icon-button>
+            <mat-icon>add</mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        <table [dataSource]="rows" class="mat-elevation-z8 euclid-table" mat-table>
+            <ng-container matColumnDef="key">
+                <th *matHeaderCellDef mat-header-cell>Key</th>
+                <td *matCellDef="let tag" mat-cell>{{ tag.key }}</td>
+            </ng-container>
+            <ng-container matColumnDef="value">
+                <th *matHeaderCellDef mat-header-cell>Value</th>
+                <td *matCellDef="let tag" mat-cell>{{ tag.value }}</td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+                <th *matHeaderCellDef mat-header-cell>Actions</th>
+                <td *matCellDef="let tag" mat-cell>
+                    <button (click)="edit.emit(tag)" [matTooltipShowDelay]="1000" aria-label="Edit"
+                            mat-icon-button matTooltip="Change the value">
+                        <mat-icon>edit</mat-icon>
+                    </button>
+                    <button (click)="remove.emit(tag)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                            mat-icon-button matTooltip="Remove the tag">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </td>
+            </ng-container>
+            <tr *matHeaderRowDef="columns" mat-header-row></tr>
+            <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+            <tr *matNoDataRow class="mat-row">
+                <td [attr.colspan]="columns.length" class="mat-cell">No tags here.</td>
+            </tr>
+        </table>
+    </mat-card-content>
+</mat-card>

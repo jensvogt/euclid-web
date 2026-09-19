@@ -6,7 +6,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {EnsService, INSTALLATION_RETENTION, RETENTION_FOREVER} from '../service/ens.service';
+import {EnsService, INSTALLATION_RETENTION, RETENTION_FOREVER, retentionLabel, STOPPED} from '../service/ens.service';
 import {ensTopicListFeature} from './state/ens-topic-list.state';
 
 /** The topics in the current namespace: what they hold, and whether they are delivering. */
@@ -49,7 +49,7 @@ export class EnsTopicListComponent extends EuclidListComponent<Topic> {
 
     /** Stops delivery, or starts it and releases whatever was held in the meantime. */
     toggleTopic(topic: Topic): void {
-        const stopped = topic.status === 'STOPPED';
+        const stopped = topic.status === STOPPED;
         this.run(
             stopped ? this.ensService.startTopic(topic.ern) : this.ensService.stopTopic(topic.ern),
             stopped ? 'Topic started, held messages released' : 'Topic stopped, messages will be held',
@@ -109,14 +109,5 @@ export class EnsTopicListComponent extends EuclidListComponent<Topic> {
         );
     }
 
-    /** The retention period as something readable, since 0 and -1 both mean something other than a duration. */
-    retention(seconds: number): string {
-        if (seconds === RETENTION_FOREVER) {
-            return 'forever';
-        }
-        if (seconds === INSTALLATION_RETENTION) {
-            return 'installation default';
-        }
-        return seconds + 's';
-    }
+    protected readonly retention = retentionLabel;
 }

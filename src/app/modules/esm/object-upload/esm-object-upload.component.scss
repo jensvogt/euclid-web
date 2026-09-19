@@ -1,0 +1,57 @@
+/* The gap the fields keep from each other, now that the hint under one sizes to what it says. */
+.field {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.chosen {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 16px 0;
+}
+
+/* The name of a file nobody chose a key for yet, so it has to survive being long. */
+.file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.empty {
+  opacity: 0.6;
+}
+
+/* The same yellow the secret list reveals a value in - this is a caveat, not a failure. */
+.warning {
+  padding: 8px 12px;
+  margin: 0 0 12px 0;
+  background: #fff8e1;
+  border-radius: 4px;
+}
+
+/* What is about to happen, which is not a caveat at all. */
+.note {
+  margin: 4px 0 12px 0;
+  opacity: 0.75;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 4px 0;
+}
+
+.progress-text {
+  font-size: small;
+  opacity: 0.75;
+}
+
+.failed {
+  padding: 8px 12px;
+  margin: 8px 0 0 0;
+  background: #fdecea;
+  border-radius: 4px;
+}

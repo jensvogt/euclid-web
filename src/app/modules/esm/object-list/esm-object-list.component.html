@@ -4,6 +4,10 @@
             <mat-icon>arrow_back</mat-icon>
         </button>
         <span class="fill-remaining-space">{{ bucketName }} &mdash; Objects ({{ total$ | async }})</span>
+        <button (click)="uploadObject()" [matTooltipShowDelay]="1000" aria-label="Upload" mat-icon-button
+                matTooltip="Upload a file into this bucket">
+            <mat-icon>add</mat-icon>
+        </button>
         <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
                 matTooltip="Refresh the object list">
             <mat-icon>refresh</mat-icon>
@@ -13,11 +17,19 @@
             <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #mainmenu="matMenu" xPosition="before">
-            <button (click)="purge()" mat-menu-item matTooltip="Delete the objects the prefix currently matches">
+            <button (click)="purge()" mat-menu-item
+                    matTooltip="Delete the objects the prefix currently matches, and wait for the server">
                 <mat-icon>
                     <span class="material-symbols-outlined">clear_all</span>
                 </mat-icon>
                 <span>Purge matching objects</span>
+            </button>
+            <button (click)="purgeInBackground()" mat-menu-item
+                    matTooltip="The same, taken on by the server rather than waited for. What a large bucket needs.">
+                <mat-icon>
+                    <span class="material-symbols-outlined">schedule_send</span>
+                </mat-icon>
+                <span>Purge in the background</span>
             </button>
             <mat-divider/>
             <button (click)="autoReload()" mat-menu-item>
@@ -68,6 +80,15 @@
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Content type">Type</th>
                         <td *matCellDef="let object" mat-cell>{{ object.contentType }}</td>
                     </ng-container>
+                    <ng-container matColumnDef="status">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="What the server has done with it. UPLOADING means it is not whole yet.">
+                            Status
+                        </th>
+                        <td *matCellDef="let object" mat-cell>
+                            <span [class.unfinished]="object.status === 'UPLOADING'">{{ object.status || '-' }}</span>
+                        </td>
+                    </ng-container>
                     <ng-container matColumnDef="encrypted">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Whether this object is encrypted">
                             Encrypted
@@ -88,6 +109,12 @@
                             <button [cdkCopyToClipboard]="object.ern" [matTooltipShowDelay]="1000" aria-label="Copy ERN"
                                     mat-icon-button matTooltip="Copy the ERN">
                                 <mat-icon>link</mat-icon>
+                            </button>
+                            <!-- The array form, because a key holds slashes and only this encodes them. -->
+                            <button [matTooltipShowDelay]="1000"
+                                    [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
+                                    aria-label="Edit" mat-icon-button matTooltip="Show and edit the object">
+                                <mat-icon>edit</mat-icon>
                             </button>
                             <button (click)="deleteObject(object)" [matTooltipShowDelay]="1000" aria-label="Delete"
                                     mat-icon-button matTooltip="Delete this object">

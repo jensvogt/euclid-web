@@ -1,0 +1,201 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Topic &mdash; {{ topicName }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/ens-topic-list', 'messages', ern]" aria-label="Messages"
+                mat-icon-button matTooltip="Show the messages the topic kept">
+            <mat-icon>list</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the topic again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ens']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ENS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (topic$ | async; as topic) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="topicmenu" [matTooltipShowDelay]="1000" aria-label="Topic menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #topicmenu="matMenu" xPosition="before">
+                        <button (click)="publishMessage(topic)" mat-menu-item>
+                            <mat-icon>campaign</mat-icon>
+                            <span>Publish a message</span>
+                        </button>
+                        <button (click)="toggleTopic(topic)" mat-menu-item
+                                matTooltip="A stopped topic holds what is published rather than losing it">
+                            <mat-icon>{{ topic.status === stopped ? 'play_arrow' : 'pause' }}</mat-icon>
+                            <span>{{ topic.status === stopped ? 'Start topic' : 'Stop topic' }}</span>
+                        </button>
+                        <button (click)="setRetention(topic)" mat-menu-item>
+                            <mat-icon>schedule</mat-icon>
+                            <span>Retention</span>
+                        </button>
+                        <button (click)="setMaxMessageLength(topic)" mat-menu-item>
+                            <mat-icon>straighten</mat-icon>
+                            <span>Maximum message length</span>
+                        </button>
+                        <button (click)="resendMessages(topic)" mat-menu-item
+                                matTooltip="Every subscriber receives them again, including those that already had them">
+                            <mat-icon>replay</mat-icon>
+                            <span>Resend messages</span>
+                        </button>
+                        <button (click)="purgeTopic(topic)" mat-menu-item
+                                matTooltip="Delete the held messages and keep the topic">
+                            <mat-icon>clear_all</mat-icon>
+                            <span>Purge topic</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteTopic(topic)" mat-menu-item
+                                matTooltip="Delete the topic and its subscriptions">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete topic</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Name</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="topic.name" class="text">{{ topic.name }}</span>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="topic.ern" class="text ern">{{ topic.ern }}</span>
+                            <button [cdkCopyToClipboard]="topic.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Owner</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="topic.owner" class="text">{{ topic.owner || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="A stopped topic holds what is published rather than fanning it out">
+                            Status
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ topic.status || '-' }}</span>
+                            <button (click)="toggleTopic(topic)" [matTooltipShowDelay]="1000" aria-label="Start or stop"
+                                    mat-icon-button
+                                    [matTooltip]="topic.status === stopped ? 'Start delivering, and release what was held' : 'Stop delivering. What is published is held.'">
+                                <mat-icon class="inline-icon">{{ topic.status === stopped ? 'play_arrow' : 'pause' }}</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="How many the topic is keeping">Messages</span>
+                        <span class="value">
+                            <span class="text">{{ topic.messages }}</span>
+                            <button [matTooltipShowDelay]="1000" [routerLink]="['/ens-topic-list', 'messages', ern]"
+                                    aria-label="Messages" mat-icon-button matTooltip="Show the messages the topic kept">
+                                <mat-icon class="inline-icon">list</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Size</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="topic.size + ' bytes'"
+                                  class="text">{{ byteConversion(topic.size) }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="How long a published message is kept">Retention</span>
+                        <span class="value">
+                            <span class="text">{{ retention(topic.retentionPeriod) }}</span>
+                            <button (click)="setRetention(topic)" [matTooltipShowDelay]="1000" aria-label="Retention"
+                                    mat-icon-button matTooltip="Change how long messages are kept">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Max message length</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="topic.maxMessageLength + ' bytes'"
+                                  class="text">{{ byteConversion(topic.maxMessageLength) }}</span>
+                            <button (click)="setMaxMessageLength(topic)" [matTooltipShowDelay]="1000"
+                                    aria-label="Max message length" mat-icon-button
+                                    matTooltip="Change the largest message the topic accepts">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(topic.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(topic.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Subscriptions ({{ (subscriptions$ | async)?.length ?? 0 }})</span>
+                    <button (click)="subscribe(topic)" [matTooltipShowDelay]="1000" aria-label="Subscribe"
+                            mat-icon-button matTooltip="Deliver this topic onward to a queue or another topic">
+                        <mat-icon>add</mat-icon>
+                    </button>
+                </mat-card-header>
+                <mat-card-content>
+                    <table [dataSource]="(subscriptions$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
+                        <ng-container matColumnDef="target">
+                            <th *matHeaderCellDef mat-header-cell>Target</th>
+                            <td *matCellDef="let subscription" mat-cell>
+                                <span [matTooltipShowDelay]="1000" [matTooltip]="subscription.targetErn"
+                                      class="text ern">{{ subscription.targetErn }}</span>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="type">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="What the target is">Kind</th>
+                            <td *matCellDef="let subscription" mat-cell>{{ targetKind(subscription) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="created">
+                            <th *matHeaderCellDef mat-header-cell>Created</th>
+                            <td *matCellDef="let subscription" mat-cell>{{ dateConversion(subscription.created) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="actions">
+                            <th *matHeaderCellDef mat-header-cell>Actions</th>
+                            <td *matCellDef="let subscription" mat-cell>
+                                <button [cdkCopyToClipboard]="subscription.targetErn" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy target" mat-icon-button matTooltip="Copy the target ERN">
+                                    <mat-icon>content_copy</mat-icon>
+                                </button>
+                                <button (click)="unsubscribe(topic, subscription)" [matTooltipShowDelay]="1000"
+                                        aria-label="Unsubscribe" mat-icon-button matTooltip="Stop delivering to this target">
+                                    <mat-icon>link_off</mat-icon>
+                                </button>
+                            </td>
+                        </ng-container>
+                        <tr *matHeaderRowDef="subscriptionColumns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: subscriptionColumns;" mat-row></tr>
+                        <tr *matNoDataRow class="mat-row">
+                            <td [attr.colspan]="subscriptionColumns.length" class="mat-cell">
+                                Nothing subscribes to this topic, so what is published to it goes nowhere.
+                            </td>
+                        </tr>
+                    </table>
+                </mat-card-content>
+            </mat-card>
+
+            <resource-tags (add)="addTag(topic)" (edit)="editTag(topic, $event)" (remove)="deleteTag(topic, $event)"
+                           [resource]="topic.name" [tags]="topic.tags"/>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the topic...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

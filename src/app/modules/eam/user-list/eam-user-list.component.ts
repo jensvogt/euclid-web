@@ -20,7 +20,10 @@ import {eamUserListFeature} from './state/eam-user-list.state';
 export class EamUserListComponent extends EuclidListComponent<User> {
 
     override readonly feature: ListFeature<User> = eamUserListFeature;
-    override readonly columns = ['userId', 'email', 'accountId', 'grants', 'created', 'actions'];
+    // No grants column: euclid 0.8 took `accountGrants` off the user and made a grant a thing in its own
+    // right, held by a user or by a group they are in. What a user may do is no longer readable from the
+    // user, and a column that listed it would have to ask `list-grants` per row.
+    override readonly columns = ['userId', 'email', 'accountId', 'created', 'actions'];
 
     protected readonly dateConversion = dateConversion;
 
@@ -92,14 +95,4 @@ export class EamUserListComponent extends EuclidListComponent<User> {
         );
     }
 
-    /** A user's grants as one line: the accounts, and the namespaces within each. */
-    grants(user: User): string {
-        const grants = user.accountGrants ?? [];
-        if (grants.length === 0) {
-            return '-';
-        }
-        return grants
-            .map(grant => grant.accountId + (grant.namespaces?.length ? ' (' + grant.namespaces.join(', ') + ')' : '') + (grant.isAdmin ? ' admin' : ''))
-            .join('; ');
-    }
 }

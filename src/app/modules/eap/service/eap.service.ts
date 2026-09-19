@@ -121,8 +121,15 @@ export class EapService {
         return this.http.call(TARGET, 'set-log-level', {applicationId: applicationId, level: level});
     }
 
+    /**
+     * Puts an application back under the installation's own logging configuration.
+     *
+     * An empty level rather than a `reset-log-level` action, because there is no such action: setting no
+     * level is what removes the override, and the application follows the configuration as it changes
+     * from there on.
+     */
     resetLogLevel(applicationId: string): Observable<unknown> {
-        return this.http.call(TARGET, 'reset-log-level', {applicationId: applicationId});
+        return this.setLogLevel(applicationId, '');
     }
 }
 
