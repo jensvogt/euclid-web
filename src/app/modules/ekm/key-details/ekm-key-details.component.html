@@ -36,7 +36,7 @@
                                 <span>Revoke key</span>
                             </button>
                         }
-                        <mat-divider/>
+                        <mat-divider></mat-divider>
                         <button (click)="deleteKey(key)" mat-menu-item
                                 matTooltip="Scheduled, not immediate. The window is the only chance to notice.">
                             <mat-icon>delete</mat-icon>
@@ -132,10 +132,10 @@
             </mat-card>
 
             <resource-tags (add)="setTag(key)" (edit)="setTag(key, $event)" (remove)="deleteTag(key, $event)"
-                           [resource]="key.name" [tags]="key.tags"/>
+                           [resource]="key.name" [tags]="key.tags"></resource-tags>
         } @else {
             <p class="nothing">{{ (error$ | async) ?? 'Reading the key...' }}</p>
         }
-        <footer-component [lastUpdate]="lastUpdate"/>
+        <footer-component [lastUpdate]="lastUpdate"></footer-component>
     </mat-card-content>
 </mat-card>

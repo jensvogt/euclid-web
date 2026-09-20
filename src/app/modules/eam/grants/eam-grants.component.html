@@ -1,7 +1,7 @@
 <div class="tab-body">
     <div class="tab-actions">
         <p class="note">
-            <ng-content/>
+            <ng-content></ng-content>
         </p>
         @if (principal) {
             <button (click)="grantRole()" [matTooltip]="'Give ' + principalName + ' a role, in a scope'"
@@ -66,6 +66,6 @@
     @if (pageable) {
         <mat-paginator (page)="handlePageEvent($event)" [length]="grants.length" [pageIndex]="pageIndex"
                        [pageSizeOptions]="pageSizeOptions" [pageSize]="pageSize" [showFirstLastButtons]="true"
-                       aria-label="Select page"/>
+                       aria-label="Select page"></mat-paginator>
     }
 </div>

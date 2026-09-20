@@ -27,7 +27,7 @@
                             <mat-icon>create_new_folder</mat-icon>
                             <span>Create a namespace</span>
                         </button>
-                        <mat-divider/>
+                        <mat-divider></mat-divider>
                         <button (click)="deleteAccount(account)" mat-menu-item
                                 matTooltip="Refused while any namespace or grant remains">
                             <mat-icon>delete</mat-icon>
@@ -173,6 +173,6 @@
         } @else {
             <p class="nothing">{{ (error$ | async) ?? 'Reading the account...' }}</p>
         }
-        <footer-component [lastUpdate]="lastUpdate"/>
+        <footer-component [lastUpdate]="lastUpdate"></footer-component>
     </mat-card-content>
 </mat-card>

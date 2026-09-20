@@ -27,7 +27,7 @@
                             <mat-icon>person_add</mat-icon>
                             <span>Add a user</span>
                         </button>
-                        <mat-divider/>
+                        <mat-divider></mat-divider>
                         <button (click)="deleteGroup(group)" mat-menu-item
                                 matTooltip="The users stay; what the group granted them does not">
                             <mat-icon>delete</mat-icon>
@@ -147,6 +147,6 @@
         } @else {
             <p class="nothing">{{ (error$ | async) ?? 'Reading the group...' }}</p>
         }
-        <footer-component [lastUpdate]="lastUpdate"/>
+        <footer-component [lastUpdate]="lastUpdate"></footer-component>
     </mat-card-content>
 </mat-card>
