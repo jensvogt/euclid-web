@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {Observable} from 'rxjs';
+import {map, Observable} from 'rxjs';
 import type {Secret, SecretValue} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
@@ -16,6 +16,27 @@ export class EssService {
     /** One page of secrets. Metadata only - no value comes back from a listing. */
     listSecrets(query: ListQuery): Observable<Page<Secret>> {
         return this.http.page<Secret>(TARGET, 'list-secrets', 'secrets', listPayload(query, 'name'));
+    }
+
+    /**
+     * One secret's metadata, without decrypting it.
+     *
+     * Not {@link getSecret}, which is the action that answers with the value - and that is precisely what
+     * a page reloading itself every minute must not call: it would decrypt a secret over and over to show
+     * when it was last rotated. ESS has no metadata-only lookup, so this narrows a listing to the name and
+     * picks the exact match out of it. A page rather than a single match, because a prefix is a prefix:
+     * `db` also finds `db-password`.
+     */
+    getSecretMetadata(name: string): Observable<Secret> {
+        return this.listSecrets({prefix: name, pageSize: 100}).pipe(
+            map((page: Page<Secret>) => {
+                const secret = page.items.find((candidate: Secret) => candidate.name === name);
+                if (!secret) {
+                    throw new Error(`No secret ${name} in this namespace.`);
+                }
+                return secret;
+            }),
+        );
     }
 
     /** Stores a secret, and answers with its metadata - never the value it was just given. */
@@ -58,6 +79,20 @@ export class EssService {
             payload['keyErn'] = changes.keyErn;
         }
         return this.http.call(TARGET, 'update-secret', payload);
+    }
+
+    /**
+     * Tags a secret, by name.
+     *
+     * Upserted: a tag already there has its value replaced, which is why there is no separate action for
+     * editing one - ESS has no `set-secret-tag`, as EKM has no `set-key-tag`.
+     */
+    addSecretTag(name: string, key: string, value: string): Observable<unknown> {
+        return this.http.call(TARGET, 'add-secret-tag', {name: name, key: key, value: value});
+    }
+
+    deleteSecretTag(name: string, key: string): Observable<unknown> {
+        return this.http.call(TARGET, 'delete-secret-tag', {name: name, key: key});
     }
 
     /** Deletes a secret outright. The value is gone; the key it was under is left alone. */

@@ -1,0 +1,71 @@
+<div class="tab-body">
+    <div class="tab-actions">
+        <p class="note">
+            <ng-content/>
+        </p>
+        @if (principal) {
+            <button (click)="grantRole()" [matTooltip]="'Give ' + principalName + ' a role, in a scope'"
+                    [matTooltipShowDelay]="1000" aria-label="Grant" mat-icon-button>
+                <mat-icon>add</mat-icon>
+            </button>
+        }
+    </div>
+    <table [dataSource]="rows" class="mat-elevation-z8 euclid-table" mat-table>
+        <ng-container matColumnDef="role">
+            <th *matHeaderCellDef mat-header-cell>Role</th>
+            <td *matCellDef="let grant" mat-cell>{{ grant.role }}</td>
+        </ng-container>
+        <ng-container matColumnDef="principal">
+            <th *matHeaderCellDef mat-header-cell matTooltip="The user or group holding it">Principal</th>
+            <td *matCellDef="let grant" mat-cell>
+                <span [matTooltipShowDelay]="1000" [matTooltip]="grant.principal" class="text">{{ holder(grant) }}</span>
+            </td>
+        </ng-container>
+        <ng-container matColumnDef="namespaces">
+            <th *matHeaderCellDef mat-header-cell matTooltip="Where the role applies">Namespaces</th>
+            <td *matCellDef="let grant" mat-cell>{{ scope(grant.namespaces) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="resources">
+            <th *matHeaderCellDef mat-header-cell matTooltip="What the role applies to">Resources</th>
+            <td *matCellDef="let grant" mat-cell>
+                <span [matTooltipShowDelay]="1000" [matTooltip]="scope(grant.resources)"
+                      class="text">{{ scope(grant.resources) }}</span>
+            </td>
+        </ng-container>
+        <ng-container matColumnDef="granted">
+            <th *matHeaderCellDef mat-header-cell>Granted</th>
+            <td *matCellDef="let grant" [matTooltip]="grant.grantedBy ? 'by ' + grant.grantedBy : ''"
+                mat-cell>{{ dateConversion(grant.granted) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+            <th *matHeaderCellDef mat-header-cell>Actions</th>
+            <td *matCellDef="let grant" mat-cell>
+                <button [cdkCopyToClipboard]="grant.grantId" [matTooltipShowDelay]="1000" aria-label="Copy grant id"
+                        mat-icon-button matTooltip="Copy the grant ID">
+                    <mat-icon>content_copy</mat-icon>
+                </button>
+                <button (click)="revokeGrant(grant)" [matTooltipShowDelay]="1000" aria-label="Revoke" mat-icon-button
+                        matTooltip="Take this role away">
+                    <mat-icon>remove_moderator</mat-icon>
+                </button>
+            </td>
+        </ng-container>
+        <tr *matHeaderRowDef="columns" mat-header-row></tr>
+        <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+        <!-- The empty row speaks for the whole list, so it says so rather than "no grants on this page". -->
+        <tr *matNoDataRow class="mat-row">
+            <td [attr.colspan]="columns.length" class="mat-cell">
+                @if (principal) {
+                    Nothing granted directly to {{ principalName }}.
+                } @else {
+                    Nothing is granted in {{ principalName }} at all.
+                }
+            </td>
+        </tr>
+    </table>
+    @if (pageable) {
+        <mat-paginator (page)="handlePageEvent($event)" [length]="grants.length" [pageIndex]="pageIndex"
+                       [pageSizeOptions]="pageSizeOptions" [pageSize]="pageSize" [showFirstLastButtons]="true"
+                       aria-label="Select page"/>
+    }
+</div>

@@ -104,6 +104,11 @@
                                     matTooltip="Ask it to start or stop. The manager acts on it; the state follows.">
                                 <mat-icon>{{ application.state === STATE_RUNNING ? 'stop' : 'play_arrow' }}</mat-icon>
                             </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the application, its instances and its environment"
+                                    routerLink="./application/{{ application.applicationId }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button [matMenuTriggerFor]="appmenu" [matTooltipShowDelay]="1000" aria-label="App menu"
                                     mat-icon-button matTooltip="More...">
                                 <mat-icon>more_vert</mat-icon>

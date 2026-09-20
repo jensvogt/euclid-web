@@ -110,6 +110,95 @@
   white-space: nowrap;
 }
 
+/*
+ * A value the server has not arrived at yet - an application asked to run that is not running, an object
+ * still being assembled. The same badge `list.component.scss` gives such a value in a listing.
+ */
+.unfinished {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff8e1;
+  font-size: small;
+}
+
+/*
+ * Something about this resource worth reading before anything else on the page - a key counting down to
+ * deletion. The same yellow the secret list reveals a value in: a caveat, not a failure.
+ */
+.warning {
+  padding: 8px 12px;
+  margin: 0 0 16px 0;
+  background: #fff8e1;
+  border-radius: 4px;
+}
+
+/*
+ * A value fetched on demand and shown above what describes it - a secret somebody asked to see. The same
+ * row `list.component.scss` gives the secret list, because it is the same thing in the same yellow.
+ */
+.revealed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin: 0 0 16px 0;
+  background: #fff8e1;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+/* A sentence above a table saying what it does and does not show. */
+.note {
+  margin: 0 0 12px 0;
+  opacity: 0.75;
+}
+
+/* Inside a tab, which brings no padding of its own. */
+.tab-body {
+  padding: 16px 0 0 0;
+}
+
+/**
+ * A tab as tall as what is in it.
+ *
+ * Material makes a tab body a scroll container - `.mat-mdc-tab-body-content` is `height: 100%` with
+ * `overflow: auto`, and the active body is `overflow-y: auto` - so a table taller than the box scrolls
+ * inside the tab rather than lengthening the page. That is a scrollbar within a scrollbar, and on a
+ * details page it hides rows behind one nobody expects to have to use.
+ *
+ * `dynamicHeight` on the tab group is Material's own answer to this and the wrong one here: it measures
+ * the content when a tab is switched to and then clips what does not fit, so rows arriving on the next
+ * auto-reload would be cut off rather than merely awkward. Letting the body grow and the page scroll
+ * cannot do that. The wrapper stays `overflow: hidden`, so the tab that is sliding out is still clipped.
+ */
+:host ::ng-deep {
+
+  .mat-mdc-tab-body.mat-mdc-tab-body-active {
+    overflow-y: visible;
+  }
+
+  .mat-mdc-tab-body-content {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/*
+ * The line above a tab's table: what it shows, and the button that adds to it.
+ *
+ * A tab group has no header to hang an action off - the labels are the header - so the action lives
+ * with the sentence that introduces the table instead.
+ */
+.tab-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .note {
+    flex: 1 1 auto;
+  }
+}
+
 .nothing {
   padding: 16px;
   opacity: 0.75;

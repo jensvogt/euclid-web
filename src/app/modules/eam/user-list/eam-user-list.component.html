@@ -99,20 +99,20 @@
                     <ng-container matColumnDef="actions">
                         <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
                         <td *matCellDef="let user" mat-cell>
-                            <button (click)="grantAccess(user)" [matTooltipShowDelay]="1000" aria-label="Grant"
-                                    mat-icon-button matTooltip="Grant access to a namespace">
-                                <mat-icon>add_moderator</mat-icon>
+                            <button [cdkCopyToClipboard]="user.ern" [matTooltipShowDelay]="1000" aria-label="Copy ERN"
+                                    mat-icon-button matTooltip="Copy the ERN">
+                                <mat-icon>link</mat-icon>
+                            </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the user, and what they have been granted"
+                                    routerLink="./user/{{ user.userId }}">
+                                <mat-icon>edit</mat-icon>
                             </button>
                             <button [matMenuTriggerFor]="usermenu" [matTooltipShowDelay]="1000" aria-label="User menu"
                                     mat-icon-button matTooltip="More...">
                                 <mat-icon>more_vert</mat-icon>
                             </button>
                             <mat-menu #usermenu="matMenu" xPosition="before">
-                                <button (click)="revokeAccess(user)" mat-menu-item>
-                                    <mat-icon>remove_moderator</mat-icon>
-                                    <span>Revoke namespace access</span>
-                                </button>
-                                <mat-divider/>
                                 <button (click)="deleteUser(user)" mat-menu-item>
                                     <mat-icon>person_remove</mat-icon>
                                     <span>Delete user</span>

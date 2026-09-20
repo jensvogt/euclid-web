@@ -1,11 +1,10 @@
-import {Component, inject} from '@angular/core';
+import {Component} from '@angular/core';
 import type {User} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {EuclidSessionService} from '../../../services/euclid-session.service';
 import {EamService} from '../service/eam.service';
 import {eamUserListFeature} from './state/eam-user-list.state';
 
@@ -26,9 +25,6 @@ export class EamUserListComponent extends EuclidListComponent<User> {
     override readonly columns = ['userId', 'email', 'accountId', 'created', 'actions'];
 
     protected readonly dateConversion = dateConversion;
-
-    /** The account to offer as the default in the grant dialogs, which is the one the session is in. */
-    private readonly accountId = inject(EuclidSessionService).session?.accountId ?? '';
 
     constructor(private readonly eamService: EamService) {
         super();
@@ -51,39 +47,6 @@ export class EamUserListComponent extends EuclidListComponent<User> {
                 Boolean(values['isAdmin']),
             ),
             'User created',
-        );
-    }
-
-    /** Granting a namespace is per account, so the dialog asks for both rather than assuming the session's. */
-    grantAccess(user: User): void {
-        this.addThen(
-            'Grant ' + user.userId + ' access to a namespace',
-            [
-                {name: 'accountId', label: 'Account', required: true, value: this.accountId},
-                {name: 'namespace', label: 'Namespace', required: true},
-            ],
-            values => this.eamService.grantNamespaceAccess(
-                user.ern,
-                String(values['accountId']),
-                String(values['namespace']),
-            ),
-            'Access granted',
-        );
-    }
-
-    revokeAccess(user: User): void {
-        this.addThen(
-            'Revoke ' + user.userId + "'s access to a namespace",
-            [
-                {name: 'accountId', label: 'Account', required: true, value: this.accountId},
-                {name: 'namespace', label: 'Namespace', required: true},
-            ],
-            values => this.eamService.revokeNamespaceAccess(
-                user.ern,
-                String(values['accountId']),
-                String(values['namespace']),
-            ),
-            'Access revoked',
         );
     }
 

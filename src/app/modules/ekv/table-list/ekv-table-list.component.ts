@@ -56,7 +56,7 @@ export class EkvTableListComponent extends EuclidListComponent<TableDescription>
 
     /** Re-counts one table's items, which the server counts rather than looks up. */
     refreshCount(table: TableDescription): void {
-        this.run(this.ekvService.describeTable(table.name), 'Item count refreshed');
+        this.run(this.ekvService.getTable(table.name), 'Item count refreshed');
     }
 
     deleteTable(table: TableDescription): void {

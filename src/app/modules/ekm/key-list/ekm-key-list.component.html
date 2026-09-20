@@ -97,8 +97,11 @@
                     <ng-container matColumnDef="actions">
                         <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
                         <td *matCellDef="let key" mat-cell>
-                            <button (click)="setDescription(key)" [matTooltipShowDelay]="1000" aria-label="Describe"
-                                    mat-icon-button matTooltip="Change the description">
+                            <!-- `edit` opens the details page here as in every other list; describing the
+                                 key moved into the menu, so the icon means one thing across the UI. -->
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the key, its status and its tags"
+                                    routerLink="./key/{{ key.name }}">
                                 <mat-icon>edit</mat-icon>
                             </button>
                             <button [matMenuTriggerFor]="keymenu" [matTooltipShowDelay]="1000" aria-label="Key menu"
@@ -106,6 +109,11 @@
                                 <mat-icon>more_vert</mat-icon>
                             </button>
                             <mat-menu #keymenu="matMenu" xPosition="before">
+                                <button (click)="setDescription(key)" mat-menu-item
+                                        matTooltip="Change what the key says it is for">
+                                    <mat-icon>notes</mat-icon>
+                                    <span>Describe key</span>
+                                </button>
                                 <button (click)="revokeKey(key)" mat-menu-item
                                         matTooltip="Take the key out of use. What it encrypted stays readable.">
                                     <mat-icon>block</mat-icon>

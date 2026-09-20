@@ -1,0 +1,338 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Application &mdash; {{ applicationId }}</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the application again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eap']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EAP counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (application$ | async; as application) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button (click)="toggleApplication(application)" [matTooltipShowDelay]="1000"
+                            aria-label="Start or stop" mat-icon-button
+                            matTooltip="Ask it to start or stop. The manager acts on it; the state follows.">
+                        <mat-icon>{{ application.state === running ? 'stop' : 'play_arrow' }}</mat-icon>
+                    </button>
+                    <button [matMenuTriggerFor]="appmenu" [matTooltipShowDelay]="1000" aria-label="Application menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #appmenu="matMenu" xPosition="before">
+                        <button (click)="restartApplication(application)" mat-menu-item
+                                matTooltip="Stop and start the instances">
+                            <mat-icon>restart_alt</mat-icon>
+                            <span>Restart</span>
+                        </button>
+                        <button (click)="redeployApplication(application)" mat-menu-item
+                                matTooltip="Point it at a new build of itself">
+                            <mat-icon>rocket_launch</mat-icon>
+                            <span>Redeploy</span>
+                        </button>
+                        <button (click)="setScale(application)" mat-menu-item>
+                            <mat-icon>tune</mat-icon>
+                            <span>Instance count</span>
+                        </button>
+                        <button (click)="setLogLevel(application)" mat-menu-item>
+                            <mat-icon>article</mat-icon>
+                            <span>Log level</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteApplication(application)" mat-menu-item
+                                matTooltip="Deleting does not stop it first">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete application</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Application ID</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.applicationId"
+                                  class="text">{{ application.applicationId }}</span>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.ern"
+                                  class="text ern">{{ application.ern }}</span>
+                            <button [cdkCopyToClipboard]="application.ern" [matTooltipShowDelay]="1000"
+                                    aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What is actually running">State</span>
+                        <span class="value">
+                            <span class="text">{{ application.state || '-' }}</span>
+                            <button (click)="toggleApplication(application)" [matTooltipShowDelay]="1000"
+                                    aria-label="Start or stop" mat-icon-button
+                                    [matTooltip]="application.state === running ? 'Ask it to stop' : 'Ask it to start'">
+                                <mat-icon class="inline-icon">
+                                    {{ application.state === running ? 'stop' : 'play_arrow' }}
+                                </mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What was asked for, which the manager works toward">
+                            Desired state
+                        </span>
+                        <span class="value">
+                            <span [class.unfinished]="application.state !== application.desiredState"
+                                  class="text">{{ application.desiredState || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="How many instances are answering now">Instances</span>
+                        <span class="value"><span class="text">{{ application.instances }}</span></span>
+
+                        <span class="property" matTooltip="What the manager keeps: at least the first, never more than the second">
+                            Min / max
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ application.minInstances }} / {{ application.maxInstances }}</span>
+                            <button (click)="setScale(application)" [matTooltipShowDelay]="1000"
+                                    aria-label="Instance count" mat-icon-button matTooltip="Change the instance count">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Runtime</span>
+                        <span class="value"><span class="text">{{ application.runtime || '-' }}</span></span>
+
+                        <span class="property">Version</span>
+                        <span class="value"><span class="text">{{ application.version || '-' }}</span></span>
+
+                        <span class="property" matTooltip="The bucket the artifact was deployed from">Artifact bucket</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.bucketErn"
+                                  class="text ern">{{ application.bucketErn || '-' }}</span>
+                            @if (application.bucketErn) {
+                                <button [matTooltipShowDelay]="1000"
+                                        [routerLink]="['/esm-bucket-list', 'bucket', application.bucketErn]"
+                                        aria-label="Bucket" mat-icon-button matTooltip="Show the bucket">
+                                    <mat-icon class="inline-icon">open_in_new</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property" matTooltip="The object key of the artifact in that bucket">Artifact</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.artifactKey"
+                                  class="text">{{ application.artifactKey || '-' }}</span>
+                            <button (click)="redeployApplication(application)" [matTooltipShowDelay]="1000"
+                                    aria-label="Redeploy" mat-icon-button matTooltip="Point it at a new build">
+                                <mat-icon class="inline-icon">rocket_launch</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="ESM's checksum of the artifact. A redeploy has to differ from it.">
+                            Checksum
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.md5Sum"
+                                  class="text ern">{{ application.md5Sum || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="The command and its arguments, as they would be typed">
+                            Command
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="commandLine(application)"
+                                  class="text ern">{{ commandLine(application) }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="Empty means it follows the installation's logging configuration">
+                            Log level
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ application.logLevel || 'configured default' }}</span>
+                            <button (click)="setLogLevel(application)" [matTooltipShowDelay]="1000"
+                                    aria-label="Log level" mat-icon-button matTooltip="Change what it logs at">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="The identity it runs as, usually a technical principal euclid made for it">
+                            Runs as
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.userId"
+                                  class="text">{{ application.userId || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="What everything belonging to it on a host is called">
+                            Runtime name
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="application.runtimeName"
+                                  class="text">{{ application.runtimeName || '-' }}</span>
+                        </span>
+
+                        <span class="property">Namespace</span>
+                        <span class="value"><span class="text">{{ application.namespace || 'account root' }}</span></span>
+
+                        <span class="property">Region</span>
+                        <span class="value"><span class="text">{{ application.region || '-' }}</span></span>
+
+                        <span class="property" matTooltip="How long an instance has to answer before it counts as failed">
+                            Ready timeout
+                        </span>
+                        <span class="value"><span class="text">{{ application.readyTimeoutMs }} ms</span></span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(application.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(application.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <!-- What is answering, what it was started with, and what it may reach. -->
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Instances ({{ application.endpoints.length }})">
+                            <div class="tab-body">
+                                <p class="note">
+                                    One row per instance answering for this application. An empty table next to a
+                                    desired state of {{ running }} is an application that cannot start.
+                                </p>
+                                <table [dataSource]="application.endpoints" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="instanceId">
+                                        <th *matHeaderCellDef mat-header-cell>Instance</th>
+                                        <td *matCellDef="let endpoint" mat-cell>
+                                            <span [matTooltipShowDelay]="1000" [matTooltip]="endpoint.instanceId"
+                                                  class="text ern">{{ endpoint.instanceId }}</span>
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="pid">
+                                        <th *matHeaderCellDef mat-header-cell matTooltip="Its process on the host">PID</th>
+                                        <td *matCellDef="let endpoint" mat-cell>{{ endpoint.pid }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="httpPort">
+                                        <th *matHeaderCellDef mat-header-cell matTooltip="The port it answers on">Port</th>
+                                        <td *matCellDef="let endpoint" mat-cell>{{ endpoint.httpPort }}</td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="instanceColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: instanceColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="instanceColumns.length" class="mat-cell">
+                                            Nothing is answering for this application.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Environment ({{ (environment$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        What the instances are started with. A process's environment is fixed when
+                                        it starts, so a change here reaches an instance when it next restarts.
+                                    </p>
+                                    <button (click)="setVariable(application)" [matTooltipShowDelay]="1000"
+                                            aria-label="Add variable" mat-icon-button
+                                            matTooltip="Add an environment variable">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="(environment$ | async) ?? []" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="key">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let variable" mat-cell>{{ variable.key }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Value</th>
+                                        <td *matCellDef="let variable" mat-cell>
+                                            <span [matTooltipShowDelay]="1000" [matTooltip]="variable.value"
+                                                  class="text">{{ variable.value }}</span>
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let variable" mat-cell>
+                                            <button (click)="setVariable(application, variable)"
+                                                    [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                                    matTooltip="Change the value">
+                                                <mat-icon>edit</mat-icon>
+                                            </button>
+                                            <button (click)="deleteVariable(application, variable)"
+                                                    [matTooltipShowDelay]="1000" aria-label="Delete" mat-icon-button
+                                                    matTooltip="Remove the variable">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="environmentColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: environmentColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="environmentColumns.length" class="mat-cell">
+                                            This application was deployed with no environment of its own.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Resources ({{ application.resources.length }})">
+                            <div class="tab-body">
+                                <p class="note">
+                                    The buckets and queues this application was granted, as the names it was
+                                    deployed with resolved to.
+                                </p>
+                                <table [dataSource]="application.resources" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="ern">
+                                        <th *matHeaderCellDef mat-header-cell>ERN</th>
+                                        <td *matCellDef="let resource" mat-cell>
+                                            <span [matTooltipShowDelay]="1000" [matTooltip]="resource"
+                                                  class="text ern">{{ resource }}</span>
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let resource" mat-cell>
+                                            <button [cdkCopyToClipboard]="resource" [matTooltipShowDelay]="1000"
+                                                    aria-label="Copy" mat-icon-button matTooltip="Copy the ERN">
+                                                <mat-icon>content_copy</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="resourceColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: resourceColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="resourceColumns.length" class="mat-cell">
+                                            This application was granted no buckets or queues.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the application...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

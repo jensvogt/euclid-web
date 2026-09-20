@@ -1,0 +1,153 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">User &mdash; {{ userId }}</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the user again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eam-group-list']" aria-label="Groups" mat-icon-button
+                matTooltip="All user groups">
+            <mat-icon>group</mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (user$ | async; as user) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="usermenu" [matTooltipShowDelay]="1000" aria-label="User menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #usermenu="matMenu" xPosition="before">
+                        <button (click)="addToGroup(user)" mat-menu-item>
+                            <mat-icon>group_add</mat-icon>
+                            <span>Add to a group</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteUser(user)" mat-menu-item>
+                            <mat-icon>person_remove</mat-icon>
+                            <span>Delete user</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">User ID</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="user.userId" class="text">{{ user.userId }}</span>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="user.ern" class="text ern">{{ user.ern }}</span>
+                            <button [cdkCopyToClipboard]="user.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Email</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="user.email" class="text">{{ user.email || '-' }}</span>
+                        </span>
+
+                        <span class="property">Account</span>
+                        <span class="value"><span class="text">{{ user.accountId || '-' }}</span></span>
+
+                        <span class="property">Region</span>
+                        <span class="value"><span class="text">{{ user.region || '-' }}</span></span>
+
+                        <span class="property" matTooltip="euclid stores a hash, and never sends the password itself">
+                            Password
+                        </span>
+                        <span class="value"><span class="text">{{ user.password ? 'set' : 'not set' }}</span></span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(user.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(user.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <!--
+              Two answers to one question - what may this user do - so they are two tabs rather than two
+              sections: a grant held directly and a grant held through a group are alternatives to look
+              through, not things to read one after the other.
+            -->
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Grants ({{ (grants$ | async)?.length ?? 0 }})">
+                            <eam-grants (changed)="load()" [grants]="(grants$ | async) ?? []"
+                                        [principalName]="user.userId" [principal]="user.ern">
+                                This user's own grants. What a group gives them is not counted here &mdash; the
+                                Groups tab is where the rest of the answer is.
+                            </eam-grants>
+                        </mat-tab>
+
+                        <mat-tab label="Groups ({{ (groups$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The groups this user is in. Whatever a group was granted, they have too.
+                                    </p>
+                                    <button (click)="addToGroup(user)" [matTooltipShowDelay]="1000"
+                                            aria-label="Add to group" mat-icon-button
+                                            matTooltip="Add this user to a group">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="(groups$ | async) ?? []" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let group" mat-cell>{{ group.name }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="description">
+                                        <th *matHeaderCellDef mat-header-cell>Description</th>
+                                        <td *matCellDef="let group" mat-cell>{{ group.description || '-' }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let group" mat-cell>
+                                            <button [matTooltipShowDelay]="1000"
+                                                    [routerLink]="['/eam-group-list', 'group', group.name]"
+                                                    aria-label="Show group" mat-icon-button
+                                                    matTooltip="Show the group and what it grants">
+                                                <mat-icon>open_in_new</mat-icon>
+                                            </button>
+                                            <button (click)="removeFromGroup(user, group)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Remove" mat-icon-button
+                                                    matTooltip="Take the user out of this group">
+                                                <mat-icon>group_remove</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="groupColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: groupColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="groupColumns.length" class="mat-cell">
+                                            This user is in no group, so the Grants tab is all of it.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the user...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

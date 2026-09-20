@@ -39,8 +39,8 @@ export class EkvService {
      * The count is counted rather than looked up, so this is not free on a large table - which is why the
      * list view shows what `list-tables` already answered with rather than asking again per row.
      */
-    describeTable(name: string): Observable<TableDescription> {
-        return this.http.call<TableDescription>(TARGET, 'describe-table', {name: name});
+    getTable(name: string): Observable<TableDescription> {
+        return this.http.call<TableDescription>(TARGET, 'get-table', {name: name});
     }
 
     /** Deletes a table and every item in it. There is no confirmation at the server and nothing is kept. */

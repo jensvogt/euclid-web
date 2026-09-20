@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {Observable} from 'rxjs';
+import {map, Observable} from 'rxjs';
 import type {Certificate, Key} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
@@ -26,6 +26,18 @@ export class EkmService {
     }
 
     /**
+     * One key, by name. Its description, never its material.
+     *
+     * By name rather than by ERN, which `get-key` also takes: a details page was reached from a listing
+     * that already said which key it meant, and the name is what `delete-key` takes as well.
+     */
+    getKey(name: string): Observable<Key> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-key', {name: name}).pipe(
+            map((response: Record<string, unknown>) => response['key'] as Key),
+        );
+    }
+
+    /**
      * Creates a key.
      *
      * The description is worth supplying: a key is identified by a generated ID that says nothing about what
@@ -49,8 +61,28 @@ export class EkmService {
         return this.http.call(TARGET, 'revoke-key', {ern: ern});
     }
 
+    /**
+     * Changes what a key says it is for, and nothing else.
+     *
+     * An empty description clears it rather than leaving it alone - otherwise there would be no way to
+     * remove one. Neither prolongs nor shortens the key's life.
+     */
     setKeyDescription(ern: string, description: string): Observable<unknown> {
         return this.http.call(TARGET, 'set-key-description', {ern: ern, description: description});
+    }
+
+    /**
+     * Tags a key.
+     *
+     * Upserted: a tag already there has its value replaced, which is why there is no separate action for
+     * editing one - EKM has no `set-key-tag` to distinguish adding from overwriting.
+     */
+    addKeyTag(ern: string, key: string, value: string): Observable<unknown> {
+        return this.http.call(TARGET, 'add-key-tag', {ern: ern, key: key, value: value});
+    }
+
+    deleteKeyTag(ern: string, key: string): Observable<unknown> {
+        return this.http.call(TARGET, 'delete-key-tag', {ern: ern, key: key});
     }
 
     // -- certificates --------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {map, Observable} from 'rxjs';
-import type {Application} from 'euclid-ndk';
+import type {Application, RestartResult} from 'euclid-ndk';
 
 import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
 
@@ -109,6 +109,31 @@ export class EapService {
             payload['version'] = version;
         }
         return this.http.call(TARGET, 'redeploy-application', payload);
+    }
+
+    /**
+     * Cycles the instances.
+     *
+     * Asking, like starting and stopping: the request is recorded and the manager stops and starts the
+     * pool on its next reconcile, so what comes back says how many instances were running when it was
+     * asked rather than how many came back.
+     */
+    restartApplication(applicationId: string): Observable<RestartResult> {
+        return this.http.call<RestartResult>(TARGET, 'restart-application', {applicationId: applicationId});
+    }
+
+    /**
+     * Changes a deployed application, and only what is named.
+     *
+     * The server reads a field that is absent as "leave it alone", which is why this takes the changes
+     * rather than the application: sending a whole application back would set every field to whatever the
+     * page happened to be showing.
+     */
+    updateApplication(applicationId: string, changes: Record<string, unknown>): Observable<Application> {
+        return this.http.call<Application>(TARGET, 'update-application', {
+            applicationId: applicationId,
+            ...changes,
+        });
     }
 
     /** Removes an application. Stop it first - this does not. */

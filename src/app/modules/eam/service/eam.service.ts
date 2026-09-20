@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {map, Observable, tap} from 'rxjs';
-import type {Account, AccessKey, Namespace, User, UserGroup} from 'euclid-ndk';
+import type {Account, AccessKey, Grant, Namespace, Role, User, UserGroup} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
 import {EuclidSessionService} from '../../../services/euclid-session.service';
@@ -28,6 +28,13 @@ export class EamService {
 
     listUsers(query: ListQuery): Observable<Page<User>> {
         return this.http.page<User>(TARGET, 'list-users', 'users', listPayload(query, 'userId'));
+    }
+
+    /** One user, by their ID. */
+    getUser(userId: string): Observable<User> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-user', {userId: userId}).pipe(
+            map((response: Record<string, unknown>) => response['user'] as User),
+        );
     }
 
     /** Creates a user. The account and region default to the session's own, as euclid-ndk's `register` does. */
@@ -91,6 +98,18 @@ export class EamService {
         return this.http.page<UserGroup>(TARGET, 'list-user-groups', 'userGroups', listPayload(query, 'name'));
     }
 
+    /**
+     * One user group, by name.
+     *
+     * By name rather than by ERN, which `get-user-group` also takes: a details page was reached from a
+     * listing that already said which group it meant.
+     */
+    getUserGroup(name: string): Observable<UserGroup> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-user-group', {name: name}).pipe(
+            map((response: Record<string, unknown>) => response['userGroup'] as UserGroup),
+        );
+    }
+
     /** Creates an empty user group. Administrator only. */
     createUserGroup(name: string, description = ''): Observable<unknown> {
         return this.http.call(TARGET, 'create-user-group', {name: name, description: description});
@@ -114,6 +133,13 @@ export class EamService {
 
     listAccounts(query: ListQuery): Observable<Page<Account>> {
         return this.http.page<Account>(TARGET, 'list-accounts', 'accounts', listPayload(query, 'accountId'));
+    }
+
+    /** One account, by its ID. */
+    getAccount(accountId: string): Observable<Account> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-account', {accountId: accountId}).pipe(
+            map((response: Record<string, unknown>) => response['account'] as Account),
+        );
     }
 
     /** Creates an account. Administrator only - account creation is platform-level. */
@@ -144,13 +170,64 @@ export class EamService {
         return this.http.call(TARGET, 'delete-namespace', {accountId: accountId, name: name});
     }
 
-    /** Grants a user access to a namespace. Requires admin rights on the account. */
-    grantNamespaceAccess(user: string, accountId: string, namespace: string): Observable<unknown> {
-        return this.http.call(TARGET, 'grant-namespace-access', {user: user, accountId: accountId, namespace: namespace});
+    // -- roles and grants ----------------------------------------------------------------------
+
+    /**
+     * The roles of this account, and euclid's own.
+     *
+     * `includeBuiltin` because the built-ins are computed rather than stored - they stay current with
+     * whatever actions the installation has - and a dialog that offers a role to grant wants both kinds.
+     */
+    listRoles(includeBuiltin = true): Observable<Role[]> {
+        return this.http.all<Role>(TARGET, 'list-roles', 'roles', {
+            ...listPayload({}, 'name'),
+            includeBuiltin: includeBuiltin,
+        });
     }
 
-    /** Revokes a user's access to a namespace. Requires admin rights on the account. */
-    revokeNamespaceAccess(user: string, accountId: string, namespace: string): Observable<unknown> {
-        return this.http.call(TARGET, 'revoke-namespace-access', {user: user, accountId: accountId, namespace: namespace});
+    /**
+     * Grants: by principal, by role, or - naming neither - everything granted in an account.
+     *
+     * The two questions the model exists to answer are "what may they do" and "who can do this"; naming
+     * neither answers a third, "what is granted here at all", which is what an account overview wants and
+     * what one request per user would otherwise cost.
+     *
+     * A principal's grants are their *own* and not those of the groups they belong to: the two are
+     * different questions, and euclid answers the combined one with `check-permission` rather than here.
+     * Whatever shows this had better say so.
+     */
+    listGrants(options: {principal?: string; role?: string; accountId?: string} = {}): Observable<Grant[]> {
+        return this.http.all<Grant>(TARGET, 'list-grants', 'grants', {
+            principal: options.principal ?? '',
+            role: options.role ?? '',
+            accountId: options.accountId ?? '',
+        });
+    }
+
+    /**
+     * Gives a role to a user or a group, scoped.
+     *
+     * What replaced `grant-namespace-access` in euclid 0.8: access to a namespace is a role granted in
+     * it, so one call says what the principal may do as well as where. `principal` is an ERN - the ERN
+     * is what says whether it is a user or a group - and `["*"]` in either scope means "all of them".
+     */
+    grantRole(role: string, principal: string, namespaces: string[], resources: string[]): Observable<unknown> {
+        return this.http.call(TARGET, 'grant-role', {
+            role: role,
+            principal: principal,
+            accountId: '',
+            namespaces: namespaces,
+            resources: resources,
+        });
+    }
+
+    /**
+     * Removes one grant, by its own id.
+     *
+     * Not by role and principal: the same role may be granted to the same principal twice with different
+     * scope, and revoking has to say which.
+     */
+    revokeRole(grantId: string): Observable<unknown> {
+        return this.http.call(TARGET, 'revoke-role', {grantId: grantId});
     }
 }

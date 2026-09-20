@@ -82,6 +82,11 @@
                                     mat-icon-button matTooltip="Add a user to the group">
                                 <mat-icon>person_add</mat-icon>
                             </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the group, its members and what it grants"
+                                    routerLink="./group/{{ group.name }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button [matMenuTriggerFor]="groupmenu" [matTooltipShowDelay]="1000" aria-label="Group menu"
                                     mat-icon-button matTooltip="More...">
                                 <mat-icon>more_vert</mat-icon>

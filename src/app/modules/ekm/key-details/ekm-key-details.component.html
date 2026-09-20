@@ -1,0 +1,141 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Key &mdash; {{ name }}</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the key again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ekm']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EKM counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (key$ | async; as key) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="keymenu" [matTooltipShowDelay]="1000" aria-label="Key menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #keymenu="matMenu" xPosition="before">
+                        <button (click)="setDescription(key)" mat-menu-item>
+                            <mat-icon>edit</mat-icon>
+                            <span>Describe key</span>
+                        </button>
+                        @if (key.status === available) {
+                            <button (click)="revokeKey(key)" mat-menu-item
+                                    matTooltip="It stops encrypting. Nothing becomes unreadable.">
+                                <mat-icon>block</mat-icon>
+                                <span>Revoke key</span>
+                            </button>
+                        }
+                        <mat-divider/>
+                        <button (click)="deleteKey(key)" mat-menu-item
+                                matTooltip="Scheduled, not immediate. The window is the only chance to notice.">
+                            <mat-icon>delete</mat-icon>
+                            <span>Schedule deletion</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+
+                    @if (key.deletionDate) {
+                        <p class="warning">
+                            This key is scheduled for deletion on {{ dateConversion(key.deletionDate) }}. It still
+                            decrypts until then; afterwards everything it encrypted &mdash; a bucket's objects, a
+                            secret's value &mdash; is unreadable for good.
+                        </p>
+                    }
+
+                    <div class="properties">
+
+                        <span class="property" matTooltip="The ID the server minted. It says nothing about what the key is for.">
+                            Name
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="key.name" class="text">{{ key.name }}</span>
+                            <button [cdkCopyToClipboard]="key.name" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the key ID to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="key.ern" class="text ern">{{ key.ern }}</span>
+                            <button [cdkCopyToClipboard]="key.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What this key protects. The only thing that later answers whether it can go.">
+                            Description
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="key.description"
+                                  class="text">{{ key.description || '-' }}</span>
+                            <button (click)="setDescription(key)" [matTooltipShowDelay]="1000" aria-label="Describe"
+                                    mat-icon-button matTooltip="Change what it says it is for">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Status</span>
+                        <span class="value">
+                            <span [class.unfinished]="key.status !== available" class="text">{{ key.status || '-' }}</span>
+                            @if (key.status === available) {
+                                <button (click)="revokeKey(key)" [matTooltipShowDelay]="1000" aria-label="Revoke"
+                                        mat-icon-button matTooltip="Stop it encrypting. What it wrote stays readable.">
+                                    <mat-icon class="inline-icon">block</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property" matTooltip="Only an available key encrypts">Encrypts</span>
+                        <span class="value">
+                            <span class="text">{{ key.status === available ? 'yes' : 'no' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="Every status decrypts, until a scheduled deletion passes">
+                            Decrypts
+                        </span>
+                        <span class="value"><span class="text">yes</span></span>
+
+                        <span class="property">Algorithm</span>
+                        <span class="value"><span class="text">{{ key.algorithm || '-' }}</span></span>
+
+                        <span class="property">Length</span>
+                        <span class="value"><span class="text">{{ key.length }} bits</span></span>
+
+                        <span class="property" matTooltip="When a scheduled deletion takes effect">Goes for good</span>
+                        <span class="value">
+                            <span class="text">
+                                {{ key.deletionDate ? dateConversion(key.deletionDate) : 'not scheduled' }}
+                            </span>
+                        </span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(key.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(key.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <resource-tags (add)="setTag(key)" (edit)="setTag(key, $event)" (remove)="deleteTag(key, $event)"
+                           [resource]="key.name" [tags]="key.tags"/>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the key...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

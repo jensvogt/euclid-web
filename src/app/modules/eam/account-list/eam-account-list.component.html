@@ -78,6 +78,11 @@
                     <ng-container matColumnDef="actions">
                         <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
                         <td *matCellDef="let account" mat-cell>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the account, its namespaces and what is granted in it"
+                                    routerLink="./account/{{ account.accountId }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button (click)="deleteAccount(account)" [matTooltipShowDelay]="1000" aria-label="Delete"
                                     mat-icon-button matTooltip="Delete the account. It must have nothing left under it.">
                                 <mat-icon>delete</mat-icon>

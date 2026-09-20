@@ -1,0 +1,178 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Account &mdash; {{ accountId }}</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the account again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eam-namespace-list']" aria-label="Namespaces"
+                mat-icon-button matTooltip="All namespaces">
+            <mat-icon>workspaces</mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (account$ | async; as account) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="accountmenu" [matTooltipShowDelay]="1000" aria-label="Account menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #accountmenu="matMenu" xPosition="before">
+                        <button (click)="createNamespace(account)" mat-menu-item>
+                            <mat-icon>create_new_folder</mat-icon>
+                            <span>Create a namespace</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteAccount(account)" mat-menu-item
+                                matTooltip="Refused while any namespace or grant remains">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete account</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Account ID</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="account.accountId"
+                                  class="text">{{ account.accountId }}</span>
+                            @if (current) {
+                                <span class="unfinished" matTooltip="Everything this UI does is scoped to it">
+                                    this session
+                                </span>
+                            }
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="account.ern"
+                                  class="text ern">{{ account.ern }}</span>
+                            <button [cdkCopyToClipboard]="account.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Name</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="account.name"
+                                  class="text">{{ account.name || '-' }}</span>
+                        </span>
+
+                        <span class="property">Description</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="account.description"
+                                  class="text">{{ account.description || '-' }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="How the account is divided up">Namespaces</span>
+                        <span class="value"><span class="text">{{ (namespaces$ | async)?.length ?? 0 }}</span></span>
+
+                        <span class="property" matTooltip="Every grant made in this account, to anyone">Grants</span>
+                        <span class="value"><span class="text">{{ (grants$ | async)?.length ?? 0 }}</span></span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(account.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(account.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <!-- What the account is divided into, and what has been given out within it. -->
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Namespaces ({{ (namespaces$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        A namespace belongs to exactly one account, and everything else is scoped
+                                        by the pair. An account with none has only its root.
+                                    </p>
+                                    <button (click)="createNamespace(account)" [matTooltipShowDelay]="1000"
+                                            aria-label="Create namespace" mat-icon-button
+                                            matTooltip="Create a namespace in this account">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="(namespaces$ | async) ?? []" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let namespace" mat-cell>
+                                            {{ namespace.name }}
+                                            @if (current && namespace.name === activeNamespace) {
+                                                <span class="unfinished" matTooltip="The session is scoped to it">
+                                                    current
+                                                </span>
+                                            }
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="description">
+                                        <th *matHeaderCellDef mat-header-cell>Description</th>
+                                        <td *matCellDef="let namespace" mat-cell>{{ namespace.description || '-' }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="ern">
+                                        <th *matHeaderCellDef mat-header-cell>ERN</th>
+                                        <td *matCellDef="let namespace" mat-cell>
+                                            <span [matTooltipShowDelay]="1000" [matTooltip]="namespace.ern"
+                                                  class="text ern">{{ namespace.ern }}</span>
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="created">
+                                        <th *matHeaderCellDef mat-header-cell>Created</th>
+                                        <td *matCellDef="let namespace" mat-cell>
+                                            {{ dateConversion(namespace.created) }}
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let namespace" mat-cell>
+                                            <button [cdkCopyToClipboard]="namespace.ern" [matTooltipShowDelay]="1000"
+                                                    aria-label="Copy ERN" mat-icon-button matTooltip="Copy the ERN">
+                                                <mat-icon>content_copy</mat-icon>
+                                            </button>
+                                            <button (click)="deleteNamespace(account, namespace)"
+                                                    [matTooltipShowDelay]="1000" aria-label="Delete" mat-icon-button
+                                                    matTooltip="Delete the namespace. Refused while a grant in it remains.">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="namespaceColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: namespaceColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="namespaceColumns.length" class="mat-cell">
+                                            This account has no namespaces, so everything in it is at its root.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Grants ({{ (grants$ | async)?.length ?? 0 }})">
+                            <eam-grants (changed)="load()" [grants]="(grants$ | async) ?? []"
+                                        [pageable]="true" [principalName]="account.accountId">
+                                Everything granted in this account, to anyone. Granting is done from the user or
+                                the group that would hold it; this is where to see the whole of it.
+                            </eam-grants>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the account...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>
