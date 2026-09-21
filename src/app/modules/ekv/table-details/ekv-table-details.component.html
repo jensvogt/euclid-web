@@ -1,0 +1,168 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Table &mdash; {{ name }}</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the table and this page of items again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ekv']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EKV counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (table$ | async; as table) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="tablemenu" [matTooltipShowDelay]="1000" aria-label="Table menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #tablemenu="matMenu" xPosition="before">
+                        <button (click)="refreshCount()" mat-menu-item
+                                matTooltip="The server counts the items rather than looking the figure up">
+                            <mat-icon>
+                                <span class="material-symbols-outlined">pin</span>
+                            </mat-icon>
+                            <span>Count the items again</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteTable(table)" mat-menu-item
+                                matTooltip="The table and every item in it. Nothing is kept.">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete table</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Name</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="table.name" class="text">{{ table.name }}</span>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="table.ern" class="text ern">{{ table.ern }}</span>
+                            <button [cdkCopyToClipboard]="table.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="Fixed when the table was created, and not changeable after">
+                            Partition key
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ table.partitionKey }} ({{ table.partitionKeyType }})</span>
+                        </span>
+
+                        <span class="property" matTooltip="A table without one cannot be queried by sort key">
+                            Sort key
+                        </span>
+                        <span class="value">
+                            <span class="text">
+                                {{ table.sortKey ? table.sortKey + ' (' + table.sortKeyType + ')' : 'none' }}
+                            </span>
+                        </span>
+
+                        <span class="property" matTooltip="Counted rather than looked up, so not free on a large table">
+                            Items
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ table.itemCount }}</span>
+                            <button (click)="refreshCount()" [matTooltipShowDelay]="1000" aria-label="Count"
+                                    mat-icon-button matTooltip="Count them again">
+                                <mat-icon class="inline-icon">refresh</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(table.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(table.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Items ({{ total$ | async }})</span>
+                </mat-card-header>
+                <mat-card-content>
+                    <p class="note">
+                        A scan, not a query: this page has no key to narrow by, so it walks the table a page at
+                        a time. An item is a free-form map, so what is not part of the key is shown as JSON.
+                    </p>
+                    <table [dataSource]="(items$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
+                        <ng-container matColumnDef="partition">
+                            <th *matHeaderCellDef mat-header-cell
+                                [matTooltip]="'The partition key: ' + table.partitionKey">{{ table.partitionKey }}
+                            </th>
+                            <td *matCellDef="let item" mat-cell>
+                                <span [matTooltipShowDelay]="1000" [matTooltip]="keyValue(item, table.partitionKey)"
+                                      class="text">{{ keyValue(item, table.partitionKey) }}</span>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="sort">
+                            <th *matHeaderCellDef mat-header-cell
+                                [matTooltip]="'The sort key: ' + table.sortKey">{{ table.sortKey }}
+                            </th>
+                            <td *matCellDef="let item" mat-cell>
+                                <span [matTooltipShowDelay]="1000" [matTooltip]="keyValue(item, table.sortKey)"
+                                      class="text">{{ keyValue(item, table.sortKey) }}</span>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="attributes">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Everything except the key">Attributes</th>
+                            <td *matCellDef="let item" mat-cell>
+                                <span [matTooltipShowDelay]="1000" [matTooltip]="attributesOf(item, table)"
+                                      class="text ern">{{ attributesOf(item, table) }}</span>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="created">
+                            <th *matHeaderCellDef mat-header-cell>Created</th>
+                            <td *matCellDef="let item" mat-cell>{{ dateConversion(item.created) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="modified">
+                            <th *matHeaderCellDef mat-header-cell>Modified</th>
+                            <td *matCellDef="let item" mat-cell>{{ dateConversion(item.modified) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="actions">
+                            <th *matHeaderCellDef mat-header-cell>Actions</th>
+                            <td *matCellDef="let item" mat-cell>
+                                <button [cdkCopyToClipboard]="attributesOf(item, table)" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the attributes as JSON">
+                                    <mat-icon>content_copy</mat-icon>
+                                </button>
+                                <button (click)="deleteItem(table, item)" [matTooltipShowDelay]="1000"
+                                        aria-label="Delete" mat-icon-button matTooltip="Delete this item">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </td>
+                        </ng-container>
+                        <tr *matHeaderRowDef="itemColumns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: itemColumns;" mat-row></tr>
+                        <tr *matNoDataRow class="mat-row">
+                            <td [attr.colspan]="itemColumns.length" class="mat-cell">Nothing in this table.</td>
+                        </tr>
+                    </table>
+                    <mat-paginator (page)="handlePageEvent($event)" [length]="(total$ | async) ?? 0"
+                                   [pageIndex]="pageIndex" [pageSizeOptions]="pageSizeOptions" [pageSize]="pageSize"
+                                   [showFirstLastButtons]="true" aria-label="Select page"/>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the table...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

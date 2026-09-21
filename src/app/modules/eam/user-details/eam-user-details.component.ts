@@ -19,6 +19,7 @@ import {FooterComponent} from '../../../shared/footer/footer.component';
 import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {EamGrantsComponent} from '../grants/eam-grants.component';
+import {PASSWORD_FIELDS, withMatchingPassword} from '../password/change-password';
 import {EamService} from '../service/eam.service';
 import {eamUserDetailsActions, eamUserDetailsSelectors} from './state/eam-user-details.state';
 
@@ -100,6 +101,17 @@ export class EamUserDetailsComponent extends EuclidResourceComponent implements 
     }
 
     // -- the user ------------------------------------------------------------------------------------
+
+    /** Sets a new password. The old one is not asked for: this is an administrator changing somebody's. */
+    changePassword(user: User): void {
+        this.addThen(
+            'Change the password for ' + user.userId,
+            PASSWORD_FIELDS,
+            values => withMatchingPassword(values, password => this.eamService.changePassword(user.userId, password)),
+            'Password changed',
+            'Change',
+        );
+    }
 
     /**
      * Deletes the user and leaves for the list.

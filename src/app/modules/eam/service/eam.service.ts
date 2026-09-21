@@ -54,6 +54,22 @@ export class EamService {
         return this.http.call(TARGET, 'delete-user', {userId: userId});
     }
 
+    /**
+     * Replaces a user's password.
+     *
+     * **The action name here is a guess and the one thing to check.** euclid-ndk 0.10.0 wraps no
+     * password-changing action at all - `password` appears in it only on `register`, which creates a user,
+     * and on the login builder - so there was nothing to copy the spelling from. `change-password` follows
+     * `change-namespace`, and the payload follows `register`'s `{userId, password}`; if the server calls it
+     * something else, this line is the only thing that changes.
+     *
+     * Asking the gateway does not settle it: it authenticates before it dispatches, so an action that
+     * exists and one that does not both answer 401 to an anonymous request.
+     */
+    changePassword(userId: string, password: string): Observable<unknown> {
+        return this.http.call(TARGET, 'change-password', {userId: userId, password: password});
+    }
+
     // -- namespace scoping ---------------------------------------------------------------------
 
     /**

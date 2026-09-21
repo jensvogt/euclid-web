@@ -5,6 +5,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
+import {PASSWORD_FIELDS, withMatchingPassword} from '../password/change-password';
 import {EamService} from '../service/eam.service';
 import {eamUserListFeature} from './state/eam-user-list.state';
 
@@ -47,6 +48,17 @@ export class EamUserListComponent extends EuclidListComponent<User> {
                 Boolean(values['isAdmin']),
             ),
             'User created',
+        );
+    }
+
+    /** Sets a new password. The old one is not asked for: this is an administrator changing somebody's. */
+    changePassword(user: User): void {
+        this.addThen(
+            'Change the password for ' + user.userId,
+            PASSWORD_FIELDS,
+            values => withMatchingPassword(values, password => this.eamService.changePassword(user.userId, password)),
+            'Password changed',
+            'Change',
         );
     }
 

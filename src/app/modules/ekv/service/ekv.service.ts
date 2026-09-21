@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
-import type {Item, TableDescription} from 'euclid-ndk';
+import type {Item, ScanResult, TableDescription} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
 
@@ -57,8 +57,8 @@ export class EkvService {
      * `total` is how many it walked past. Expensive by nature on a large table, as it is in any key-value
      * store.
      */
-    scan(table: string, pageSize = 10, pageIndex = 0): Observable<{items?: Item[]; count?: number; total?: number}> {
-        return this.http.call(TARGET, 'scan', {table: table, pageSize: pageSize, pageIndex: pageIndex});
+    scan(table: string, pageSize = 10, pageIndex = 0): Observable<ScanResult> {
+        return this.http.call<ScanResult>(TARGET, 'scan', {table: table, pageSize: pageSize, pageIndex: pageIndex});
     }
 
     getItem(table: string, key: Record<string, unknown>): Observable<Item> {

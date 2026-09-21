@@ -23,6 +23,11 @@
                         <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #usermenu="matMenu" xPosition="before">
+                        <button (click)="changePassword(user)" mat-menu-item
+                                matTooltip="Set a new password. The old one is not needed.">
+                            <mat-icon>password</mat-icon>
+                            <span>Change password</span>
+                        </button>
                         <button (click)="addToGroup(user)" mat-menu-item>
                             <mat-icon>group_add</mat-icon>
                             <span>Add to a group</span>
@@ -65,7 +70,14 @@
                         <span class="property" matTooltip="euclid stores a hash, and never sends the password itself">
                             Password
                         </span>
-                        <span class="value"><span class="text">{{ user.password ? 'set' : 'not set' }}</span></span>
+                        <span class="value">
+                            <span class="text">{{ user.password ? 'set' : 'not set' }}</span>
+                            <button (click)="changePassword(user)" [matTooltipShowDelay]="1000"
+                                    aria-label="Change password" mat-icon-button
+                                    matTooltip="Set a new password. The old one is not needed.">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
 
                         <span class="property">Created</span>
                         <span class="value"><span class="text">{{ dateConversion(user.created) }}</span></span>

@@ -283,6 +283,21 @@ export class EsmService {
     }
 
     /**
+     * Throws away a multipart upload that will not be finished.
+     *
+     * New in euclid 0.11, and what a cancelled upload needed: until then the parts already sent stayed in
+     * the server's scratch directory under an ID nothing would ever refer to again. Discards them, and -
+     * for a first upload - the object row that was seeded for bytes which never arrived. A re-upload's row
+     * is left alone: that row is the previous version of the object, still published and still readable,
+     * and not this upload's to delete.
+     *
+     * An upload that has already completed answers 404, because there is no longer any such upload.
+     */
+    abortUpload(uploadId: string): Observable<unknown> {
+        return this.http.call(TARGET, 'abort-upload', {uploadId: uploadId});
+    }
+
+    /**
      * Assembles the parts into the object.
      *
      * Retried like a part is, and for a stronger reason: failing here discards every part already

@@ -30,7 +30,7 @@
     "@ngrx/store": "^21.1.1",
     "@ngrx/store-devtools": "^21.1.1",
     "echarts": "^6.1.0",
-    "euclid-ndk": "^0.10.0",
+    "euclid-ndk": "^0.11.0",
     "ngx-echarts": "^21.0.0",
     "rxjs": "~7.8.2",
     "sass": "^1.101.0",

@@ -39,7 +39,7 @@
                 <mat-icon>vpn_key</mat-icon>
                 <span>Access keys</span>
             </button>
-            <mat-divider/>
+            <mat-divider></mat-divider>
             <button (click)="autoReload()" mat-menu-item>
                 <mat-icon>
                     <span class="material-symbols-outlined">hourglass</span>
@@ -113,6 +113,12 @@
                                 <mat-icon>more_vert</mat-icon>
                             </button>
                             <mat-menu #usermenu="matMenu" xPosition="before">
+                                <button (click)="changePassword(user)" mat-menu-item
+                                        matTooltip="Set a new password. The old one is not needed.">
+                                    <mat-icon>password</mat-icon>
+                                    <span>Change password</span>
+                                </button>
+                                <mat-divider/>
                                 <button (click)="deleteUser(user)" mat-menu-item>
                                     <mat-icon>person_remove</mat-icon>
                                     <span>Delete user</span>

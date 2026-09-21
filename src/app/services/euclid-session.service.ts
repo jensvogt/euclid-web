@@ -36,13 +36,29 @@ const SESSION_KEY = 'euclid.session';
  * The logged-in session: the bearer token and the identity every request is made under.
  *
  * **Why a bearer token and not a signature.** euclid accepts either - `HttpActionServer::Authenticate`
- * takes a SigV4 or RFC 9421 signature, or an `Authorization: Bearer` token, for every action - but only
- * one of the two is available here. Both signing schemes cover the `host` header (SigV4 signs it
- * directly, RFC 9421 derives `@authority` from it), and `Host` is a forbidden header in the browser: the
- * fetch layer sets it and script can neither read nor write it. A signature made over a guess at what
- * the browser will send is a signature that fails to verify for reasons the UI cannot see. The token
- * has no such problem, so this is the one credential a browser can present - which is also why the
- * secret access key is dropped on the floor rather than stored.
+ * takes a SigV4 or RFC 9421 signature, or an `Authorization: Bearer` token, for every action - and this
+ * chooses the token. Not for want of credentials: `eam:login` answers with an `accessKeyId` and a
+ * `secretAccessKey`, and {@link LoginResponse} declares both. The secret is dropped rather than stored.
+ *
+ * Three things decide it, and none of them is that a browser cannot sign:
+ *
+ * 1. *The secret would have to live here.* A signing key in `sessionStorage` is a credential an XSS can
+ *    take and use from anywhere until somebody revokes the key; a token expires on its own. That is the
+ *    trade, and it is the part that is a decision rather than a task.
+ * 2. *The signature covers what a proxy rewrites.* RFC 9421's covered components are fixed and include
+ *    `@path` and `@authority`. This UI posts to a same-origin `/euclid/` - which exists so the
+ *    `x-euclid-*` headers avoid a CORS preflight the gateway answers with 404 - and the proxy in front
+ *    strips the prefix, so the gateway sees `/`. A signer here would have to sign what the gateway will
+ *    receive rather than what the browser sent, which means the deployment's rewrite rules baked into the
+ *    client. They can change; a 401 does not say that they did.
+ * 3. *euclid-ndk cannot do it for us.* It is imported `import type` only - erased at compile time - and
+ *    its runtime signs with `node:crypto`. Signing here means reimplementing RFC 9421 on WebCrypto,
+ *    against a component list that is a wire format shared with the server.
+ *
+ * None of that is fatal, and a signature would end the one real problem a token has: it runs out, which
+ * a multipart upload of a few thousand parts can outlive - see
+ * {@link import("../modules/esm/object-upload/esm-object-upload.component.js").EsmObjectUploadDialog},
+ * which asks for the password again instead.
  *
  * **Where it is kept.** `sessionStorage`, not `localStorage`: a bearer token is a credential, and one
  * scoped to the tab that obtained it outlives a reload without outliving the browser. Settings that are

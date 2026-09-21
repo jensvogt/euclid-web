@@ -11,11 +11,12 @@ import {MatButton} from '@angular/material/button';
 import {MatFormField, MatHint, MatLabel} from '@angular/material/form-field';
 import {MatInput} from '@angular/material/input';
 import {MatProgressBar} from '@angular/material/progress-bar';
+import {MatSnackBar} from '@angular/material/snack-bar';
 import {Subscription} from 'rxjs';
 import type {CreateUploadResult, StoredObject} from 'euclid-ndk';
 
 import {byteConversion} from '../../../shared/byte-utils.component';
-import {isUnauthorized} from '../../../services/euclid-http.service';
+import {EuclidError, isUnauthorized} from '../../../services/euclid-http.service';
 import {EuclidSessionService} from '../../../services/euclid-session.service';
 import {EsmService, isMultipart, PART_SIZE, partCountOf, UPLOAD_CONCURRENCY} from '../service/esm.service';
 
@@ -89,6 +90,7 @@ export class EsmObjectUploadDialog implements OnDestroy {
     protected readonly partSizeLabel = byteConversion(PART_SIZE);
 
     private readonly esmService = inject(EsmService);
+    private readonly snackBar = inject(MatSnackBar);
     private readonly session = inject(EuclidSessionService);
 
     /** Whether the key still follows the file's name, which it stops doing once the user edits it. */
@@ -105,8 +107,17 @@ export class EsmObjectUploadDialog implements OnDestroy {
     ) {
     }
 
+    /**
+     * Whatever closed this, an upload still open is one nothing is driving any more.
+     *
+     * Cancelling is not the only way out: Material closes a dialog on navigation, so leaving the page
+     * mid-upload destroys this component without going through {@link cancel}. Both ends up here, and a
+     * completed upload has already forgotten its ID - see {@link assemble} - so there is nothing to
+     * abort after a success.
+     */
     ngOnDestroy(): void {
         this.running?.unsubscribe();
+        this.abandon();
     }
 
     get valid(): boolean {
@@ -262,16 +273,38 @@ export class EsmObjectUploadDialog implements OnDestroy {
     }
 
     /**
-     * Stops, whether or not anything is in flight.
+     * Stops, and tells the server to throw away what was sent.
      *
-     * Abandoning a multipart upload leaves the parts already sent in the server's scratch directory for
-     * that upload ID, which nothing here will ever refer to again. That is what the other clients leave
-     * behind on a failure too - there is no action to take one back - and it is a cost the server
-     * already expects to carry.
+     * An upload nothing is driving any more is exactly what `abort-upload` is for - new in euclid 0.11,
+     * and what this needed. Until then the parts already staged stayed under an ID nothing would refer to
+     * again, and so did the object row seeded for bytes that never arrived, which is what otherwise reads
+     * as an object stuck at `UPLOADING`.
+     *
+     * The dialog closes either way. A 404 means the upload completed in the meantime and there is nothing
+     * to abort, which is not worth saying; anything else is, because it means the server is still holding
+     * something this page asked it to let go of.
      */
     cancel(): void {
         this.running?.unsubscribe();
+        this.abandon();
         this.dialogRef.close();
+    }
+
+    /** Tells the server to throw away an upload that is still open, once. */
+    private abandon(): void {
+        if (!this.uploadId) {
+            return;
+        }
+        const uploadId = this.uploadId;
+        this.uploadId = '';
+
+        this.esmService.abortUpload(uploadId).subscribe({
+            error: (error: Error) => {
+                if (!(error instanceof EuclidError) || error.status !== 404) {
+                    this.snackBar.open(error.message, 'Not cleaned up', {duration: 10000});
+                }
+            },
+        });
     }
 
     private sendParts(): void {
@@ -289,7 +322,12 @@ export class EsmObjectUploadDialog implements OnDestroy {
     private assemble(): void {
         this.phase = 'uploading';
         this.track(this.esmService.completeUpload(this.uploadId).subscribe({
-            next: (stored: StoredObject) => this.dialogRef.close(stored),
+            // The ID is forgotten before the dialog closes: the upload is the server's now, and what is
+            // left of this component must not try to abort something that has already been assembled.
+            next: (stored: StoredObject) => {
+                this.uploadId = '';
+                this.dialogRef.close(stored);
+            },
             error: (error: Error) => this.stopped(error),
         }));
     }

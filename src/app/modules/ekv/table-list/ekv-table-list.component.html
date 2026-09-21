@@ -97,6 +97,11 @@
                                     <span class="material-symbols-outlined">pin</span>
                                 </mat-icon>
                             </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the table and the items in it"
+                                    routerLink="./table/{{ table.name }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
                             <button (click)="deleteTable(table)" [matTooltipShowDelay]="1000" aria-label="Delete"
                                     mat-icon-button matTooltip="Delete the table and every item in it">
                                 <mat-icon>delete</mat-icon>
