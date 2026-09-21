@@ -108,8 +108,8 @@ again, which is honest: nothing was recorded while nobody was looking.
 ## Building
 
 ```bash
-npm run build                               # development
-npm run build -- --configuration production # production, ~227 kB transferred
+npm run build      # development
+npm run build:prod # production, ~227 kB transferred
 ```
 
 Each module is a lazy chunk, so the initial bundle is the shell plus whatever is opened.
