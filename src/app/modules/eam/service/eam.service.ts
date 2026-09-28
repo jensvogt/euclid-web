@@ -55,19 +55,25 @@ export class EamService {
     }
 
     /**
-     * Replaces a user's password.
+     * Replaces a user's password, which means proving you know the one being replaced.
      *
-     * `newPassword` rather than `register`'s `password`, which is what this was first written with: the
-     * server refused that with "newPassword is required", and its own refusal is the only thing that says
-     * so. euclid-ndk wraps no password-changing action even at 0.11.0 - `password` appears in it only on
-     * `register` and on the login builder - so there is nothing here to copy the spelling from, and asking
-     * the gateway settles nothing either, since it authenticates before it dispatches and answers 401 to
-     * an anonymous request whether or not the action exists.
+     * The shape here was read off the server's own refusals one at a time, because there is nothing to copy
+     * it from: euclid-ndk wraps no password-changing action even at 0.11.0 - `password` appears in it only
+     * on `register` and on the login builder - and asking the gateway settles nothing, since it
+     * authenticates before it dispatches and answers 401 to an anonymous request whether or not the action
+     * exists. `{userId, password}` after `register` was refused 400 "newPassword is required"; sending only
+     * the new one was then refused 403 "The old password is not correct".
      *
-     * The name of the action is settled, though: a 400 naming a field is a request that was dispatched.
+     * Which makes this a user changing their own password rather than an administrator resetting one, and
+     * `oldPassword` the one part still inferred rather than quoted - it is what pairs with the
+     * `newPassword` the server did name.
      */
-    changePassword(userId: string, newPassword: string): Observable<unknown> {
-        return this.http.call(TARGET, 'change-password', {userId: userId, newPassword: newPassword});
+    changePassword(userId: string, oldPassword: string, newPassword: string): Observable<unknown> {
+        return this.http.call(TARGET, 'change-password', {
+            userId: userId,
+            oldPassword: oldPassword,
+            newPassword: newPassword,
+        });
     }
 
     // -- namespace scoping ---------------------------------------------------------------------

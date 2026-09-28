@@ -102,12 +102,13 @@ export class EamUserDetailsComponent extends EuclidResourceComponent implements 
 
     // -- the user ------------------------------------------------------------------------------------
 
-    /** Sets a new password. The old one is not asked for: this is an administrator changing somebody's. */
+    /** Sets a new password. The current one is asked for too - the server checks it whoever is asking. */
     changePassword(user: User): void {
         this.addThen(
             'Change the password for ' + user.userId,
             PASSWORD_FIELDS,
-            values => withMatchingPassword(values, password => this.eamService.changePassword(user.userId, password)),
+            values => withMatchingPassword(values, (oldPassword, newPassword) =>
+                this.eamService.changePassword(user.userId, oldPassword, newPassword)),
             'Password changed',
             'Change',
         );
