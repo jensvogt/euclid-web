@@ -45,7 +45,7 @@
             }
             <div class="table-container">
                 <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
-                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
                     <ng-container matColumnDef="accessKeyId">
                         <th *matHeaderCellDef mat-header-cell matTooltip="The key ID a signature is made under">Key ID</th>
                         <td *matCellDef="let key" mat-cell>

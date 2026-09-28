@@ -54,6 +54,31 @@
   white-space: nowrap;
 }
 
+/*
+ * Every column as wide as what is in it, for the lists that ask for it with `sized-to-content` on the
+ * table. Opt-in rather than the rule, because it only reads well where the values are short and of a
+ * settled length - a listing of object keys wants the room shared out instead.
+ *
+ * `width: 1px` is not a width but a request to be as narrow as possible - a cell is never laid out below
+ * its content - and `nowrap` is what stops that narrowness being taken as permission to wrap a value onto
+ * a second line, which would make one row twice the height of its neighbours.
+ *
+ * The table still spans the card, so the slack has to go somewhere: it goes to the first column, which on
+ * every one of these lists is the name the row is about and the one value with no bound on its length. By
+ * position rather than by name, since each module calls it something else.
+ */
+.euclid-table.sized-to-content th,
+.euclid-table.sized-to-content td {
+  width: 1px;
+  white-space: nowrap;
+  padding-right: 16px;
+}
+
+.euclid-table.sized-to-content th:first-child,
+.euclid-table.sized-to-content td:first-child {
+  width: auto;
+}
+
 .ern {
   font-family: monospace;
   font-size: small;

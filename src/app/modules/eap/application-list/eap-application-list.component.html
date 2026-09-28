@@ -52,7 +52,7 @@
             </mat-card-actions>
             <div class="table-container">
                 <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
-                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
                     <ng-container matColumnDef="applicationId">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Application ID">Application</th>
                         <td *matCellDef="let application" mat-cell>
@@ -77,17 +77,22 @@
                     </ng-container>
                     <ng-container matColumnDef="state">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header
-                            matTooltip="What it is doing now, as against what was asked of it">State
+                            matTooltip="What is actually running: RUNNING exactly when an instance answers">State
                         </th>
-                        <td *matCellDef="let application" mat-cell
-                            [matTooltip]="'Desired: ' + application.desiredState">{{ application.state }}</td>
+                        <td *matCellDef="let application" mat-cell>{{ application.state }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="desiredState">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="What was asked of it. The state follows, once the manager has acted.">Desired
+                        </th>
+                        <td *matCellDef="let application" mat-cell>{{ application.desiredState }}</td>
                     </ng-container>
                     <ng-container matColumnDef="instances">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header
-                            matTooltip="Instances answering, and the range it may scale within">Instances
+                            matTooltip="Instances answering, over the largest the pool goes">Instances
                         </th>
                         <td *matCellDef="let application" mat-cell [matTooltip]="endpoints(application)">
-                            {{ application.instances }} ({{ application.minInstances }}&ndash;{{ application.maxInstances }})
+                            {{ application.instances }}/{{ application.maxInstances }}
                         </td>
                     </ng-container>
                     <ng-container matColumnDef="logLevel">

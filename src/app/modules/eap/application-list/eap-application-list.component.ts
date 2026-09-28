@@ -27,7 +27,9 @@ import {eapApplicationListFeature} from './state/eap-application-list.state';
 export class EapApplicationListComponent extends EuclidListComponent<Application> {
 
     override readonly feature: ListFeature<Application> = eapApplicationListFeature;
-    override readonly columns = ['applicationId', 'runtime', 'version', 'state', 'instances', 'logLevel', 'modified', 'actions'];
+    override readonly columns = [
+        'applicationId', 'runtime', 'version', 'state', 'desiredState', 'instances', 'logLevel', 'modified', 'actions',
+    ];
 
     protected readonly dateConversion = dateConversion;
     protected readonly STATE_RUNNING = STATE_RUNNING;

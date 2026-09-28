@@ -57,17 +57,17 @@ export class EamService {
     /**
      * Replaces a user's password.
      *
-     * **The action name here is a guess and the one thing to check.** euclid-ndk 0.10.0 wraps no
-     * password-changing action at all - `password` appears in it only on `register`, which creates a user,
-     * and on the login builder - so there was nothing to copy the spelling from. `change-password` follows
-     * `change-namespace`, and the payload follows `register`'s `{userId, password}`; if the server calls it
-     * something else, this line is the only thing that changes.
+     * `newPassword` rather than `register`'s `password`, which is what this was first written with: the
+     * server refused that with "newPassword is required", and its own refusal is the only thing that says
+     * so. euclid-ndk wraps no password-changing action even at 0.11.0 - `password` appears in it only on
+     * `register` and on the login builder - so there is nothing here to copy the spelling from, and asking
+     * the gateway settles nothing either, since it authenticates before it dispatches and answers 401 to
+     * an anonymous request whether or not the action exists.
      *
-     * Asking the gateway does not settle it: it authenticates before it dispatches, so an action that
-     * exists and one that does not both answer 401 to an anonymous request.
+     * The name of the action is settled, though: a 400 naming a field is a request that was dispatched.
      */
-    changePassword(userId: string, password: string): Observable<unknown> {
-        return this.http.call(TARGET, 'change-password', {userId: userId, password: password});
+    changePassword(userId: string, newPassword: string): Observable<unknown> {
+        return this.http.call(TARGET, 'change-password', {userId: userId, newPassword: newPassword});
     }
 
     // -- namespace scoping ---------------------------------------------------------------------
