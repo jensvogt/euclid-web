@@ -1,0 +1,195 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Message &mdash; {{ messageId }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/ens-topic-list', 'messages', topicErn]"
+                aria-label="Messages" mat-icon-button matTooltip="Back to the topic's messages">
+            <mat-icon>list</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the message again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ens']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ENS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (message$ | async; as message) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button (click)="resend(message)" [matTooltipShowDelay]="1000" aria-label="Resend"
+                            mat-icon-button
+                            matTooltip="Fan this message out again, to every subscriber the topic has now">
+                        <mat-icon>
+                            <span class="material-symbols-outlined">forward_to_inbox</span>
+                        </mat-icon>
+                    </button>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Message ID</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.messageId"
+                                  class="text ern">{{ message.messageId }}</span>
+                            <button [cdkCopyToClipboard]="message.messageId" [matTooltipShowDelay]="1000"
+                                    aria-label="Copy" mat-icon-button matTooltip="Copy the message ID to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.ern"
+                                  class="text ern">{{ message.ern || '-' }}</span>
+                            @if (message.ern) {
+                                <button [cdkCopyToClipboard]="message.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="inline-icon">content_copy</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property">Topic</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.topicErn"
+                                  class="text">{{ topicName }}</span>
+                            <button [matTooltipShowDelay]="1000"
+                                    [routerLink]="['/ens-topic-list', 'topic', message.topicErn]"
+                                    aria-label="Topic" mat-icon-button matTooltip="Show the topic it was published to">
+                                <mat-icon class="inline-icon">open_in_new</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property"
+                              matTooltip="The topic's account of the fan-out, not any one subscriber's">Status</span>
+                        <span class="value"><span class="text">{{ message.status || '-' }}</span></span>
+
+                        <span class="property">Content type</span>
+                        <span class="value"><span class="text">{{ message.contentType || '-' }}</span></span>
+
+                        <span class="property" matTooltip="When it was last handed on to a subscriber">
+                            Last received
+                        </span>
+                        <span class="value">
+                            <span class="text">
+                                {{ message.lastReceived ? dateConversion(message.lastReceived) : 'never' }}
+                            </span>
+                        </span>
+
+                        <span class="property">Published</span>
+                        <span class="value"><span class="text">{{ dateConversion(message.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(message.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <!--
+              Two tabs where the queue message page has three: a published message carries no system
+              attributes. euclid's envelope is a queue message's, and `TopicMessage` has no field for it.
+            -->
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Body">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The body as the topic holds it. Saving rewrites this message in place
+                                        &mdash; subscribers that already received it hold their own copies,
+                                        which a resend is what reaches.
+                                    </p>
+                                    <button (click)="saveBody()" [disabled]="!bodyEdited"
+                                            [matTooltipShowDelay]="1000" aria-label="Save" mat-icon-button
+                                            matTooltip="Write the edited body back to this message">
+                                        <mat-icon>save</mat-icon>
+                                    </button>
+                                    <button (click)="publishAsNewMessage()" [disabled]="!body"
+                                            [matTooltipShowDelay]="1000" aria-label="Publish as new message"
+                                            mat-icon-button
+                                            matTooltip="Publish what is in the box to this topic as a second message, leaving this one as it is">
+                                        <mat-icon>send</mat-icon>
+                                    </button>
+                                    <button (click)="togglePrettyPrint()" [disabled]="!body"
+                                            [matTooltip]="prettyPrinted
+                                                ? 'Put the body back as it was before it was laid out'
+                                                : 'Lay the body out, if it is JSON or XML. Anything else is left as it is.'"
+                                            [matTooltipShowDelay]="1000" aria-label="Pretty print"
+                                            mat-icon-button>
+                                        <mat-icon>
+                                            {{ prettyPrinted ? 'format_indent_decrease' : 'format_indent_increase' }}
+                                        </mat-icon>
+                                    </button>
+                                    <button (click)="revertBody()" [disabled]="!bodyEdited"
+                                            [matTooltipShowDelay]="1000" aria-label="Revert" mat-icon-button
+                                            matTooltip="Throw the edit away and go back to what is stored">
+                                        <mat-icon>restart_alt</mat-icon>
+                                    </button>
+                                    <button [cdkCopyToClipboard]="body" [matTooltipShowDelay]="1000"
+                                            aria-label="Copy body" mat-icon-button
+                                            matTooltip="Copy what is in the box to the clipboard">
+                                        <mat-icon>content_copy</mat-icon>
+                                    </button>
+                                </div>
+                                <label>
+                                    <textarea (ngModelChange)="bodyChanged()" [(ngModel)]="body" class="payload"
+                                              name="body" spellcheck="false" aria-label="Message body"></textarea>
+                                </label>
+                                @if (bodyEdited) {
+                                    <p class="note edited">
+                                        Edited, and not saved. The message on the topic still has the body it
+                                        was published with.
+                                    </p>
+                                }
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Attributes ({{ (attributes$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <p class="note">What the message was published with, and travels on with it.</p>
+                                <table [dataSource]="(attributes$ | async) ?? []" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.name }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Value</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.value }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="type">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The type euclid stores the value under">Type
+                                        </th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.type }}</td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="attributeColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: attributeColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="attributeColumns.length" class="mat-cell">
+                                            This message was published with no attributes.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the message...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

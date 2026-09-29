@@ -84,6 +84,25 @@
   font-size: small;
 }
 
+/*
+ * The value in a row that is the way to that row's own page - a message ID against its details page.
+ *
+ * Coloured rather than underlined at rest, because a column of underlines is noise in a table; the
+ * underline arrives on hover and on keyboard focus, which is where it says "this is the thing you are
+ * about to follow". The theme's own primary, with a fallback for the rare page rendered before the
+ * prebuilt theme has been applied.
+ */
+.row-link {
+  color: var(--mat-sys-primary, inherit);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
 /* A value fetched on demand and shown above the table - see the secret list. */
 .revealed {
   display: flex;

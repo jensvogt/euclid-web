@@ -36,22 +36,20 @@
         <mat-card appearance="outlined" style="margin: -10px;">
             <div class="table-container">
                 <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
-                       class="mat-elevation-z8 euclid-table" mat-table matSort>
+                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
                     <ng-container matColumnDef="messageId">
                         <th *matHeaderCellDef mat-header-cell matTooltip="The ID the server gave the message">Message ID</th>
                         <td *matCellDef="let message" mat-cell>
                             <div class="with-icon">
-                                <span class="ern">{{ message.messageId }}</span>
+                                <a [routerLink]="['/ens-topic-list', 'messages', topicErn, message.messageId]"
+                                   [matTooltipShowDelay]="1000" class="ern row-link"
+                                   matTooltip="Show the message, its body and its attributes">{{ message.messageId }}</a>
                                 <button [cdkCopyToClipboard]="message.messageId" [matTooltipShowDelay]="1000"
                                         aria-label="Copy" mat-icon-button matTooltip="Copy to clipboard">
                                     <mat-icon class="copy-icon">content_copy</mat-icon>
                                 </button>
                             </div>
                         </td>
-                    </ng-container>
-                    <ng-container matColumnDef="body">
-                        <th *matHeaderCellDef mat-header-cell matTooltip="The first line of the body">Body</th>
-                        <td *matCellDef="let message" mat-cell>{{ preview(message.body) }}</td>
                     </ng-container>
                     <ng-container matColumnDef="status">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Whether it has been delivered">Status</th>

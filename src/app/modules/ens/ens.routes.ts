@@ -9,6 +9,11 @@ import {
 } from './topic-details/state/ens-topic-details.state';
 import {ensTopicListFeature, loadTopics$} from './topic-list/state/ens-topic-list.state';
 import {ensMessageListFeature, loadMessages$} from './message-list/state/ens-message-list.state';
+import {
+    ensMessageDetailsFeatureKey,
+    ensMessageDetailsReducer,
+    loadMessage$,
+} from './message-details/state/ens-message-details.state';
 
 export const ensRoutes: Routes = [
     {
@@ -17,7 +22,8 @@ export const ensRoutes: Routes = [
             provideState(ensTopicListFeature.featureKey, ensTopicListFeature.reducer),
             provideState(ensMessageListFeature.featureKey, ensMessageListFeature.reducer),
             provideState(ensTopicDetailsFeatureKey, ensTopicDetailsReducer),
-            provideEffects({loadTopics$, loadMessages$, loadTopic$}),
+            provideState(ensMessageDetailsFeatureKey, ensMessageDetailsReducer),
+            provideEffects({loadTopics$, loadMessages$, loadTopic$, loadMessage$}),
         ],
         children: [
             {
@@ -34,6 +40,14 @@ export const ensRoutes: Routes = [
                 path: 'messages/:topicErn',
                 title: 'ENS Messages',
                 loadComponent: () => import('./message-list/ens-message-list.component').then(m => m.EnsMessageListComponent),
+            },
+            // The topic as well as the message, though `get-message` needs only the ID: the page links back
+            // to the listing it was opened from and to the topic itself, and neither address can be built
+            // from a message that has not been read yet.
+            {
+                path: 'messages/:topicErn/:messageId',
+                title: 'ENS Message',
+                loadComponent: () => import('./message-details/ens-message-details.component').then(m => m.EnsMessageDetailsComponent),
             },
         ],
     },

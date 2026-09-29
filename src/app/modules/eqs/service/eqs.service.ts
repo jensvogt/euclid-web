@@ -152,6 +152,40 @@ export class EqsService {
         return this.http.page<QueueMessage>(TARGET, 'list-messages', 'messages', payload);
     }
 
+    /**
+     * One message, by its ID, with its body and both attribute maps on it.
+     *
+     * The ID rather than a receipt handle: a handle belongs to one delivery and is void once that
+     * delivery's claim has expired, while the ID names the message for as long as it exists - and looking
+     * at a message is something one does after the fact.
+     *
+     * Looking, not receiving, as {@link listMessages} is: this leaves visibility alone and does not count
+     * as a delivery, so opening a message in a browser neither hides it from a consumer nor moves it any
+     * closer to the dead letter queue.
+     */
+    getMessage(messageId: string): Observable<QueueMessage> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-message', {messageId: messageId}).pipe(
+            map((response: Record<string, unknown>) => response['message'] as QueueMessage),
+        );
+    }
+
+    /**
+     * Replaces a message's body, leaving everything else about it alone.
+     *
+     * **Not wrapped by euclid-ndk, so the action name and payload here are inferred.** 0.15.0 has no
+     * `updateMessageBody` and no `update-message-body` anywhere in it - its only writes against an existing
+     * message are `delete-message`, `set-message-visibility` and `set-message-attribute` - so there was
+     * nothing to copy the spelling from. That the NDK lacks it does not mean the server does: `change-password`
+     * is wrapped nowhere either and works. If the server calls this something else, or names the body field
+     * differently, its refusal will say so and these two lines are the only thing that changes.
+     *
+     * The message keeps its ID, its attributes and its delivery count. {@link sendMessage} is the other way
+     * to get a body onto a queue and a different thing entirely - it makes a second message.
+     */
+    updateMessageBody(messageId: string, body: string): Observable<unknown> {
+        return this.http.call(TARGET, 'update-message-body', {messageId: messageId, body: body});
+    }
+
     sendMessage(queueErn: string, body: string): Observable<unknown> {
         return this.http.call(TARGET, 'send-message', {ern: queueErn, body: body, attributes: {}});
     }

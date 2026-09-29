@@ -132,6 +132,35 @@ export class EnsService {
         return this.http.page<TopicMessage>(TARGET, 'list-messages', 'messages', payload);
     }
 
+    /**
+     * One published message, by its ID, with its body and attributes on it.
+     *
+     * What the topic itself kept, which is not what any subscriber has: every subscription gets its own
+     * copy on its own queue, and those are consumed independently of this. So reading one here neither
+     * delivers it nor takes it away from anyone.
+     */
+    getMessage(messageId: string): Observable<TopicMessage> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-message', {messageId: messageId}).pipe(
+            map((response: Record<string, unknown>) => response['message'] as TopicMessage),
+        );
+    }
+
+    /**
+     * Replaces a published message's body, leaving everything else about it alone.
+     *
+     * **Not wrapped by euclid-ndk, so the action name and payload here are inferred** - the same guess
+     * {@link import("../../eqs/service/eqs.service.js").EqsService.updateMessageBody} makes, and it stands
+     * or falls with it. 0.15.0 has no `updateMessageBody` in either module; its only write against a
+     * published message is `set-message-attribute`.
+     *
+     * What this changes is the copy the topic is holding. Subscribers that already received the message
+     * have their own copies on their own queues, and nothing here reaches those - {@link resendMessages}
+     * is what fans the corrected body out to them.
+     */
+    updateMessageBody(messageId: string, body: string): Observable<unknown> {
+        return this.http.call(TARGET, 'update-message-body', {messageId: messageId, body: body});
+    }
+
     publishMessage(topicErn: string, body: string): Observable<unknown> {
         return this.http.call(TARGET, 'publish-message', {ern: topicErn, body: body, attributes: {}});
     }

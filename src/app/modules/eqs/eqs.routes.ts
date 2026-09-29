@@ -9,6 +9,11 @@ import {
 } from './queue-details/state/eqs-queue-details.state';
 import {eqsQueueListFeature, loadQueues$} from './queue-list/state/eqs-queue-list.state';
 import {eqsMessageListFeature, loadMessages$} from './message-list/state/eqs-message-list.state';
+import {
+    eqsMessageDetailsFeatureKey,
+    eqsMessageDetailsReducer,
+    loadMessage$,
+} from './message-details/state/eqs-message-details.state';
 
 /**
  * EQS's routes, with its store slices provided at the route rather than globally.
@@ -23,7 +28,8 @@ export const eqsRoutes: Routes = [
             provideState(eqsQueueListFeature.featureKey, eqsQueueListFeature.reducer),
             provideState(eqsMessageListFeature.featureKey, eqsMessageListFeature.reducer),
             provideState(eqsQueueDetailsFeatureKey, eqsQueueDetailsReducer),
-            provideEffects({loadQueues$, loadMessages$, loadQueue$}),
+            provideState(eqsMessageDetailsFeatureKey, eqsMessageDetailsReducer),
+            provideEffects({loadQueues$, loadMessages$, loadQueue$, loadMessage$}),
         ],
         children: [
             {
@@ -40,6 +46,14 @@ export const eqsRoutes: Routes = [
                 path: 'messages/:queueErn',
                 title: 'EQS Messages',
                 loadComponent: () => import('./message-list/eqs-message-list.component').then(m => m.EqsMessageListComponent),
+            },
+            // The queue as well as the message, though `get-message` needs only the ID: the page links back
+            // to the listing it was opened from and to the queue itself, and neither address can be built
+            // from a message that has not been read yet.
+            {
+                path: 'messages/:queueErn/:messageId',
+                title: 'EQS Message',
+                loadComponent: () => import('./message-details/eqs-message-details.component').then(m => m.EqsMessageDetailsComponent),
             },
         ],
     },

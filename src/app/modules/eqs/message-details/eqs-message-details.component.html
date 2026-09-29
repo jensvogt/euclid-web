@@ -1,0 +1,259 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Message &mdash; {{ messageId }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eqs-queue-list', 'messages', queueErn]"
+                aria-label="Messages" mat-icon-button matTooltip="Back to the queue's messages">
+            <mat-icon>list</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the message again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eqs']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EQS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (message$ | async; as message) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button (click)="deleteMessage(message)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                            mat-icon-button matTooltip="Delete the message. This cannot be undone.">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Message ID</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.messageId"
+                                  class="text ern">{{ message.messageId }}</span>
+                            <button [cdkCopyToClipboard]="message.messageId" [matTooltipShowDelay]="1000"
+                                    aria-label="Copy" mat-icon-button matTooltip="Copy the message ID to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.ern"
+                                  class="text ern">{{ message.ern || '-' }}</span>
+                            @if (message.ern) {
+                                <button [cdkCopyToClipboard]="message.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="inline-icon">content_copy</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property">Queue</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.queueErn"
+                                  class="text">{{ queueName }}</span>
+                            <button [matTooltipShowDelay]="1000"
+                                    [routerLink]="['/eqs-queue-list', 'queue', message.queueErn]"
+                                    aria-label="Queue" mat-icon-button matTooltip="Show the queue it is on">
+                                <mat-icon class="inline-icon">open_in_new</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="Whether the message is available, in flight or delayed">
+                            Status
+                        </span>
+                        <span class="value"><span class="text">{{ message.status || '-' }}</span></span>
+
+                        <span class="property" matTooltip="What the message is delivered at">Priority</span>
+                        <span class="value"><span class="text">{{ message.priority || '-' }}</span></span>
+
+                        <span class="property" matTooltip="The size of the body, which is what the queue's limit measures">
+                            Size
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.size + ' bytes'"
+                                  class="text">{{ byteConversion(message.size) }}</span>
+                        </span>
+
+                        <span class="property">Content type</span>
+                        <span class="value"><span class="text">{{ message.contentType || '-' }}</span></span>
+
+                        <span class="property"
+                              matTooltip="How often it has been received. Past the queue's maximum it goes to the dead letter queue.">
+                            Received
+                        </span>
+                        <span class="value"><span class="text">{{ message.receivedCount }}</span></span>
+
+                        <span class="property"
+                              matTooltip="The lease the last receive handed out. It stops working once the visibility timeout expires.">
+                            Receipt handle
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="message.receiptHandle"
+                                  class="text ern">{{ message.receiptHandle || '-' }}</span>
+                            @if (message.receiptHandle) {
+                                <button [cdkCopyToClipboard]="message.receiptHandle" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button
+                                        matTooltip="Copy the receipt handle to the clipboard">
+                                    <mat-icon class="inline-icon">content_copy</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property" matTooltip="When it was last handed to a consumer">Last received</span>
+                        <span class="value">
+                            <span class="text">
+                                {{ message.lastReceived ? dateConversion(message.lastReceived) : 'never' }}
+                            </span>
+                        </span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(message.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(message.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <!--
+              Tabs rather than three sections down the page: the body, the sender's attributes and euclid's
+              envelope are three ways of asking what this message carries, and one is what somebody came to
+              read. Stacked, the two tables push the body off the screen for everyone who came for the body.
+            -->
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Body ({{ byteConversion(message.size) }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The body as it is stored. Saving rewrites this message in place
+                                        &mdash; it keeps its ID, its attributes and its delivery count, and
+                                        whatever consumes {{ queueName }} next sees the new body.
+                                    </p>
+                                    <button (click)="saveBody()" [disabled]="!bodyEdited"
+                                            [matTooltipShowDelay]="1000" aria-label="Save" mat-icon-button
+                                            matTooltip="Write the edited body back to this message">
+                                        <mat-icon>save</mat-icon>
+                                    </button>
+                                    <button (click)="sendAsNewMessage()" [disabled]="!body"
+                                            [matTooltipShowDelay]="1000" aria-label="Send as new message"
+                                            mat-icon-button
+                                            matTooltip="Send what is in the box to this queue as a second message, leaving this one as it is">
+                                        <mat-icon>send</mat-icon>
+                                    </button>
+                                    <button (click)="togglePrettyPrint()" [disabled]="!body"
+                                            [matTooltip]="prettyPrinted
+                                                ? 'Put the body back as it was before it was laid out'
+                                                : 'Lay the body out, if it is JSON or XML. Anything else is left as it is.'"
+                                            [matTooltipShowDelay]="1000" aria-label="Pretty print"
+                                            mat-icon-button>
+                                        <mat-icon>
+                                            {{ prettyPrinted ? 'format_indent_decrease' : 'format_indent_increase' }}
+                                        </mat-icon>
+                                    </button>
+                                    <button (click)="revertBody()" [disabled]="!bodyEdited"
+                                            [matTooltipShowDelay]="1000" aria-label="Revert" mat-icon-button
+                                            matTooltip="Throw the edit away and go back to what is stored">
+                                        <mat-icon>restart_alt</mat-icon>
+                                    </button>
+                                    <button [cdkCopyToClipboard]="body" [matTooltipShowDelay]="1000"
+                                            aria-label="Copy body" mat-icon-button
+                                            matTooltip="Copy what is in the box to the clipboard">
+                                        <mat-icon>content_copy</mat-icon>
+                                    </button>
+                                </div>
+                                <label>
+                                    <textarea (ngModelChange)="bodyChanged()" [(ngModel)]="body" class="payload"
+                                              name="body" spellcheck="false" aria-label="Message body"></textarea>
+                                </label>
+                                @if (bodyEdited) {
+                                    <p class="note edited">
+                                        Edited, and not saved. The message on the queue still has the body it
+                                        was sent with.
+                                    </p>
+                                }
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Attributes ({{ (attributes$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <p class="note">The sender's own, which come back on the received message.</p>
+                                <table [dataSource]="(attributes$ | async) ?? []" class="mat-elevation-z8 euclid-table"
+                                       mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.name }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Value</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.value }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="type">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The type euclid stores the value under">Type
+                                        </th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.type }}</td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="attributeColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: attributeColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="attributeColumns.length" class="mat-cell">
+                                            The sender set no attributes on this message.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="System attributes ({{ (systemAttributes$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <p class="note">
+                                    euclid's envelope, which travels with the message across every hop &mdash;
+                                    what lets a message that arrived through a bucket or a topic still carry
+                                    what it was sent with.
+                                </p>
+                                <table [dataSource]="(systemAttributes$ | async) ?? []"
+                                       class="mat-elevation-z8 euclid-table" mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.name }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Value</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.value }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="type">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The type euclid stores the value under">Type
+                                        </th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.type }}</td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="attributeColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: attributeColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="attributeColumns.length" class="mat-cell">
+                                            This message carries no envelope.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the message...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

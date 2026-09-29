@@ -25,7 +25,11 @@ import {ensMessageListFeature} from './state/ens-message-list.state';
 export class EnsMessageListComponent extends EuclidListComponent<TopicMessage> {
 
     override readonly feature: ListFeature<TopicMessage> = ensMessageListFeature;
-    override readonly columns = ['messageId', 'body', 'status', 'contentType', 'created', 'actions'];
+    // No body column, as the queue message list has none: a body is arbitrarily large and rarely one line,
+    // so the first line of one was never enough to read and always enough to crowd out the fields that tell
+    // two messages apart. The details page is where the whole of it is, and the copy button in the row
+    // yields it without going there.
+    override readonly columns = ['messageId', 'status', 'contentType', 'created', 'actions'];
 
     topicErn = '';
 
@@ -66,10 +70,5 @@ export class EnsMessageListComponent extends EuclidListComponent<TopicMessage> {
             this.ensService.purgeTopic(this.topicErn),
             'Topic purged',
         );
-    }
-
-    preview(body: string): string {
-        const firstLine = (body ?? '').split('\n')[0];
-        return firstLine.length > 120 ? firstLine.substring(0, 120) + '...' : firstLine;
     }
 }

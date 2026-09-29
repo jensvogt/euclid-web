@@ -147,6 +147,43 @@
   overflow-x: auto;
 }
 
+/*
+ * A body shown as it was sent, in a box that can be typed into - a queue message's payload.
+ *
+ * A `textarea` rather than a `pre`, because a plain text box is the one control that shows an arbitrary
+ * payload exactly as it is: monospace, whitespace preserved, no interpretation of what might be markup.
+ * Whitespace is part of what was sent - a JSON document somebody formatted before sending it is
+ * unreadable with the newlines collapsed - and reformatting it would be showing something other than the
+ * bytes on the queue.
+ *
+ * Sized rather than grown to fit: a body has no limit worth designing around, so it is a tall box that
+ * scrolls, and `resize: vertical` lets it be dragged taller for one that needs it. Not horizontally -
+ * the box is the width of the card, and `soft` wrapping means a long line is folded for reading without
+ * a newline being added to what would be sent.
+ */
+.payload {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 320px;
+  max-height: 60vh;
+  resize: vertical;
+  margin: 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: small;
+  line-height: 1.4;
+}
+
+/* The body in the box is not the body on the queue - see the send button beside it. */
+.edited {
+  margin: 8px 0 0 0;
+  color: #8a6d00;
+}
+
 /* A sentence above a table saying what it does and does not show. */
 .note {
   margin: 0 0 12px 0;
