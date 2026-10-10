@@ -115,6 +115,11 @@ export const routes: Routes = [
                 canActivate: [authGuard],
                 loadChildren: () => import('./modules/eap/eap.routes').then(m => m.eapRoutes),
             },
+            {
+                path: 'eap-node-list',
+                canActivate: [authGuard],
+                loadChildren: () => import('./modules/eap/eap.routes').then(m => m.eapNodeRoutes),
+            },
             //=========================================================================
             // ESS - secrets
             //=========================================================================

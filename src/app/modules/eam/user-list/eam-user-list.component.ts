@@ -1,11 +1,12 @@
-import {Component} from '@angular/core';
+import {Component, inject} from '@angular/core';
 import type {User} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
+import {EuclidSessionService} from '../../../services/euclid-session.service';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {PASSWORD_FIELDS, withMatchingPassword} from '../password/change-password';
+import {passwordFields, withMatchingPassword} from '../password/change-password';
 import {EamService} from '../service/eam.service';
 import {eamUserListFeature} from './state/eam-user-list.state';
 
@@ -26,6 +27,9 @@ export class EamUserListComponent extends EuclidListComponent<User> {
     override readonly columns = ['userId', 'email', 'accountId', 'created', 'actions'];
 
     protected readonly dateConversion = dateConversion;
+
+    /** Who is logged in, which is what says whether a row is the user's own. */
+    private readonly session = inject(EuclidSessionService);
 
     constructor(private readonly eamService: EamService) {
         super();
@@ -51,15 +55,24 @@ export class EamUserListComponent extends EuclidListComponent<User> {
         );
     }
 
-    /** Sets a new password. The current one is asked for too - the server checks it whoever is asking. */
+    /**
+     * Sets a new password: a reset for anybody else, a change for yourself.
+     *
+     * Two things behind one menu item, because euclid tells them apart by what the request carries and
+     * the page knows which this is. Resetting somebody else's needs no old password - being an
+     * administrator is the proof; your own needs one, so that a token left behind cannot be turned into
+     * the account itself.
+     */
     changePassword(user: User): void {
+        const own = user.userId === this.session.session?.userId;
         this.addThen(
-            'Change the password for ' + user.userId,
-            PASSWORD_FIELDS,
-            values => withMatchingPassword(values, (oldPassword, newPassword) =>
-                this.eamService.changePassword(user.userId, oldPassword, newPassword)),
-            'Password changed',
-            'Change',
+            own ? 'Change your password' : 'Reset the password for ' + user.userId,
+            passwordFields(own),
+            values => withMatchingPassword(values, password => own
+                ? this.eamService.changeOwnPassword(String(values['oldPassword']), password)
+                : this.eamService.resetPassword(user.userId, password)),
+            own ? 'Password changed' : 'Password reset',
+            own ? 'Change' : 'Reset',
         );
     }
 

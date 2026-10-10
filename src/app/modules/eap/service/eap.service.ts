@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {map, Observable} from 'rxjs';
-import type {Application, RestartResult} from 'euclid-ndk';
+import type {Application, RestartResult, WorkerNode, WorkerNodeDetails} from 'euclid-ndk';
 
 import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
 
@@ -49,6 +49,65 @@ export class EapService {
             }),
         );
     }
+
+    // -- worker nodes --------------------------------------------------------------------------
+
+    /**
+     * The worker nodes registered to this account, live or not.
+     *
+     * A node registers itself and renews a lease, so this is the fleet as it has reported itself rather
+     * than anything configured here - and a node that stopped renewing stays in the listing with
+     * `live: false`, which is what tells an absent host from a deregistered one.
+     *
+     * Paged and filtered here, as {@link listApplications} is: `list-nodes` answers with every node at
+     * once, since an installation has tens of hosts rather than thousands. It takes no prefix either, so
+     * the prefix box narrows by name on this side.
+     *
+     * Not scoped by namespace, unlike an application listing: a host belongs to the account and runs
+     * whatever it is given.
+     */
+    listNodes(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'name', sortDirection: 'asc' | 'desc' = 'asc'): Observable<Page<WorkerNode>> {
+        return this.http.all<WorkerNode>(TARGET, 'list-nodes', 'nodes').pipe(
+            map((nodes: WorkerNode[]) => {
+                const matching = prefix ? nodes.filter(node => node.name.startsWith(prefix)) : nodes;
+                const sorted = [...matching].sort((left, right) => compare(left, right, sortColumn));
+                if (sortDirection === 'desc') {
+                    sorted.reverse();
+                }
+                return {
+                    total: matching.length,
+                    items: sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
+                };
+            }),
+        );
+    }
+
+    /** One node, and what it is holding slots for. A listing leaves the applications off; this does not. */
+    getNode(node: string): Observable<WorkerNodeDetails> {
+        return this.http.call<WorkerNodeDetails>(TARGET, 'get-node', {node: node});
+    }
+
+    /**
+     * Stops new instances being placed on a node, and lets the ones it has leave as they are replaced.
+     *
+     * Not a stop: the node keeps running what it has and keeps renewing its lease, so the pool drifts off
+     * it rather than going down with it. `drained: false` puts it back into service.
+     */
+    drainNode(node: string, drained = true): Observable<unknown> {
+        return this.http.call(TARGET, 'drain-node', {node: node, drained: drained});
+    }
+
+    /**
+     * Removes a node's registration, which is how its name is freed for another host.
+     *
+     * Administrator only, and it stops nothing: a worker still running registers itself again on its next
+     * renewal. Taking a host out of service is draining it, then stopping the worker, then this.
+     */
+    deleteNode(node: string): Observable<unknown> {
+        return this.http.call(TARGET, 'delete-node', {node: node});
+    }
+
+    // -- applications --------------------------------------------------------------------------
 
     getApplication(applicationId: string): Observable<Application> {
         return this.http.call<Application>(TARGET, 'get-application', {applicationId: applicationId});
@@ -158,8 +217,8 @@ export class EapService {
     }
 }
 
-/** Orders two applications by one of their fields, numerically where the field is a number. */
-function compare(left: Application, right: Application, column: string): number {
+/** Orders two records by one of their fields, numerically where the field is a number. */
+function compare(left: object, right: object, column: string): number {
     const a = (left as unknown as Record<string, unknown>)[column];
     const b = (right as unknown as Record<string, unknown>)[column];
     if (typeof a === 'number' && typeof b === 'number') {

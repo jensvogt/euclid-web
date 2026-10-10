@@ -1,0 +1,151 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Worker nodes ({{ total$ | async }})</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the node list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eap-application-list']" aria-label="Applications"
+                mat-icon-button matTooltip="The applications these nodes run">
+            <mat-icon>apps</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eap']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EAP counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The name the host registered itself under">Node
+                        </th>
+                        <td *matCellDef="let node" mat-cell>
+                            <div class="with-icon">
+                                <span>{{ node.name }}</span>
+                                <button [cdkCopyToClipboard]="node.name" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                        mat-icon-button matTooltip="Copy the node name to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="address">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Where the manager reaches it">
+                            Address
+                        </th>
+                        <td *matCellDef="let node" mat-cell [matTooltip]="node.principal ? 'Registered by ' + node.principal : ''">
+                            {{ node.address || '-' }}
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="labels">
+                        <th *matHeaderCellDef mat-header-cell
+                            matTooltip="What the node offers, matched against an application's node labels">Labels
+                        </th>
+                        <td *matCellDef="let node" mat-cell [matTooltip]="labels(node)">{{ labels(node) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="platform">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="What the host runs on">
+                            Platform
+                        </th>
+                        <td *matCellDef="let node" mat-cell>{{ platform(node) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="version">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The worker's own version">
+                            Worker
+                        </th>
+                        <td *matCellDef="let node" mat-cell>{{ node.version || '-' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="state">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Live and taking work, draining, or lost - the lease stopped being renewed">
+                            State
+                        </th>
+                        <td *matCellDef="let node" mat-cell>
+                            <span [class.unfinished]="state(node) !== 'live'">{{ state(node) }}</span>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="lastSeen">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the lease was last renewed">
+                            Last seen
+                        </th>
+                        <td *matCellDef="let node" mat-cell>{{ dateConversion(node.lastSeen) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let node" mat-cell>
+                            <button (click)="toggleDrain(node)" [matTooltipShowDelay]="1000" aria-label="Drain"
+                                    mat-icon-button
+                                    [matTooltip]="node.drained ? 'Put it back into service' : 'Stop placing new instances on it. What it runs keeps running.'">
+                                <mat-icon>{{ node.drained ? 'play_arrow' : 'water_drop' }}</mat-icon>
+                            </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Edit" mat-icon-button
+                                    matTooltip="Show the node and what is running on it"
+                                    routerLink="./node/{{ node.name }}">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            <button (click)="deleteNode(node)" [matTooltipShowDelay]="1000" aria-label="Deregister"
+                                    mat-icon-button
+                                    matTooltip="Forget its registration. This does not stop a worker that is still running.">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">
+                            No worker node has registered with this account.
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

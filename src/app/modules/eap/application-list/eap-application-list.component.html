@@ -23,6 +23,11 @@
             <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button mat-menu-item routerLink="/eap-node-list">
+                <mat-icon>dns</mat-icon>
+                <span>Worker nodes</span>
+            </button>
+            <mat-divider/>
             <button (click)="autoReload()" mat-menu-item>
                 <mat-icon>
                     <span class="material-symbols-outlined">hourglass</span>

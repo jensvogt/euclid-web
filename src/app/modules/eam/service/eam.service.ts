@@ -55,22 +55,27 @@ export class EamService {
     }
 
     /**
-     * Replaces a user's password, which means proving you know the one being replaced.
+     * Resets another user's password. Administrator only.
      *
-     * The shape here was read off the server's own refusals one at a time, because there is nothing to copy
-     * it from: euclid-ndk wraps no password-changing action even at 0.11.0 - `password` appears in it only
-     * on `register` and on the login builder - and asking the gateway settles nothing, since it
-     * authenticates before it dispatches and answers 401 to an anonymous request whether or not the action
-     * exists. `{userId, password}` after `register` was refused 400 "newPassword is required"; sending only
-     * the new one was then refused 403 "The old password is not correct".
-     *
-     * Which makes this a user changing their own password rather than an administrator resetting one, and
-     * `oldPassword` the one part still inferred rather than quoted - it is what pairs with the
-     * `newPassword` the server did name.
+     * No old password, because an administrator is not supposed to know one - being an administrator is
+     * the proof instead. Aimed at yourself the server reads it as {@link changeOwnPassword} and refuses
+     * it for the old password it did not get, which is why the pages pick between the two rather than
+     * offering this for everyone.
      */
-    changePassword(userId: string, oldPassword: string, newPassword: string): Observable<unknown> {
+    resetPassword(userId: string, newPassword: string): Observable<unknown> {
+        return this.http.call(TARGET, 'change-password', {userId: userId, newPassword: newPassword});
+    }
+
+    /**
+     * Changes this session's own password.
+     *
+     * The same action, told apart by what it carries: no `userId`, which the server reads as "mine", and
+     * an old password - a token alone is not enough, so one left behind cannot be turned into the account
+     * itself. The session keeps working, because its token is verified against the server's signing
+     * secret rather than against the password.
+     */
+    changeOwnPassword(oldPassword: string, newPassword: string): Observable<unknown> {
         return this.http.call(TARGET, 'change-password', {
-            userId: userId,
             oldPassword: oldPassword,
             newPassword: newPassword,
         });

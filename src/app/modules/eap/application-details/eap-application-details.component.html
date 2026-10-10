@@ -225,6 +225,20 @@
                                         <th *matHeaderCellDef mat-header-cell matTooltip="Its process on the host">PID</th>
                                         <td *matCellDef="let endpoint" mat-cell>{{ endpoint.pid }}</td>
                                     </ng-container>
+                                    <!--
+                                      Not from the application: an EAP endpoint is an ID, a pid and a
+                                      port. The machine comes from EMM's module registry, joined on the
+                                      instance ID - see the state slice.
+                                    -->
+                                    <ng-container matColumnDef="host">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The machine the worker running it reported. A pid alone does not say which, since every host runs the same installation path.">
+                                            Host
+                                        </th>
+                                        <td *matCellDef="let endpoint" mat-cell>
+                                            {{ host((hosts$ | async) ?? {}, endpoint.instanceId) }}
+                                        </td>
+                                    </ng-container>
                                     <ng-container matColumnDef="httpPort">
                                         <th *matHeaderCellDef mat-header-cell matTooltip="The port it answers on">Port</th>
                                         <td *matCellDef="let endpoint" mat-cell>{{ endpoint.httpPort }}</td>

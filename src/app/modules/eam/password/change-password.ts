@@ -3,32 +3,38 @@ import {Observable, throwError} from 'rxjs';
 import {ResourceField} from '../../../shared/resource-add/resource-add.component';
 
 /**
- * What changing a password asks for: the current one, and the new one twice.
+ * What setting a password asks for: the new one twice, and the old one when it is your own.
  *
- * The new one twice because it is not shown: a password field that is typed once and never read back is a
- * password that is wrong for as long as it takes somebody to notice they cannot log in.
+ * Twice because it is not shown: a password field typed once and never read back is a password that is
+ * wrong for as long as it takes somebody to notice they cannot log in.
  *
- * The current one because the server insists - it answers 403 "The old password is not correct" to a
- * change that does not carry it, whoever is asking. So this is a user changing their own password rather
- * than an administrator resetting one, even when it is reached from the user list.
+ * The old one only for yourself, because that is what euclid asks for. One action serves both, told
+ * apart by what it carries - an administrator resetting somebody else's is not supposed to know the old
+ * one, and being an administrator is the proof instead.
  */
-export const PASSWORD_FIELDS: ResourceField[] = [
-    {
-        name: 'oldPassword',
-        label: 'Current password',
-        type: 'password',
-        required: true,
-        hint: 'The password being replaced. The server checks it, so a forgotten one cannot be reset here.',
-    },
-    {name: 'newPassword', label: 'New password', type: 'password', required: true},
-    {
-        name: 'repeat',
-        label: 'Repeat the new password',
-        type: 'password',
-        required: true,
-        hint: 'The two have to match.',
-    },
-];
+export function passwordFields(own: boolean): ResourceField[] {
+    const fields: ResourceField[] = own
+        ? [{
+            name: 'oldPassword',
+            label: 'Current password',
+            type: 'password',
+            required: true,
+            hint: 'Your own password changes only on proof of the old one. A token alone is not enough.',
+        }]
+        : [];
+
+    return [
+        ...fields,
+        {name: 'password', label: 'New password', type: 'password', required: true},
+        {
+            name: 'repeat',
+            label: 'Repeat the new password',
+            type: 'password',
+            required: true,
+            hint: 'The two have to match.',
+        },
+    ];
+}
 
 /**
  * The change, or a refusal when the two fields disagree.
@@ -43,11 +49,11 @@ export const PASSWORD_FIELDS: ResourceField[] = [
  */
 export function withMatchingPassword(
     values: Record<string, string | number | boolean>,
-    change: (oldPassword: string, newPassword: string) => Observable<unknown>,
+    change: (password: string) => Observable<unknown>,
 ): Observable<unknown> {
-    const newPassword = String(values['newPassword']);
-    if (newPassword !== String(values['repeat'])) {
+    const password = String(values['password']);
+    if (password !== String(values['repeat'])) {
         return throwError(() => new Error('The two passwords do not match.'));
     }
-    return change(String(values['oldPassword']), newPassword);
+    return change(password);
 }

@@ -58,10 +58,13 @@ import {eapApplicationDetailsActions, eapApplicationDetailsSelectors} from './st
 export class EapApplicationDetailsComponent extends EuclidResourceComponent implements OnInit, OnDestroy {
 
     application$!: Observable<Application | null>;
+
+    /** Instance ID to the machine it is on, as EMM's module registry reports it. */
+    hosts$!: Observable<Record<string, string>>;
     environment$!: Observable<ResourceTag[]>;
     error$!: Observable<string | null>;
 
-    readonly instanceColumns = ['instanceId', 'pid', 'httpPort'];
+    readonly instanceColumns = ['instanceId', 'pid', 'host', 'httpPort'];
     readonly environmentColumns = ['key', 'value', 'actions'];
     readonly resourceColumns = ['ern', 'actions'];
 
@@ -81,6 +84,7 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
     ngOnInit(): void {
         this.applicationId = this.route.snapshot.paramMap.get('applicationId') ?? '';
         this.application$ = this.store.select(eapApplicationDetailsSelectors.selectApplication);
+        this.hosts$ = this.store.select(eapApplicationDetailsSelectors.selectHosts);
         this.environment$ = this.application$.pipe(map(application => environmentOf(application)));
         this.error$ = this.store.select(eapApplicationDetailsSelectors.selectError);
         this.load();
@@ -97,6 +101,25 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
         }
         this.lastUpdate = new Date();
         this.store.dispatch(eapApplicationDetailsActions.load({applicationId: this.applicationId}));
+    }
+
+    /**
+     * Which machine an instance is on, as a cell.
+     *
+     * Beside the pid, because a pid alone does not identify a process here: every host runs the same
+     * installation path and pids collide across machines as a matter of course.
+     *
+     * Three answers, and the difference between the last two matters. A named host is the worker that
+     * reported it. An empty one is the manager's own host - what every instance on an installation with
+     * no workers carries - and is named rather than left blank, so a column of them reads as "all here"
+     * instead of "nobody knows". An instance the registry has no record of at all is the dash.
+     */
+    host(hosts: Record<string, string>, instanceId: string): string {
+        const host = hosts[instanceId];
+        if (host === undefined) {
+            return '-';
+        }
+        return host.length > 0 ? host : 'manager';
     }
 
     /** The command line as it would be typed, which is what a `command` and its arguments amount to. */

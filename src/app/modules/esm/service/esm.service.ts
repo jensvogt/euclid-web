@@ -10,7 +10,14 @@ import type {
     Variant,
 } from 'euclid-ndk';
 
-import {EuclidHttpService, isTransient, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
+import {
+    CallOptions,
+    EuclidHttpService,
+    isTransient,
+    ListQuery,
+    listPayload,
+    Page,
+} from '../../../services/euclid-http.service';
 
 export const TARGET = 'esm';
 
@@ -32,6 +39,17 @@ export const UPLOAD_CONCURRENCY = 4;
  * object that is still in it much later is the interesting one.
  */
 export const UPLOADING = 'UPLOADING';
+
+/**
+ * What every request of an upload carries: an expired session is the dialog's to handle, not the app's.
+ *
+ * The upload dialog asks for the password where it stands and carries on from the part it stopped at,
+ * which is only possible while it is still on screen - see
+ * {@link import("../../../services/session-expiry.interceptor.js").SkipAuthRedirect}. Being sent to the
+ * login page instead would take the upload ID and the outstanding parts with it, and 12 GB would have to
+ * go up again.
+ */
+const OWNS_EXPIRY: CallOptions = {ownsExpiry: true};
 
 /** Whether this file goes up in parts rather than in a single request. */
 export function isMultipart(file: Blob): boolean {
@@ -226,7 +244,7 @@ export class EsmService {
             'x-euclid-bucket-ern': bucketErn,
             'x-euclid-key': key,
             'Content-Type': contentType || 'application/octet-stream',
-        });
+        }, OWNS_EXPIRY);
     }
 
     /**
@@ -271,6 +289,7 @@ export class EsmService {
             'create-upload',
             {bucketErn: bucketErn, key: key},
             {'x-euclid-expected-concurrency': String(concurrency)},
+            OWNS_EXPIRY,
         );
     }
 
@@ -279,7 +298,7 @@ export class EsmService {
         return this.http.postBytes(TARGET, 'upload-part', data, {
             'x-euclid-upload-id': uploadId,
             'x-euclid-part-number': String(partNumber),
-        }).pipe(retryTransient());
+        }, OWNS_EXPIRY).pipe(retryTransient());
     }
 
     /**
@@ -294,7 +313,7 @@ export class EsmService {
      * An upload that has already completed answers 404, because there is no longer any such upload.
      */
     abortUpload(uploadId: string): Observable<unknown> {
-        return this.http.call(TARGET, 'abort-upload', {uploadId: uploadId});
+        return this.http.call(TARGET, 'abort-upload', {uploadId: uploadId}, {}, OWNS_EXPIRY);
     }
 
     /**
@@ -304,7 +323,9 @@ export class EsmService {
      * uploaded. An upload the server did accept answers a repeat with 404 rather than assembling twice.
      */
     completeUpload(uploadId: string): Observable<StoredObject> {
-        return this.http.call<StoredObject>(TARGET, 'complete-upload', {uploadId: uploadId}).pipe(retryTransient());
+        return this.http
+            .call<StoredObject>(TARGET, 'complete-upload', {uploadId: uploadId}, {}, OWNS_EXPIRY)
+            .pipe(retryTransient());
     }
 
     deleteObject(ern: string): Observable<unknown> {

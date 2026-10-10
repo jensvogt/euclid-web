@@ -1,9 +1,20 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpErrorResponse} from '@angular/common/http';
+import {HttpClient, HttpContext, HttpErrorResponse} from '@angular/common/http';
 import {catchError, map, Observable, throwError} from 'rxjs';
 
 import {environment} from '../../environments/environment';
 import {EuclidSessionService} from './euclid-session.service';
+import {SkipAuthRedirect} from './session-expiry.interceptor';
+
+/**
+ * What a caller wants done differently with one request.
+ *
+ * `ownsExpiry` keeps an expired session from sending the user to the login screen, for the one flow that
+ * handles that itself - see {@link SkipAuthRedirect}.
+ */
+export interface CallOptions {
+    ownsExpiry?: boolean;
+}
 
 /** How a listing is paged and ordered. Every field has a server-side default. */
 export interface PageQuery {
@@ -58,12 +69,13 @@ export class EuclidHttpService {
         action: string,
         payload: Record<string, unknown> = {},
         headers: Record<string, string> = {},
+        options: CallOptions = {},
     ): Observable<T> {
         let sent = this.session.requestHeaders(target, action);
         for (const [name, value] of Object.entries(headers)) {
             sent = sent.set(name, value);
         }
-        return this.http.post<T>(this.url, payload, {headers: sent}).pipe(
+        return this.http.post<T>(this.url, payload, {headers: sent, context: contextOf(options)}).pipe(
             catchError((error: HttpErrorResponse) => throwError(() => euclidError(target, action, error))),
         );
     }
@@ -84,12 +96,13 @@ export class EuclidHttpService {
         action: string,
         data: Blob,
         headers: Record<string, string> = {},
+        options: CallOptions = {},
     ): Observable<T> {
         let sent = this.session.requestHeaders(target, action).set('Content-Type', 'application/octet-stream');
         for (const [name, value] of Object.entries(headers)) {
             sent = sent.set(name, value);
         }
-        return this.http.post<T>(this.url, data, {headers: sent}).pipe(
+        return this.http.post<T>(this.url, data, {headers: sent, context: contextOf(options)}).pipe(
             catchError((error: HttpErrorResponse) => throwError(() => euclidError(target, action, error))),
         );
     }
@@ -177,4 +190,9 @@ export function isUnauthorized(error: unknown): boolean {
 function euclidError(target: string, action: string, error: HttpErrorResponse): EuclidError {
     const reason = typeof error.error?.error === 'string' ? error.error.error : error.message;
     return new EuclidError(`${target}:${action} failed (${error.status}): ${reason}`, error.status);
+}
+
+/** The request context these options amount to, which is how an interceptor reads them. */
+function contextOf(options: CallOptions): HttpContext {
+    return new HttpContext().set(SkipAuthRedirect, options.ownsExpiry ?? false);
 }

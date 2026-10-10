@@ -1,0 +1,190 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Node &mdash; {{ name }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eap-node-list']" aria-label="Nodes" mat-icon-button
+                matTooltip="All worker nodes">
+            <mat-icon>dns</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the node again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eap']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EAP counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (node$ | async; as node) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button (click)="toggleDrain(node)" [matTooltipShowDelay]="1000" aria-label="Drain"
+                            mat-icon-button
+                            [matTooltip]="node.drained ? 'Put it back into service' : 'Stop placing new instances on it'">
+                        <mat-icon>{{ node.drained ? 'play_arrow' : 'water_drop' }}</mat-icon>
+                    </button>
+                    <button [matMenuTriggerFor]="nodemenu" [matTooltipShowDelay]="1000" aria-label="Node menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #nodemenu="matMenu" xPosition="before">
+                        <button (click)="toggleDrain(node)" mat-menu-item
+                                matTooltip="Not a stop: what it runs keeps running and leaves as it is replaced">
+                            <mat-icon>{{ node.drained ? 'play_arrow' : 'water_drop' }}</mat-icon>
+                            <span>{{ node.drained ? 'Put back into service' : 'Drain node' }}</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteNode(node)" mat-menu-item
+                                matTooltip="Forgets the registration. A worker still running registers again.">
+                            <mat-icon>delete</mat-icon>
+                            <span>Deregister node</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+
+                    @if (!node.live) {
+                        <p class="warning">
+                            This node stopped renewing its lease, last seen {{ dateConversion(node.lastSeen) }}. Its
+                            registration and everything it was running are still on record, which is how an absent
+                            host is told from a deregistered one &mdash; the applications below are what it held
+                            when it went.
+                        </p>
+                    } @else if (node.drained) {
+                        <p class="warning">
+                            This node is draining: it keeps running what it has and keeps renewing, and the manager
+                            places nothing new on it. It is empty when the applications below are.
+                        </p>
+                    }
+
+                    <div class="properties">
+
+                        <span class="property" matTooltip="The name the host registered itself under">Node</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="node.name" class="text">{{ node.name }}</span>
+                            <button [cdkCopyToClipboard]="node.name" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the node name to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="Where the manager reaches it">Address</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="node.address"
+                                  class="text">{{ node.address || '-' }}</span>
+                        </span>
+
+                        <span class="property">State</span>
+                        <span class="value">
+                            <span [class.unfinished]="state(node) !== 'live'" class="text">{{ state(node) }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="When the lease was last renewed">Last seen</span>
+                        <span class="value"><span class="text">{{ dateConversion(node.lastSeen) }}</span></span>
+
+                        <span class="property">Platform</span>
+                        <span class="value"><span class="text">{{ platform(node) }}</span></span>
+
+                        <span class="property" matTooltip="What the host reports having">CPUs</span>
+                        <span class="value"><span class="text">{{ node.cpuCount || '-' }}</span></span>
+
+                        <span class="property" matTooltip="The worker's own version">Worker version</span>
+                        <span class="value"><span class="text">{{ node.version || '-' }}</span></span>
+
+                        <span class="property"
+                              matTooltip="The principal that registered this name, and the only one that may renew it">
+                            Registered by
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="node.principal"
+                                  class="text ern">{{ node.principal || '-' }}</span>
+                        </span>
+
+                        <span class="property"
+                              matTooltip="What this node offers, matched against an application's node labels when the manager places an instance">
+                            Labels
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="labels(node)"
+                                  class="text">{{ labels(node) }}</span>
+                        </span>
+
+                        <span class="property" matTooltip="Instances serving here, across every application">
+                            Running
+                        </span>
+                        <span class="value"><span class="text">{{ running(node) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Applications ({{ node.applications.length }})</span>
+                </mat-card-header>
+                <mat-card-content>
+                    <p class="note">
+                        What this node is holding slots for. <em>Slots</em> is what the manager has placed here and
+                        <em>running</em> what is actually serving out of them &mdash; a node holding four and
+                        running none is the state worth seeing, and one number cannot say it.
+                    </p>
+                    <table [dataSource]="node.applications" class="mat-elevation-z8 euclid-table sized-to-content"
+                           mat-table>
+                        <ng-container matColumnDef="applicationId">
+                            <th *matHeaderCellDef mat-header-cell>Application</th>
+                            <td *matCellDef="let application" mat-cell>
+                                <a [routerLink]="['/eap-application-list', 'application', application.applicationId]"
+                                   [matTooltip]="'Show ' + application.applicationId"
+                                   [matTooltipShowDelay]="1000" class="row-link">{{ application.applicationId }}</a>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="namespace">
+                            <th *matHeaderCellDef mat-header-cell
+                                matTooltip="An application ID is unique within an account and namespace">Namespace
+                            </th>
+                            <td *matCellDef="let application" mat-cell>{{ application.namespace || 'account root' }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="runtime">
+                            <th *matHeaderCellDef mat-header-cell>Runtime</th>
+                            <td *matCellDef="let application" mat-cell
+                                [matTooltip]="application.runtimeName">{{ application.runtime || '-' }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="instances">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Slots this node holds for it">Slots</th>
+                            <td *matCellDef="let application" mat-cell>{{ application.instances }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="running">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Of those slots, the ones actually serving">
+                                Running
+                            </th>
+                            <td *matCellDef="let application" mat-cell>
+                                <span [class.unfinished]="application.running < application.instances">
+                                    {{ application.running }}
+                                </span>
+                            </td>
+                        </ng-container>
+                        <tr *matHeaderRowDef="applicationColumns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: applicationColumns;" mat-row></tr>
+                        <tr *matNoDataRow class="mat-row">
+                            <td [attr.colspan]="applicationColumns.length" class="mat-cell">
+                                @if (node.drained) {
+                                    Nothing is left on this node, so draining it is done.
+                                } @else {
+                                    Nothing is placed on this node.
+                                }
+                            </td>
+                        </tr>
+                    </table>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the node...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

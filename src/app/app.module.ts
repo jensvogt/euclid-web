@@ -21,6 +21,7 @@ import {DashboardModule} from './modules/dashboard/dashboard.module';
 import {reducers} from './state/root.reducer';
 import {LoadingIndicatorComponent} from './shared/spinner/loading-spinner.component';
 import {LoadingInterceptor} from './shared/spinner/loading-interceptor.component';
+import {SessionExpiryInterceptor} from './services/session-expiry.interceptor';
 
 @NgModule({
     declarations: [AppComponent],
@@ -43,6 +44,8 @@ import {LoadingInterceptor} from './shared/spinner/loading-interceptor.component
         provideEffects(),
         provideRouterStore(),
         {provide: HTTP_INTERCEPTORS, useClass: LoadingInterceptor, multi: true},
+        // After the spinner's, so that a request stopped for an expired session still turns it off again.
+        {provide: HTTP_INTERCEPTORS, useClass: SessionExpiryInterceptor, multi: true},
     ],
     imports: [
         BrowserModule,
