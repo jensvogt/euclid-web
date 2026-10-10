@@ -30,7 +30,9 @@ export class EqsService {
 
     listQueues(query: ListQuery, includeInternal = false): Observable<Page<Queue>> {
         const payload = {...listPayload(query, 'name'), includeInternal: includeInternal};
-        return this.http.page<Queue>(TARGET, 'list-queues', 'queues', payload);
+        return this.http.page<Queue>(TARGET, 'list-queues', 'queues', payload).pipe(
+            map((page: Page<Queue>) => ({total: page.total, items: page.items.map(queueOf)})),
+        );
     }
 
     /**
@@ -43,7 +45,7 @@ export class EqsService {
      */
     getQueue(ern: string): Observable<Queue> {
         return this.http.call<Record<string, unknown>>(TARGET, 'get-queue', {ern: ern}).pipe(
-            map((response: Record<string, unknown>) => response['queue'] as Queue),
+            map((response: Record<string, unknown>) => queueOf(response['queue'] as Queue)),
         );
     }
 
@@ -207,4 +209,16 @@ export class EqsService {
  */
 export function queueNameOf(ern: string): string {
     return ern.substring(ern.lastIndexOf(':') + 1);
+}
+
+/**
+ * One queue, with the dead letter queue under the name the rest of this UI calls it by.
+ *
+ * The server sends `deadLetterQueueArn` - an "arn" it has never renamed - and euclid-ndk's parser
+ * renames it on the way through. This UI reads the raw answer and never runs that parser, so without
+ * this the field types as present and reads as undefined.
+ */
+function queueOf(queue: Queue): Queue {
+    const wire = queue as unknown as Record<string, unknown>;
+    return {...queue, deadLetterQueueErn: queue.deadLetterQueueErn ?? String(wire['deadLetterQueueArn'] ?? '')};
 }

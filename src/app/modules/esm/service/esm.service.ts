@@ -148,11 +148,21 @@ export class EsmService {
      * gone, and `jobId` names the job doing it.
      */
     purgeBucket(ern: string, prefix = '', background = false): Observable<PurgeBucketResult> {
-        return this.http.call<PurgeBucketResult>(TARGET, 'purge-bucket', {
+        return this.http.call<Record<string, unknown>>(TARGET, 'purge-bucket', {
             ern: ern,
             prefix: prefix,
             async: background,
-        });
+        }).pipe(
+            // The server's own words: it answers `async` for what euclid-ndk's parser calls `background`,
+            // and names the figure `count` or `objects` depending on the action. This UI reads the raw
+            // answer, so the renaming is its own to do.
+            map((result: Record<string, unknown>) => ({
+                ern: String(result['ern'] ?? ''),
+                count: Number(result['count'] ?? result['objects'] ?? 0),
+                jobId: String(result['jobId'] ?? ''),
+                background: Boolean(result['async']),
+            })),
+        );
     }
 
     /**

@@ -1,0 +1,85 @@
+/**
+ * One module's dashboard: a row of figures about the module, and a tile per thing it holds.
+ *
+ * Its own stylesheet rather than the details one: this page is counts rather than label-and-value, and
+ * the tiles are the navigation. The few names it shares with the rest - the heading, the badge for a
+ * value that is not what it should be - are repeated here rather than pulling in a page of grid rules.
+ */
+
+.fill-remaining-space {
+  flex: 1 1 auto;
+  padding-top: 6px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  font-size: x-large;
+}
+
+.section {
+  margin: 0 -10px 16px -10px;
+}
+
+/* What the module itself is doing, read left to right rather than as a table of two columns. */
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * The tiles. `auto-fill` rather than a fixed column count, because a module with one resource and a
+ * module with five are the same page: the row fills with what there is instead of leaving four empty
+ * cells beside ESM's buckets.
+ */
+.resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 0 -10px;
+}
+
+.resource {
+  min-height: 92px;
+}
+
+/* A tile that goes somewhere says so before it is clicked, rather than only under the pointer. */
+.linked {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--mat-sys-primary, #004a9f);
+  }
+}
+
+.number {
+  display: block;
+  font-size: xx-large;
+  line-height: 1.1;
+}
+
+.caption {
+  display: block;
+  font-size: small;
+  opacity: 0.75;
+}
+
+.muted {
+  opacity: 0.5;
+}
+
+/* The same badge a listing gives a value the server has not arrived at - see `list.component.scss`. */
+.unfinished {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #fff8e1;
+}
+
+.nothing {
+  padding: 16px;
+  opacity: 0.75;
+}

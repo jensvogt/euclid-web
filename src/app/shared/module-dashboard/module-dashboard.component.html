@@ -1,0 +1,82 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">{{ module?.label ?? target }}</span>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Count everything again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics', target]" aria-label="Monitoring"
+                mat-icon-button matTooltip="Monitoring of this module's counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/dashboard']" aria-label="Dashboard" mat-icon-button
+                matTooltip="All modules">
+            <mat-icon>dashboard</mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (module) {
+
+            <!--
+              What the manager says about the module itself, which is a different question from what the
+              module holds: a registry that cannot be reached leaves this off rather than guessing.
+            -->
+            @if (status; as status) {
+                <mat-card appearance="outlined" class="section">
+                    <mat-card-content>
+                        <div class="status">
+                            <div class="figure">
+                                <span class="number" [class.unfinished]="unwell">{{ status.running }}</span>
+                                <span class="caption">
+                                    running{{ status.maxInstances > 0 ? ' of ' + status.maxInstances : '' }}
+                                </span>
+                            </div>
+                            <div class="figure">
+                                <span class="number" [class.unfinished]="unwell">
+                                    {{ status.desiredStopped ? 'stopped' : status.active ? 'active' : 'off' }}
+                                </span>
+                                <span class="caption">
+                                    @if (status.desiredStopped) {
+                                        somebody asked it to stay stopped
+                                    } @else if (status.active) {
+                                        switched on in the manager's configuration
+                                    } @else {
+                                        not switched on in the manager's configuration
+                                    }
+                                </span>
+                            </div>
+                            <div class="figure">
+                                <span class="number">{{ status.logLevel || 'default' }}</span>
+                                <span class="caption">log level</span>
+                            </div>
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            }
+
+            <div class="resources">
+                @for (counted of counts; track counted.resource.label) {
+                    <mat-card appearance="outlined" class="resource"
+                              [class.linked]="counted.resource.route"
+                              [routerLink]="counted.resource.route ?? null">
+                        <mat-card-content>
+                            <span class="number">{{ counted.count === null ? '—' : counted.count }}</span>
+                            <span class="caption">{{ counted.resource.label }}</span>
+                            @if (!counted.resource.route) {
+                                <span class="caption muted">no list view yet</span>
+                            }
+                        </mat-card-content>
+                    </mat-card>
+                }
+            </div>
+        } @else {
+            <p class="nothing">{{ error || 'Reading the module...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

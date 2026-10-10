@@ -1,0 +1,143 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Transfer servers ({{ total$ | async }})</span>
+        <button (click)="createServer()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create a transfer server in front of a bucket">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the server list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ets']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ETS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button mat-menu-item routerLink="/esm-bucket-list">
+                <mat-icon>folder</mat-icon>
+                <span>Buckets</span>
+            </button>
+            <mat-divider/>
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <mat-form-field style="width:100%">
+                    <mat-label>Prefix</mat-label>
+                    <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
+                           placeholder="Search" type="text">
+                    @if (prefixSet) {
+                        <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
+                            <mat-icon matSuffix>close</mat-icon>
+                        </button>
+                    }
+                    <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </button>
+                </mat-form-field>
+            </mat-card-actions>
+            <div class="table-container">
+                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
+                    <ng-container matColumnDef="serverId">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Server ID">Server</th>
+                        <td *matCellDef="let server" mat-cell>
+                            <div class="with-icon">
+                                <span>{{ server.serverId }}</span>
+                                <button [cdkCopyToClipboard]="server.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="protocol">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="What it speaks">Protocol</th>
+                        <td *matCellDef="let server" mat-cell>{{ server.protocol }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="listen">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Where a client connects">Listens on
+                        </th>
+                        <td *matCellDef="let server" mat-cell
+                            [matTooltip]="server.protocol === 'FTP' ? 'Passive ports ' + server.pasvMin + '-' + server.pasvMax : ''">
+                            {{ listen(server) }}
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="bucketName">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The bucket a client sees. Its objects are the files.">Bucket
+                        </th>
+                        <td *matCellDef="let server" mat-cell [matTooltip]="server.bucketErn">
+                            {{ server.bucketName }}{{ server.homeDirectory ? ' / ' + server.homeDirectory : '' }}
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="state">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="What it is doing now, as against what was asked of it">State
+                        </th>
+                        <td *matCellDef="let server" mat-cell [matTooltip]="'Desired: ' + server.desiredState">
+                            <span [class.unfinished]="server.state !== server.desiredState">{{ server.state }}</span>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it was created">Created</th>
+                        <td *matCellDef="let server" mat-cell>{{ dateConversion(server.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let server" mat-cell>
+                            <button (click)="toggleServer(server)" [matTooltipShowDelay]="1000"
+                                    aria-label="Start or stop" mat-icon-button
+                                    matTooltip="Ask it to start or stop. The manager acts on it; the state follows.">
+                                <mat-icon>{{ server.state === running ? 'stop' : 'play_arrow' }}</mat-icon>
+                            </button>
+                            <button [matTooltipShowDelay]="1000" aria-label="Bucket" mat-icon-button
+                                    matTooltip="Show the bucket it serves"
+                                    [routerLink]="['/esm-bucket-list', 'bucket', server.bucketErn]">
+                                <mat-icon>folder</mat-icon>
+                            </button>
+                            <button (click)="deleteServer(server)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete the server. The bucket is left alone.">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No transfer servers here.</td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

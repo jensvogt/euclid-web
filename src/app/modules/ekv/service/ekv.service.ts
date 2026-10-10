@@ -1,10 +1,20 @@
 import {Injectable} from '@angular/core';
-import {Observable} from 'rxjs';
+import {map, Observable} from 'rxjs';
 import type {Item, ScanResult, TableDescription} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
 
 export const TARGET = 'ekv';
+
+/**
+ * Where the server keeps an item's timestamps: as two ordinary attributes of the item itself.
+ *
+ * Lifted out of the rest by {@link itemOf}, because leaving them in would mean an item read, changed
+ * and written back acquires two attributes it never had - and a write replaces rather than merges, so
+ * they would stick.
+ */
+export const CREATED_ATTRIBUTE = '_created';
+export const MODIFIED_ATTRIBUTE = '_modified';
 
 /** What a key column holds. */
 export const KEY_STRING = 'string';
@@ -58,14 +68,53 @@ export class EkvService {
      * store.
      */
     scan(table: string, pageSize = 10, pageIndex = 0): Observable<ScanResult> {
-        return this.http.call<ScanResult>(TARGET, 'scan', {table: table, pageSize: pageSize, pageIndex: pageIndex});
+        return this.http.call<RawScanResult>(TARGET, 'scan', {
+            table: table,
+            pageSize: pageSize,
+            pageIndex: pageIndex,
+        }).pipe(
+            map((result: RawScanResult) => ({
+                items: (result.items ?? []).map(itemOf),
+                count: result.count ?? 0,
+                total: result.total ?? 0,
+            })),
+        );
     }
 
     getItem(table: string, key: Record<string, unknown>): Observable<Item> {
-        return this.http.call<Item>(TARGET, 'get-item', {table: table, key: key});
+        return this.http.call<Record<string, unknown>>(TARGET, 'get-item', {table: table, key: key}).pipe(
+            map(itemOf),
+        );
     }
 
     deleteItem(table: string, key: Record<string, unknown>): Observable<unknown> {
         return this.http.call(TARGET, 'delete-item', {table: table, key: key});
     }
+}
+
+/** A scan as it arrives: items are flat maps of their own attributes, not the shape euclid-ndk parses. */
+interface RawScanResult {
+    items?: Record<string, unknown>[];
+    count?: number;
+    total?: number;
+}
+
+/**
+ * One item, rearranged into the shape the rest of the app expects.
+ *
+ * An item on the wire *is* its attributes - there is no `attributes` field to read, and the timestamps
+ * are two of those attributes. euclid-ndk's `toItem` does this same lifting, which is exactly the trap:
+ * the SDK's `Item` type describes the parsed shape and this UI never runs the parser, so typing a raw
+ * response as `Item` type-checks and then reads `undefined` for every value.
+ */
+function itemOf(document: Record<string, unknown>): Item {
+    const attributes = {...document};
+    delete attributes[CREATED_ATTRIBUTE];
+    delete attributes[MODIFIED_ATTRIBUTE];
+
+    return {
+        attributes: attributes,
+        created: String(document[CREATED_ATTRIBUTE] ?? ''),
+        modified: String(document[MODIFIED_ATTRIBUTE] ?? ''),
+    };
 }

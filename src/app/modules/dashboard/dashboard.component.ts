@@ -15,7 +15,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     lastUpdate: Date = new Date();
 
-    /** The modules this installation has, which is what the monitoring card lists. */
+    /** The modules this installation has, which is what the modules and monitoring tiles both list. */
     readonly modules = EUCLID_MODULES;
 
     private updateSubscription: Subscription | undefined;

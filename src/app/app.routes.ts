@@ -142,6 +142,24 @@ export const routes: Routes = [
                 loadChildren: () => import('./modules/eag/eag.routes').then(m => m.eagListenerRoutes),
             },
             //=========================================================================
+            // ETS - transfer servers
+            //=========================================================================
+            {
+                path: 'ets-server-list',
+                canActivate: [authGuard],
+                loadChildren: () => import('./modules/ets/ets.routes').then(m => m.etsRoutes),
+            },
+            //=========================================================================
+            // One module's own dashboard - one page, every module, because what differs
+            // between them is a list of resources rather than a layout
+            //=========================================================================
+            {
+                path: 'module/:target',
+                canActivate: [authGuard],
+                title: 'Module',
+                loadComponent: () => import('./shared/module-dashboard/module-dashboard.component').then(m => m.ModuleDashboardComponent),
+            },
+            //=========================================================================
             // Monitoring - one page, nine modules, because get-metrics is one action
             //=========================================================================
             {

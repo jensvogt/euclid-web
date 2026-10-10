@@ -104,6 +104,50 @@ export class EagService {
 
     /** The ports the gateway is listening on, and the certificate each is serving. */
     listListeners(): Observable<Page<Listener>> {
-        return this.http.page<Listener>(TARGET, 'list-listeners', 'listeners');
+        return this.http.page<Record<string, unknown>>(TARGET, 'list-listeners', 'listeners').pipe(
+            map((page: Page<Record<string, unknown>>) => ({
+                total: page.total,
+                items: page.items.map(listenerOf),
+            })),
+        );
     }
+}
+
+/**
+ * One listener, with its certificate gathered into an object.
+ *
+ * The server sends a listener flat: the certificate's name is `certificate`, and everything about that
+ * certificate is a `certificate*` field beside it. euclid-ndk's parser folds those into a nested
+ * {@link ListenerCertificate} and renames the name to `certificateName`; this UI reads the raw answer
+ * and never runs that parser, so it does the same folding here.
+ *
+ * `certificateFound` is what says whether there is a certificate to describe at all - a plain HTTP
+ * listener has none, and so does an HTTPS one whose certificate the server could not find, which is a
+ * different thing from a port that never came up.
+ */
+function listenerOf(wire: Record<string, unknown>): Listener {
+    const found = Boolean(wire['certificateFound']);
+
+    return {
+        namespace: String(wire['namespace'] ?? ''),
+        port: Number(wire['port'] ?? 0),
+        protocol: String(wire['protocol'] ?? ''),
+        serving: Boolean(wire['serving']),
+        certificateName: String(wire['certificate'] ?? ''),
+        certificateConfigured: String(wire['certificateConfigured'] ?? ''),
+        certificate: found
+            ? {
+                ern: String(wire['certificateErn'] ?? ''),
+                subject: String(wire['certificateSubject'] ?? ''),
+                issuer: String(wire['certificateIssuer'] ?? ''),
+                serialNumber: String(wire['certificateSerialNumber'] ?? ''),
+                fingerprint: String(wire['certificateFingerprint'] ?? ''),
+                subjectAltNames: (wire['certificateSubjectAltNames'] as string[]) ?? [],
+                generated: Boolean(wire['certificateGenerated']),
+                notBefore: String(wire['certificateNotBefore'] ?? ''),
+                notAfter: String(wire['certificateNotAfter'] ?? ''),
+                expired: Boolean(wire['certificateExpired']),
+            }
+            : null,
+    };
 }
