@@ -57,7 +57,11 @@
                         </th>
                         <td *matCellDef="let node" mat-cell>
                             <div class="with-icon">
-                                <span>{{ node.name }}</span>
+                                <mat-nav-list>
+                                    <a [matTooltipShowDelay]="1000" mat-list-item
+                                       matTooltip="Show the node and what is running on it"
+                                       routerLink="./node/{{ node.name }}">{{ node.name }}</a>
+                                </mat-nav-list>
                                 <button [cdkCopyToClipboard]="node.name" [matTooltipShowDelay]="1000" aria-label="Copy"
                                         mat-icon-button matTooltip="Copy the node name to the clipboard">
                                     <mat-icon class="copy-icon">content_copy</mat-icon>

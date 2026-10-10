@@ -55,7 +55,11 @@
                         </th>
                         <td *matCellDef="let account" mat-cell>
                             <div class="with-icon">
-                                <span>{{ account.accountId }}</span>
+                                <mat-nav-list>
+                                    <a [matTooltipShowDelay]="1000" mat-list-item
+                                       matTooltip="Show the account, its namespaces and what is granted in it"
+                                       routerLink="./account/{{ account.accountId }}">{{ account.accountId }}</a>
+                                </mat-nav-list>
                                 <button [cdkCopyToClipboard]="account.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
                                         mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                     <mat-icon class="copy-icon">content_copy</mat-icon>

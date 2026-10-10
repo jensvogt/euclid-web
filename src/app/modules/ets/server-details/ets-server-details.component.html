@@ -1,0 +1,332 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Transfer server &mdash; {{ serverId }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/ets-server-list']" aria-label="Servers" mat-icon-button
+                matTooltip="All transfer servers">
+            <mat-icon>dns</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the server again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/ets']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the ETS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (server$ | async; as server) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button (click)="toggleServer(server)" [matTooltipShowDelay]="1000" aria-label="Start or stop"
+                            mat-icon-button
+                            matTooltip="Ask it to start or stop. The manager acts on it; the state follows.">
+                        <mat-icon>{{ server.state === running ? 'stop' : 'play_arrow' }}</mat-icon>
+                    </button>
+                    <button [matMenuTriggerFor]="servermenu" [matTooltipShowDelay]="1000" aria-label="Server menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #servermenu="matMenu" xPosition="before">
+                        <button (click)="setListener(server)" mat-menu-item
+                                matTooltip="A running server keeps its port until it is next started">
+                            <mat-icon>settings_ethernet</mat-icon>
+                            <span>Listener</span>
+                        </button>
+                        <button (click)="setBucket(server)" mat-menu-item>
+                            <mat-icon>folder</mat-icon>
+                            <span>Bucket and home directory</span>
+                        </button>
+                        <button (click)="setHostKey(server)" mat-menu-item matTooltip="What an SFTP client is shown">
+                            <mat-icon>key</mat-icon>
+                            <span>Host key</span>
+                        </button>
+                        @if (server.protocol === ftp) {
+                            <button (click)="setPassivePorts(server)" mat-menu-item
+                                    matTooltip="The range a firewall has to allow through">
+                                <mat-icon>lan</mat-icon>
+                                <span>Passive ports</span>
+                            </button>
+                        }
+                        <mat-divider/>
+                        <button (click)="deleteServer(server)" mat-menu-item
+                                matTooltip="The bucket it serves is left alone">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete server</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property">Server ID</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="server.serverId"
+                                  class="text">{{ server.serverId }}</span>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="server.ern" class="text ern">{{ server.ern }}</span>
+                            <button [cdkCopyToClipboard]="server.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What it speaks">Protocol</span>
+                        <span class="value"><span class="text">{{ server.protocol }}</span></span>
+
+                        <span class="property" matTooltip="Where a client connects">Listens on</span>
+                        <span class="value">
+                            <span class="text">{{ listen(server) }}</span>
+                            <button (click)="setListener(server)" [matTooltipShowDelay]="1000" aria-label="Listener"
+                                    mat-icon-button matTooltip="Change the address or the port">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What it is doing now">State</span>
+                        <span class="value">
+                            <span [class.unfinished]="server.state !== server.desiredState"
+                                  class="text">{{ server.state || '-' }}</span>
+                            <button (click)="toggleServer(server)" [matTooltipShowDelay]="1000"
+                                    aria-label="Start or stop" mat-icon-button
+                                    [matTooltip]="server.state === running ? 'Ask it to stop' : 'Ask it to start'">
+                                <mat-icon class="inline-icon">
+                                    {{ server.state === running ? 'stop' : 'play_arrow' }}
+                                </mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="What was asked for, which the manager works toward">
+                            Desired state
+                        </span>
+                        <span class="value"><span class="text">{{ server.desiredState || '-' }}</span></span>
+
+                        <span class="property" matTooltip="The files a client sees are this bucket's objects">
+                            Bucket
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="server.bucketErn"
+                                  class="text">{{ server.bucketName || '-' }}</span>
+                            @if (server.bucketErn) {
+                                <button [matTooltipShowDelay]="1000"
+                                        [routerLink]="['/esm-bucket-list', 'bucket', server.bucketErn]"
+                                        aria-label="Bucket" mat-icon-button matTooltip="Show the bucket it serves">
+                                    <mat-icon class="inline-icon">open_in_new</mat-icon>
+                                </button>
+                            }
+                        </span>
+
+                        <span class="property" matTooltip="The key prefix a session starts in">Home directory</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="server.homeDirectory"
+                                  class="text">{{ server.homeDirectory || 'the root of the bucket' }}</span>
+                            <button (click)="setBucket(server)" [matTooltipShowDelay]="1000" aria-label="Bucket"
+                                    mat-icon-button matTooltip="Change the bucket or the home directory">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="Named rather than carried: the material stays with euclid">
+                            Host key
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="server.hostKey"
+                                  class="text">{{ server.hostKey || '-' }}</span>
+                            <button (click)="setHostKey(server)" [matTooltipShowDelay]="1000" aria-label="Host key"
+                                    mat-icon-button matTooltip="Change the host key it presents">
+                                <mat-icon class="inline-icon">edit</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="The range an FTP data connection is handed out of">
+                            Passive ports
+                        </span>
+                        <span class="value">
+                            @if (server.protocol === ftp) {
+                                <span class="text">{{ server.pasvMin }}&ndash;{{ server.pasvMax }}</span>
+                                <button (click)="setPassivePorts(server)" [matTooltipShowDelay]="1000"
+                                        aria-label="Passive ports" mat-icon-button matTooltip="Change the range">
+                                    <mat-icon class="inline-icon">edit</mat-icon>
+                                </button>
+                            } @else {
+                                <span class="text">not used by {{ server.protocol }}</span>
+                            }
+                        </span>
+
+                        <span class="property" matTooltip="What everything belonging to it on the host is called">
+                            Runtime name
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="server.runtimeName"
+                                  class="text">{{ server.runtimeName || '-' }}</span>
+                        </span>
+
+                        <span class="property">Namespace</span>
+                        <span class="value"><span class="text">{{ server.namespace || 'account root' }}</span></span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(server.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(server.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <!-- Who may log in, and what they see once they have: the three lists a row cannot hold. -->
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Users ({{ entries(server, 'userIds').length }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The users who may log in, by ID. A server with none and no groups lets
+                                        nobody in.
+                                    </p>
+                                    <button (click)="addEntry(server, 'userIds', 'Let a user into ' + server.serverId, 'User ID', 'The user ID, as the user list shows it.')"
+                                            [matTooltipShowDelay]="1000" aria-label="Add user" mat-icon-button
+                                            matTooltip="Let a user log in">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="entries(server, 'userIds')"
+                                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>User</th>
+                                        <td *matCellDef="let entry" mat-cell>{{ entry }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let entry" mat-cell>
+                                            <button [matTooltipShowDelay]="1000"
+                                                    [routerLink]="['/eam-user-list', 'user', entry]"
+                                                    aria-label="Show user" mat-icon-button matTooltip="Show this user">
+                                                <mat-icon>open_in_new</mat-icon>
+                                            </button>
+                                            <button (click)="removeEntry(server, 'userIds', entry)"
+                                                    [matTooltipShowDelay]="1000" aria-label="Remove" mat-icon-button
+                                                    matTooltip="Stop this user logging in">
+                                                <mat-icon>person_remove</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="entryColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: entryColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="entryColumns.length" class="mat-cell">
+                                            No user is named directly. The groups tab is where the rest of the
+                                            answer is.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Groups ({{ entries(server, 'userGroups').length }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The groups whose members may log in. Adding somebody to one of these lets
+                                        them in without touching this server.
+                                    </p>
+                                    <button (click)="addEntry(server, 'userGroups', 'Let a group into ' + server.serverId, 'Group name', 'The group name, as the user group list shows it.')"
+                                            [matTooltipShowDelay]="1000" aria-label="Add group" mat-icon-button
+                                            matTooltip="Let a group's members log in">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="entries(server, 'userGroups')"
+                                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Group</th>
+                                        <td *matCellDef="let entry" mat-cell>{{ entry }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let entry" mat-cell>
+                                            <button [matTooltipShowDelay]="1000"
+                                                    [routerLink]="['/eam-group-list', 'group', entry]"
+                                                    aria-label="Show group" mat-icon-button
+                                                    matTooltip="Show this group">
+                                                <mat-icon>open_in_new</mat-icon>
+                                            </button>
+                                            <button (click)="removeEntry(server, 'userGroups', entry)"
+                                                    [matTooltipShowDelay]="1000" aria-label="Remove" mat-icon-button
+                                                    matTooltip="Stop this group's members logging in">
+                                                <mat-icon>group_remove</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="entryColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: entryColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="entryColumns.length" class="mat-cell">
+                                            No group may log in.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Directories ({{ entries(server, 'directories').length }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The directories a client sees whether or not anything is stored under them.
+                                        A bucket has none of its own &mdash; keys share a prefix, and that is all
+                                        &mdash; so a client that expects to change into one before uploading has to
+                                        be told it exists.
+                                    </p>
+                                    <button (click)="addEntry(server, 'directories', 'Add a directory to ' + server.serverId, 'Directory', 'A key prefix, relative to the home directory.')"
+                                            [matTooltipShowDelay]="1000" aria-label="Add directory" mat-icon-button
+                                            matTooltip="Show a directory to clients">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="entries(server, 'directories')"
+                                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Directory</th>
+                                        <td *matCellDef="let entry" mat-cell>{{ entry }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let entry" mat-cell>
+                                            <button (click)="removeEntry(server, 'directories', entry)"
+                                                    [matTooltipShowDelay]="1000" aria-label="Remove" mat-icon-button
+                                                    matTooltip="Stop showing this directory. Nothing stored is removed.">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="entryColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: entryColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="entryColumns.length" class="mat-cell">
+                                            A client sees only the prefixes that objects already use.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the server...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

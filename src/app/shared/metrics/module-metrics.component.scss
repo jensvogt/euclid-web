@@ -17,7 +17,24 @@
   width: 100%;
 }
 
+/* A time series reads badly in half the width, so it takes the whole row. */
+.chart.wide {
+  grid-column: 1 / -1;
+}
+
+.metrics-panel {
+  display: block;
+  margin-top: 10px;
+}
+
 .metrics-table {
   width: 100%;
-  margin-top: 10px;
+}
+
+/* Said where the chart would have been, so the row is not simply missing. */
+.note {
+  grid-column: 1 / -1;
+  padding: 10px;
+  font-style: italic;
+  opacity: 0.7;
 }

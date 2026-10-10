@@ -53,7 +53,11 @@
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Group name">Name</th>
                         <td *matCellDef="let group" mat-cell>
                             <div class="with-icon">
-                                <span>{{ group.name }}</span>
+                                <mat-nav-list>
+                                    <a [matTooltipShowDelay]="1000" mat-list-item
+                                       matTooltip="Show the group, its members and what it grants"
+                                       routerLink="./group/{{ group.name }}">{{ group.name }}</a>
+                                </mat-nav-list>
                                 <button [cdkCopyToClipboard]="group.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
                                         mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                     <mat-icon class="copy-icon">content_copy</mat-icon>

@@ -64,7 +64,12 @@
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The object's key">Key</th>
                         <td *matCellDef="let object" mat-cell>
                             <div class="with-icon">
-                                <span>{{ object.key }}</span>
+                                <mat-nav-list>
+                                    <a [matTooltipShowDelay]="1000"
+                                       [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
+                                       mat-list-item
+                                       matTooltip="Show and edit the object">{{ object.key }}</a>
+                                </mat-nav-list>
                                 <button [cdkCopyToClipboard]="object.key" [matTooltipShowDelay]="1000"
                                         aria-label="Copy" mat-icon-button matTooltip="Copy the key to the clipboard">
                                     <mat-icon class="copy-icon">content_copy</mat-icon>
