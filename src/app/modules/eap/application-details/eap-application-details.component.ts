@@ -76,7 +76,6 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly eapService = inject(EapService);
 
     private updateSubscription: Subscription | undefined;

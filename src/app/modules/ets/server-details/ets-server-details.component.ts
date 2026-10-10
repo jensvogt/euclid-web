@@ -75,7 +75,6 @@ export class EtsServerDetailsComponent extends EuclidResourceComponent implement
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly etsService = inject(EtsService);
 
     private updateSubscription: Subscription | undefined;

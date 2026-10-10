@@ -1,6 +1,5 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {ActivatedRoute, RouterLink} from '@angular/router';
-import {Location} from '@angular/common';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatIconButton} from '@angular/material/button';
 import {MatIcon} from '@angular/material/icon';
@@ -17,7 +16,7 @@ import {forkJoin, interval, Subscription} from 'rxjs';
 import {dateConversion} from '../date-utils.component';
 import {FooterComponent} from '../footer/footer.component';
 import {autoReloadPeriod} from '../list/euclid-list.component';
-import {EuclidModule, moduleOf} from './euclid-modules';
+import {EuclidModule, moduleOf, parentRouteOf} from './euclid-modules';
 import {
     MetricPoint,
     MetricsService,
@@ -102,7 +101,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
     constructor(
         private readonly route: ActivatedRoute,
         private readonly metricsService: MetricsService,
-        private readonly location: Location,
+        private readonly router: Router,
     ) {
     }
 
@@ -119,8 +118,9 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
         this.updateSubscription?.unsubscribe();
     }
 
+    /** Up a level rather than back through history, as every other page's does - see parentRouteOf(). */
     back(): void {
-        this.location.back();
+        void this.router.navigateByUrl(parentRouteOf(this.router.url));
     }
 
     refresh(): void {

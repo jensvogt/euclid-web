@@ -1,0 +1,59 @@
+@if (module) {
+    <div class="module-stats">
+
+        <!--
+          What the manager says about the module itself, which is a different question from what the
+          module holds: a registry that cannot be reached leaves this off rather than guessing.
+        -->
+        @if (status; as status) {
+            <div class="status">
+                <div class="figure">
+                    <span class="number" [class.unfinished]="unwell">{{ status.running }}</span>
+                    <span class="caption">
+                        running{{ status.maxInstances > 0 ? ' of ' + status.maxInstances : '' }}
+                    </span>
+                </div>
+                <div class="figure">
+                    <span class="number" [class.unfinished]="unwell">
+                        {{ status.desiredStopped ? 'stopped' : status.active ? 'active' : 'off' }}
+                    </span>
+                    <span class="caption">
+                        @if (status.desiredStopped) {
+                            somebody asked it to stay stopped
+                        } @else if (status.active) {
+                            switched on in the manager's configuration
+                        } @else {
+                            not switched on in the manager's configuration
+                        }
+                    </span>
+                </div>
+                <div class="figure">
+                    <span class="number">{{ status.logLevel || 'default' }}</span>
+                    <span class="caption">log level</span>
+                </div>
+            </div>
+        }
+
+        <!--
+          A tile per thing the module holds. The one the page below is about is shown and not linked -
+          a link to where you already are is a link that does nothing - and the rest are how you get
+          from one of a module's lists to the next.
+        -->
+        <div class="resources">
+            @for (counted of counts; track counted.resource.label) {
+                <mat-card appearance="outlined" class="resource"
+                          [class.linked]="counted.resource.route && !counted.current"
+                          [class.current]="counted.current"
+                          [routerLink]="counted.current ? null : counted.resource.route ?? null">
+                    <mat-card-content>
+                        <span class="number">{{ counted.count === null ? '—' : counted.count }}</span>
+                        <span class="caption">{{ counted.resource.label }}</span>
+                        @if (!counted.resource.route) {
+                            <span class="caption muted">no list view yet</span>
+                        }
+                    </mat-card-content>
+                </mat-card>
+            }
+        </div>
+    </div>
+}

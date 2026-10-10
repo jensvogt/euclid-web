@@ -63,7 +63,6 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly esmService = inject(EsmService);
 
     private updateSubscription: Subscription | undefined;

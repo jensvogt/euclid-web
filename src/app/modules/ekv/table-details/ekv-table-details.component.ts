@@ -80,7 +80,6 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly ekvService = inject(EkvService);
 
     private readonly watching = new Subscription();

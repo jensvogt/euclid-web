@@ -10,6 +10,8 @@ import type {
     Variant,
 } from 'euclid-ndk';
 
+import {HttpResponse} from '@angular/common/http';
+
 import {
     CallOptions,
     EuclidHttpService,
@@ -39,6 +41,15 @@ export const UPLOAD_CONCURRENCY = 4;
  * object that is still in it much later is the interesting one.
  */
 export const UPLOADING = 'UPLOADING';
+
+/**
+ * The largest object a page will pull into the browser to show.
+ *
+ * Not a limit on what euclid stores or serves - it is what a browser can hold in a string and a person
+ * can be shown at once. An object above it is not read at all rather than read and truncated, since
+ * `get-object` answers with the whole thing or with 413 and has no notion of a range.
+ */
+export const MAX_INLINE_SIZE = 1024 * 1024;
 
 /**
  * What every request of an upload carries: an expired session is the dialog's to handle, not the app's.
@@ -236,6 +247,26 @@ export class EsmService {
                 return object;
             }),
         );
+    }
+
+    /**
+     * One object's bytes, in a single request.
+     *
+     * `x-euclid-part-size` is the largest answer the caller will take, and the server compares an
+     * object's size against it with `>=` - so the limit goes out one byte higher, or an object of exactly
+     * that size would be refused. An object above it answers 413, which is the server saying the
+     * multipart path is the way to read this one rather than that anything is wrong, and an object still
+     * being written answers 409.
+     *
+     * The response rather than the blob: the content type the object was stored under is what decides
+     * how it can be shown.
+     */
+    getObjectBytes(bucketErn: string, key: string, maxInlineSize = MAX_INLINE_SIZE): Observable<HttpResponse<Blob>> {
+        return this.http.getBytes(TARGET, 'get-object', {
+            'x-euclid-bucket-ern': bucketErn,
+            'x-euclid-key': key,
+            'x-euclid-part-size': String(maxInlineSize + 1),
+        });
     }
 
     /**

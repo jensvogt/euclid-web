@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpContext, HttpErrorResponse} from '@angular/common/http';
-import {catchError, map, Observable, throwError} from 'rxjs';
+import {HttpClient, HttpContext, HttpErrorResponse, HttpResponse} from '@angular/common/http';
+import {catchError, from, map, mergeMap, Observable, throwError} from 'rxjs';
 
 import {environment} from '../../environments/environment';
 import {EuclidSessionService} from './euclid-session.service';
@@ -108,6 +108,36 @@ export class EuclidHttpService {
     }
 
     /**
+     * One of the actions whose answer is bytes rather than JSON.
+     *
+     * The mirror of {@link postBytes}: what would have been fields travels in `x-euclid-*` headers, and
+     * the body that comes back is the object. The request still carries an empty body, because euclid's
+     * one endpoint is a POST whatever is being asked of it.
+     *
+     * The whole response rather than the body, because the headers are part of the answer here - a
+     * stored content type is what decides whether what came back can be shown as text at all.
+     */
+    getBytes(
+        target: string,
+        action: string,
+        headers: Record<string, string> = {},
+        options: CallOptions = {},
+    ): Observable<HttpResponse<Blob>> {
+        let sent = this.session.requestHeaders(target, action).set('Content-Type', 'application/octet-stream');
+        for (const [name, value] of Object.entries(headers)) {
+            sent = sent.set(name, value);
+        }
+        return this.http.post(this.url, new Blob(), {
+            headers: sent,
+            context: contextOf(options),
+            observe: 'response',
+            responseType: 'blob',
+        }).pipe(
+            catchError((error: HttpErrorResponse) => blobError(target, action, error)),
+        );
+    }
+
+    /**
      * A listing, as a page.
      *
      * `field` is what the module calls its items - `queues`, `buckets`, `topics` - because euclid names
@@ -190,6 +220,36 @@ export function isUnauthorized(error: unknown): boolean {
 function euclidError(target: string, action: string, error: HttpErrorResponse): EuclidError {
     const reason = typeof error.error?.error === 'string' ? error.error.error : error.message;
     return new EuclidError(`${target}:${action} failed (${error.status}): ${reason}`, error.status);
+}
+
+/**
+ * The same reason, read out of a body that came back as bytes.
+ *
+ * A request that asked for bytes is refused in bytes too: Angular hands the error body over as a Blob
+ * whatever it holds, so `{"error": "..."}` has to be read out of it before it can be reported - and
+ * without this a 413 would reach the user as Angular's own description of the status code rather than as
+ * the size the server refused. Reading a Blob is asynchronous, which is why this answers with an
+ * observable rather than with an error.
+ */
+function blobError(target: string, action: string, error: HttpErrorResponse): Observable<never> {
+    if (!(error.error instanceof Blob)) {
+        return throwError(() => euclidError(target, action, error));
+    }
+    return from(error.error.text()).pipe(
+        mergeMap((text: string) => {
+            let reason = text || error.message;
+            try {
+                const parsed: unknown = JSON.parse(text);
+                const stated = (parsed as {error?: unknown})?.error;
+                if (typeof stated === 'string') {
+                    reason = stated;
+                }
+            } catch {
+                // Not JSON, so the text is the best there is - and an empty one leaves the status to speak.
+            }
+            return throwError(() => new EuclidError(`${target}:${action} failed (${error.status}): ${reason}`, error.status));
+        }),
+    );
 }
 
 /** The request context these options amount to, which is how an interceptor reads them. */

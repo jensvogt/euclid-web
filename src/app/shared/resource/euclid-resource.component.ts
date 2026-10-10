@@ -1,10 +1,11 @@
 import {Directive, inject} from '@angular/core';
-import {Location} from '@angular/common';
+import {Router} from '@angular/router';
 import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {Observable} from 'rxjs';
 
 import {ConfirmData, ConfirmDialog} from '../confirm/confirm.component';
+import {parentRouteOf} from '../metrics/euclid-modules';
 import {ResourceAddData, ResourceAddDialog, ResourceField} from '../resource-add/resource-add.component';
 
 /**
@@ -24,7 +25,7 @@ export abstract class EuclidResourceComponent {
 
     protected readonly dialog = inject(MatDialog);
     protected readonly snackBar = inject(MatSnackBar);
-    protected readonly location = inject(Location);
+    protected readonly router = inject(Router);
 
     /** When this view last read what it shows, which is what the footer reports. */
     lastUpdate: Date = new Date();
@@ -36,8 +37,16 @@ export abstract class EuclidResourceComponent {
         this.load();
     }
 
+    /**
+     * Goes up a level rather than back through history.
+     *
+     * The two differ as soon as somebody moves sideways: users, then groups, then accounts are three
+     * pages at the same level, and history would walk back through all of them one click at a time. Up
+     * from any of them is the main dashboard - see {@link parentRouteOf}. The browser's own back button
+     * is still there for retracing steps, and this one is for leaving.
+     */
     back(): void {
-        this.location.back();
+        void this.router.navigateByUrl(parentRouteOf(this.router.url));
     }
 
     /**

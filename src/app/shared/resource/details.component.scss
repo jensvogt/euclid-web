@@ -178,6 +178,23 @@
   line-height: 1.4;
 }
 
+/*
+ * An image object, shown at the size it is until that is wider than the card.
+ *
+ * Not stretched to fill: a 16x16 favicon blown up to the width of the page says nothing true about it,
+ * and the checkerboard behind it is what makes a transparent PNG's edges visible at all.
+ */
+.object-image {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  margin: 0;
+  padding: 12px;
+  background: repeating-conic-gradient(rgba(0, 0, 0, 0.06) 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
 /* The body in the box is not the body on the queue - see the send button beside it. */
 .edited {
   margin: 8px 0 0 0;

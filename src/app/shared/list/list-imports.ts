@@ -16,6 +16,7 @@ import {MatTooltip} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
 
 import {FooterComponent} from '../footer/footer.component';
+import {ModuleStatsComponent} from '../module-stats/module-stats.component';
 
 /**
  * What every list view's template needs.
@@ -46,5 +47,6 @@ export const EUCLID_LIST_IMPORTS = [
     FormsModule,
     RouterLink,
     AsyncPipe,
+    ModuleStatsComponent,
     FooterComponent,
 ];

@@ -102,7 +102,6 @@ export class EqsMessageDetailsComponent extends EuclidResourceComponent implemen
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly eqsService = inject(EqsService);
 
     private readonly subscriptions = new Subscription();

@@ -70,7 +70,6 @@ export class EamAccountDetailsComponent extends EuclidResourceComponent implemen
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly session = inject(EuclidSessionService);
     private readonly eamService = inject(EamService);
 

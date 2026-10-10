@@ -1,21 +1,15 @@
 /**
- * One module's dashboard: a row of figures about the module, and a tile per thing it holds.
+ * The band of figures a module's pages carry: what it is running, and a tile per thing it holds.
  *
- * Its own stylesheet rather than the details one: this page is counts rather than label-and-value, and
- * the tiles are the navigation. The few names it shares with the rest - the heading, the badge for a
- * value that is not what it should be - are repeated here rather than pulling in a page of grid rules.
+ * Sized to sit above something else rather than to be the page. It is read on the way past - a count
+ * and a caption - so the tiles are short and the numbers are large enough to take in without reading
+ * them, and the whole band is separated from what follows by a rule rather than by space alone.
  */
 
-.fill-remaining-space {
-  flex: 1 1 auto;
-  padding-top: 6px;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-  font-size: x-large;
-}
-
-.section {
-  margin: 0 -10px 16px -10px;
+.module-stats {
+  margin: 0 0 12px 0;
+  padding: 0 0 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 /* What the module itself is doing, read left to right rather than as a table of two columns. */
@@ -23,6 +17,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 32px;
+  margin: 0 0 12px 0;
 }
 
 .figure {
@@ -32,18 +27,17 @@
 
 /*
  * The tiles. `auto-fill` rather than a fixed column count, because a module with one resource and a
- * module with five are the same page: the row fills with what there is instead of leaving four empty
+ * module with five are the same band: the row fills with what there is instead of leaving four empty
  * cells beside ESM's buckets.
  */
 .resources {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 10px;
-  margin: 0 -10px;
 }
 
 .resource {
-  min-height: 92px;
+  min-height: 76px;
 }
 
 /* A tile that goes somewhere says so before it is clicked, rather than only under the pointer. */
@@ -56,9 +50,15 @@
   }
 }
 
+/* Where you already are: marked rather than linked, so the band says which list is below it. */
+.current {
+  border-color: var(--mat-sys-primary, #004a9f);
+  background: rgba(0, 74, 159, 0.06);
+}
+
 .number {
   display: block;
-  font-size: xx-large;
+  font-size: x-large;
   line-height: 1.1;
 }
 
@@ -77,9 +77,4 @@
   padding: 2px 8px;
   border-radius: 10px;
   background: #fff8e1;
-}
-
-.nothing {
-  padding: 16px;
-  opacity: 0.75;
 }

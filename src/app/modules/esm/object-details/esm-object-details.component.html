@@ -125,48 +125,144 @@
             </mat-card>
 
             <mat-card appearance="outlined" class="section">
-                <mat-card-header>
-                    <span class="section-title">Attributes ({{ (attributes$ | async)?.length ?? 0 }})</span>
-                    <button (click)="addAttribute(object)" [matTooltipShowDelay]="1000" aria-label="Add attribute"
-                            mat-icon-button matTooltip="Add an attribute to the object">
-                        <mat-icon>add</mat-icon>
-                    </button>
-                </mat-card-header>
                 <mat-card-content>
-                    <table [dataSource]="(attributes$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
-                        <ng-container matColumnDef="name">
-                            <th *matHeaderCellDef mat-header-cell>Name</th>
-                            <td *matCellDef="let attribute" mat-cell>{{ attribute.name }}</td>
-                        </ng-container>
-                        <ng-container matColumnDef="value">
-                            <th *matHeaderCellDef mat-header-cell>Value</th>
-                            <td *matCellDef="let attribute" mat-cell>{{ attribute.value }}</td>
-                        </ng-container>
-                        <ng-container matColumnDef="type">
-                            <th *matHeaderCellDef mat-header-cell
-                                matTooltip="The type euclid stores the value under">Type
-                            </th>
-                            <td *matCellDef="let attribute" mat-cell>{{ attribute.type }}</td>
-                        </ng-container>
-                        <ng-container matColumnDef="actions">
-                            <th *matHeaderCellDef mat-header-cell>Actions</th>
-                            <td *matCellDef="let attribute" mat-cell>
-                                <button (click)="editAttribute(object, attribute)" [matTooltipShowDelay]="1000"
-                                        aria-label="Edit" mat-icon-button matTooltip="Change the value">
-                                    <mat-icon>edit</mat-icon>
-                                </button>
-                                <button (click)="deleteAttribute(object, attribute)" [matTooltipShowDelay]="1000"
-                                        aria-label="Delete" mat-icon-button matTooltip="Remove the attribute">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
-                            </td>
-                        </ng-container>
-                        <tr *matHeaderRowDef="attributeColumns" mat-header-row></tr>
-                        <tr *matRowDef="let row; columns: attributeColumns;" mat-row></tr>
-                        <tr *matNoDataRow class="mat-row">
-                            <td [attr.colspan]="attributeColumns.length" class="mat-cell">This object has no attributes.</td>
-                        </tr>
-                    </table>
+                    <mat-tab-group>
+
+                        <mat-tab label="Content">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        The object's bytes, as the server stored them. Read once with the
+                                        object and not again until asked, since the page re-reads itself
+                                        every minute and these are a download rather than a row. Up to
+                                        {{ byteConversion(maxInlineSize) }} &mdash; beyond that an object is
+                                        a download rather than a thing to look at.
+                                    </p>
+                                    <!-- Only for a document that is one: a text file that is neither JSON
+                                         nor XML has no formatted form to switch to. -->
+                                    @if (content?.pretty) {
+                                        <button (click)="prettyPrinted = !prettyPrinted" [matTooltipShowDelay]="1000"
+                                                [matTooltip]="prettyPrinted
+                                                    ? 'Show the bytes as they are stored'
+                                                    : 'Lay the document out, indented'"
+                                                aria-label="Pretty print" mat-icon-button>
+                                            <mat-icon>{{ prettyPrinted ? 'notes' : 'format_indent_increase' }}</mat-icon>
+                                        </button>
+                                    }
+                                    @if (content) {
+                                        <button (click)="downloadContent(object)" [matTooltipShowDelay]="1000"
+                                                aria-label="Download" mat-icon-button
+                                                matTooltip="Save the object to a file">
+                                            <mat-icon>download</mat-icon>
+                                        </button>
+                                    }
+                                    <button (click)="loadContent(object)" [disabled]="contentLoading"
+                                            [matTooltipShowDelay]="1000" aria-label="Read again" mat-icon-button
+                                            matTooltip="Read the bytes again">
+                                        <mat-icon>refresh</mat-icon>
+                                    </button>
+                                </div>
+
+                                @if (contentLoading) {
+                                    <p class="nothing">Reading the object...</p>
+                                } @else if (contentNote) {
+                                    <!-- The server's own sentence, which says which of the several things it
+                                         refuses for actually happened: too large, or not finished being written. -->
+                                    <p class="nothing">{{ contentNote }}</p>
+                                } @else if (content) {
+                                    @if (prettyPrinted) {
+                                        <p class="note">
+                                            Laid out for reading. What is stored &mdash; and what the download
+                                            button saves &mdash; is the document as it was sent.
+                                        </p>
+                                    }
+                                    @if (content.truncated) {
+                                        <p class="note warning">
+                                            <mat-icon class="inline-icon">warning</mat-icon>
+                                            Shown in part. The whole object is
+                                            {{ byteConversion(content.size) }} &mdash; download it to see all of it.
+                                        </p>
+                                    }
+                                    @switch (content.kind) {
+                                        @case ('image') {
+                                            <img [src]="content.url" alt="{{ object.key }}" class="object-image">
+                                        }
+                                        @case ('binary') {
+                                            <p class="note">
+                                                Not text: {{ content.contentType || 'no content type' }},
+                                                {{ byteConversion(content.size) }}. The first bytes, as hex.
+                                            </p>
+                                            <label>
+                                                <textarea [value]="shownText(content)" aria-label="Object content"
+                                                          class="payload" readonly spellcheck="false"></textarea>
+                                            </label>
+                                        }
+                                        @default {
+                                            <label>
+                                                <textarea [value]="shownText(content)" aria-label="Object content"
+                                                          class="payload" readonly spellcheck="false"></textarea>
+                                            </label>
+                                        }
+                                    }
+                                } @else {
+                                    <p class="nothing">Nothing read yet.</p>
+                                }
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Attributes ({{ (attributes$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        What was hung off the object. Not the object's own properties &mdash; those
+                                        are above, and the server keeps them.
+                                    </p>
+                                    <button (click)="addAttribute(object)" [matTooltipShowDelay]="1000"
+                                            aria-label="Add attribute" mat-icon-button
+                                            matTooltip="Add an attribute to the object">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="(attributes$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell>Name</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.name }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="value">
+                                        <th *matHeaderCellDef mat-header-cell>Value</th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.value }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="type">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The type euclid stores the value under">Type
+                                        </th>
+                                        <td *matCellDef="let attribute" mat-cell>{{ attribute.type }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let attribute" mat-cell>
+                                            <button (click)="editAttribute(object, attribute)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Edit" mat-icon-button matTooltip="Change the value">
+                                                <mat-icon>edit</mat-icon>
+                                            </button>
+                                            <button (click)="deleteAttribute(object, attribute)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Delete" mat-icon-button matTooltip="Remove the attribute">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="attributeColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: attributeColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="attributeColumns.length" class="mat-cell">
+                                            This object has no attributes.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
                 </mat-card-content>
             </mat-card>
         } @else {

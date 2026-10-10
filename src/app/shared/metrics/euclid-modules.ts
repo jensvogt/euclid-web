@@ -29,12 +29,17 @@ export interface EuclidModule {
     target: string;
     label: string;
     /**
-     * The module's own dashboard, which is where the modules tile and the monitoring page link back to.
+     * Where the module opens: its main list view, which is where the modules tile and the monitoring
+     * page send you.
      *
-     * One route per module rather than one per list: a list is something inside a module, and sending
-     * somebody to the user list when they asked for EAM hides the other four things EAM keeps.
+     * The list rather than a dashboard of its own, because every list view carries the module's figures
+     * and the way into its other lists above it - see {@link ModuleStatsComponent}. A separate page of
+     * counts in front of that was one click between somebody and the thing they came for.
+     *
+     * Absent for a module with no list view at all, which EMM is: the registry is what EMM holds, and
+     * there is no page of it yet.
      */
-    route: string;
+    route?: string;
     /** What it holds, in the order its dashboard shows them. */
     resources: ModuleResource[];
 }
@@ -52,7 +57,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'eam',
         label: 'Access Management (EAM)',
-        route: '/module/eam',
+        route: '/eam-user-list',
         resources: [
             {label: 'Users', route: '/eam-user-list', action: 'list-users', field: 'users', paged: true},
             {label: 'User groups', route: '/eam-group-list', action: 'list-user-groups', field: 'userGroups', paged: true},
@@ -71,7 +76,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'esm',
         label: 'Storage (ESM)',
-        route: '/module/esm',
+        route: '/esm-bucket-list',
         resources: [
             {label: 'Buckets', route: '/esm-bucket-list', action: 'list-buckets', field: 'buckets', paged: true},
         ],
@@ -79,7 +84,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'eqs',
         label: 'Queues (EQS)',
-        route: '/module/eqs',
+        route: '/eqs-queue-list',
         resources: [
             {label: 'Queues', route: '/eqs-queue-list', action: 'list-queues', field: 'queues', paged: true},
         ],
@@ -87,7 +92,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'ens',
         label: 'Notifications (ENS)',
-        route: '/module/ens',
+        route: '/ens-topic-list',
         resources: [
             {label: 'Topics', route: '/ens-topic-list', action: 'list-topics', field: 'topics', paged: true},
         ],
@@ -95,7 +100,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'ekm',
         label: 'Key Management (EKM)',
-        route: '/module/ekm',
+        route: '/ekm-key-list',
         resources: [
             {label: 'Keys', route: '/ekm-key-list', action: 'list-keys', field: 'keys', paged: true},
             {label: 'Certificates', route: '/ekm-certificate-list', action: 'list-certificates', field: 'certificates', paged: true},
@@ -104,7 +109,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'ekv',
         label: 'Tables (EKV)',
-        route: '/module/ekv',
+        route: '/ekv-table-list',
         resources: [
             {label: 'Tables', route: '/ekv-table-list', action: 'list-tables', field: 'tables', paged: true},
         ],
@@ -112,7 +117,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'eap',
         label: 'Applications (EAP)',
-        route: '/module/eap',
+        route: '/eap-application-list',
         resources: [
             {label: 'Applications', route: '/eap-application-list', action: 'list-applications', field: 'applications', paged: false},
             {label: 'Worker nodes', route: '/eap-node-list', action: 'list-nodes', field: 'nodes', paged: false},
@@ -121,7 +126,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'ess',
         label: 'Secrets (ESS)',
-        route: '/module/ess',
+        route: '/ess-secret-list',
         resources: [
             {label: 'Secrets', route: '/ess-secret-list', action: 'list-secrets', field: 'secrets', paged: true},
         ],
@@ -129,7 +134,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'eag',
         label: 'API Gateway (EAG)',
-        route: '/module/eag',
+        route: '/eag-route-list',
         resources: [
             {label: 'Routes', route: '/eag-route-list', action: 'list-routes', field: 'routes', paged: false},
             {label: 'Listeners', route: '/eag-listener-list', action: 'list-listeners', field: 'listeners', paged: true},
@@ -138,7 +143,7 @@ export const EUCLID_MODULES: EuclidModule[] = [
     {
         target: 'ets',
         label: 'Transfer Servers (ETS)',
-        route: '/module/ets',
+        route: '/ets-server-list',
         resources: [
             {label: 'Transfer servers', route: '/ets-server-list', action: 'list-servers', field: 'servers', paged: false},
         ],
@@ -148,7 +153,6 @@ export const EUCLID_MODULES: EuclidModule[] = [
         // panel above it. A page for starting, stopping and scaling them is EMM's to gain next.
         target: 'emm',
         label: 'Module Registry (EMM)',
-        route: '/module/emm',
         resources: [
             {label: 'Modules', action: 'list-modules', field: 'modules', paged: false},
         ],
@@ -158,4 +162,63 @@ export const EUCLID_MODULES: EuclidModule[] = [
 /** One module by target, for a route that carries the target as a parameter. */
 export function moduleOf(target: string): EuclidModule | undefined {
     return EUCLID_MODULES.find(module => module.target === target);
+}
+
+/** The page above every module: what the back button on a module's own list view goes to. */
+export const DASHBOARD_ROUTE = '/dashboard';
+
+/**
+ * The resource whose list view a page belongs under, and the module that owns it.
+ *
+ * By prefix, because what a list view shows is not the only thing under its route: a bucket's objects
+ * and one object's details are both `/esm-bucket-list/...`, and all three pages are about ESM. The
+ * longest matching resource wins, so a route that happens to begin with another one cannot claim it.
+ */
+function matchRoute(url: string): {module: EuclidModule; route: string} | undefined {
+    const path = url.split(/[?#]/)[0];
+
+    let found: {module: EuclidModule; route: string} | undefined;
+    for (const module of EUCLID_MODULES) {
+        for (const resource of module.resources) {
+            const route = resource.route;
+            if (!route || route.length <= (found?.route.length ?? 0)) {
+                continue;
+            }
+            if (path === route || path.startsWith(`${route}/`)) {
+                found = {module: module, route: route};
+            }
+        }
+    }
+    return found;
+}
+
+/** Which module a page belongs to, worked out from its URL. */
+export function moduleOfRoute(url: string): EuclidModule | undefined {
+    return matchRoute(url)?.module;
+}
+
+/**
+ * The page one level above this one.
+ *
+ * A level is what the routes already say, so this needs no table of its own. A module's list view is
+ * directly under the main dashboard, whatever was looked at on the way there - clicking users, then
+ * groups, then accounts is three times across one level rather than three levels down, and a back button
+ * that retraced it would be the browser's own. Under a list view sits `<kind>/<id>`, which is either one
+ * of those things or a listing of what is inside it, and under that sits `<kind>/<id>/<id>` - one object
+ * of a bucket, one message of a queue - whose level up is that listing.
+ *
+ * A page the registry says nothing about - the monitoring pages, anything new - is treated as sitting
+ * directly under the dashboard, which is where it is reached from.
+ */
+export function parentRouteOf(url: string): string {
+    const path = url.split(/[?#]/)[0];
+    const matched = matchRoute(path);
+    if (!matched || path === matched.route) {
+        return DASHBOARD_ROUTE;
+    }
+
+    const rest = path.slice(matched.route.length).split('/').filter(segment => segment !== '');
+    return rest.length > 2
+        ? `${matched.route}/${rest.slice(0, rest.length - 1).join('/')}`
+        : matched.route;
 }

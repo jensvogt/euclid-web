@@ -3,9 +3,9 @@
         <div class="wrapper">
 
             <!--
-              One tile for the modules, top level only. What each of them holds is on its own dashboard
-              rather than here: naming the twenty-odd lists beneath ten modules made this page a menu of
-              everything and a view of nothing.
+              One tile for the modules, top level only. Each opens its main list, which carries the
+              module's figures and the way into its other lists above it - naming the twenty-odd lists
+              beneath ten modules here made this page a menu of everything and a view of nothing.
             -->
             <mat-card class="mat-elevation-z4">
                 <mat-card-header>
@@ -14,7 +14,16 @@
                 <mat-card-content>
                     <mat-nav-list class="two-columns">
                         @for (module of modules; track module.target) {
-                            <a [routerLink]="module.route" mat-list-item>{{ module.label }}</a>
+                            @if (module.route) {
+                                <a [routerLink]="module.route" mat-list-item>{{ module.label }}</a>
+                            } @else {
+                                <!-- No list view to open: EMM's own page has still to be written. Named
+                                     anyway, because its counters and its instances are worth reaching. -->
+                                <a [routerLink]="'/metrics/' + module.target" mat-list-item
+                                   matTooltip="No list view yet - this opens its monitoring instead">
+                                    {{ module.label }}
+                                </a>
+                            }
                         }
                     </mat-nav-list>
                 </mat-card-content>

@@ -4,10 +4,10 @@
             <mat-icon>arrow_back</mat-icon>
         </button>
         <span class="fill-remaining-space">{{ module?.label ?? target }} &mdash; Monitoring</span>
-        @if (module) {
-            <button [matTooltipShowDelay]="1000" [routerLink]="module.route" aria-label="Module"
-                    mat-icon-button matTooltip="The module's own dashboard">
-                <mat-icon>dashboard</mat-icon>
+        @if (module?.route; as route) {
+            <button [matTooltipShowDelay]="1000" [routerLink]="route" aria-label="Module"
+                    mat-icon-button matTooltip="What this module holds">
+                <mat-icon>list</mat-icon>
             </button>
         }
         <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button

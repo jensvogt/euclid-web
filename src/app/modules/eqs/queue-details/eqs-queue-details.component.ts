@@ -64,7 +64,6 @@ export class EqsQueueDetailsComponent extends EuclidResourceComponent implements
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly eqsService = inject(EqsService);
 
     private updateSubscription: Subscription | undefined;

@@ -65,7 +65,6 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly essService = inject(EssService);
 
     private updateSubscription: Subscription | undefined;

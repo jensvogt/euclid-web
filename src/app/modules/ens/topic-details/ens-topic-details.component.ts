@@ -79,7 +79,6 @@ export class EnsTopicDetailsComponent extends EuclidResourceComponent implements
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
-    private readonly router = inject(Router);
     private readonly ensService = inject(EnsService);
 
     private updateSubscription: RxSubscription | undefined;
