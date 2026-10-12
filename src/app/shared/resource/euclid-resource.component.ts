@@ -6,7 +6,7 @@ import {Observable} from 'rxjs';
 
 import {ConfirmData, ConfirmDialog} from '../confirm/confirm.component';
 import {parentRouteOf} from '../metrics/euclid-modules';
-import {ResourceAddData, ResourceAddDialog, ResourceField} from '../resource-add/resource-add.component';
+import {FieldValue, ResourceAddData, ResourceAddDialog, ResourceField} from '../resource-add/resource-add.component';
 
 /**
  * What a view that acts on euclid's resources does, whatever shape it has.
@@ -107,7 +107,7 @@ export abstract class EuclidResourceComponent {
     protected addThen(
         title: string,
         fields: ResourceField[],
-        create: (values: Record<string, string | number | boolean>) => Observable<unknown>,
+        create: (values: Record<string, FieldValue>) => Observable<unknown>,
         message: string,
         confirm?: string,
         done?: () => void,
@@ -120,7 +120,7 @@ export abstract class EuclidResourceComponent {
         dialogConfig.data = {title: title, fields: fields, confirm: confirm} as ResourceAddData;
 
         this.dialog.open(ResourceAddDialog, dialogConfig).afterClosed()
-            .subscribe((values: Record<string, string | number | boolean> | undefined) => {
+            .subscribe((values: Record<string, FieldValue> | undefined) => {
                 if (values) {
                     this.run(create(values), message, done);
                 }

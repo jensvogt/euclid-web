@@ -31,6 +31,41 @@
   overflow: auto;
 }
 
+/*
+ * What the waiting spinner is positioned against.
+ *
+ * Around the scrolling container rather than inside it: an overlay inside a box that scrolls is placed
+ * against the content, so it would slide up out of view as soon as anybody scrolled the table under it.
+ */
+.table-area {
+  position: relative;
+}
+
+/*
+ * Said over the table rather than instead of it.
+ *
+ * A reload has the previous page on screen and it is still true, so it stays readable under a wash
+ * rather than being replaced by an empty box - the same reasoning that leaves the page in place when a
+ * reload fails. The wash is what makes it clear the rows underneath are not the answer being waited for.
+ */
+.busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+
+.busy-label {
+  font-size: small;
+  opacity: 0.75;
+}
+
 .with-icon {
   display: flex;
   align-items: center;
@@ -56,8 +91,7 @@
 
 /*
  * Every column as wide as what is in it, for the lists that ask for it with `sized-to-content` on the
- * table. Opt-in rather than the rule, because it only reads well where the values are short and of a
- * settled length - a listing of object keys wants the room shared out instead.
+ * table. Opt-in rather than the rule, because a table of short settled values is what it is for.
  *
  * `width: 1px` is not a width but a request to be as narrow as possible - a cell is never laid out below
  * its content - and `nowrap` is what stops that narrowness being taken as permission to wrap a value onto
@@ -74,9 +108,29 @@
   padding-right: 16px;
 }
 
+/*
+ * The first column takes the rest, and gives when there is not enough.
+ *
+ * `width: 100%` is the claim on the slack. `max-width: 0` is what makes the column able to give it back:
+ * without it a value longer than the room available - an object key, which has no bound at all - is a
+ * width the column insists on, and a table whose columns all insist is a table wider than its card with a
+ * horizontal scrollbar under it. Neither property is a width that is used; between them they say "as much
+ * as is left, and no more".
+ *
+ * A cell is still never laid out below the minimum width of what is in it, so the value inside has to be
+ * able to shrink for any of this to hold. For the usual first cell - a `mat-nav-list` link beside a copy
+ * button - that is what these `min-width: 0` lines are: a flex item does not go below its content unless
+ * told to, and Material's list item clips and ellipsises its own text once its box is settled.
+ */
 .euclid-table.sized-to-content th:first-child,
 .euclid-table.sized-to-content td:first-child {
-  width: auto;
+  width: 100%;
+  max-width: 0;
+}
+
+.euclid-table.sized-to-content td:first-child .with-icon,
+.euclid-table.sized-to-content td:first-child .with-icon > * {
+  min-width: 0;
 }
 
 .ern {

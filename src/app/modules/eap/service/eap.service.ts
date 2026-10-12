@@ -158,14 +158,24 @@ export class EapService {
         return this.http.call(TARGET, 'stop-application', {applicationId: applicationId});
     }
 
-    /** Points an application at a new build of itself. The artifact defaults to the one already deployed. */
-    redeployApplication(applicationId: string, artifact = '', version = ''): Observable<unknown> {
+    /**
+     * Points an application at a new build of itself. The artifact defaults to the one already deployed.
+     *
+     * The server refuses a redeploy whose artifact hashes the same as the one running, because a
+     * deployment that changes no bytes is a restart dressed up as one. `force` is for the cases where
+     * that is the point: putting a deleted artifact back, or restarting a pool onto the same build after
+     * a host lost its copy.
+     */
+    redeployApplication(applicationId: string, artifact = '', version = '', force = false): Observable<unknown> {
         const payload: Record<string, unknown> = {applicationId: applicationId};
         if (artifact) {
             payload['artifact'] = artifact;
         }
         if (version) {
             payload['version'] = version;
+        }
+        if (force) {
+            payload['force'] = true;
         }
         return this.http.call(TARGET, 'redeploy-application', payload);
     }

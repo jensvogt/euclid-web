@@ -58,82 +58,98 @@
                     </button>
                 </mat-form-field>
             </mat-card-actions>
-            <div class="table-container">
-                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
-                       class="mat-elevation-z8 euclid-table" mat-table matSort>
-                    <ng-container matColumnDef="key">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The object's key">Key</th>
-                        <td *matCellDef="let object" mat-cell>
-                            <div class="with-icon">
-                                <mat-nav-list>
-                                    <a [matTooltipShowDelay]="1000"
-                                       [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
-                                       mat-list-item
-                                       matTooltip="Show and edit the object">{{ object.key }}</a>
-                                </mat-nav-list>
-                                <button [cdkCopyToClipboard]="object.key" [matTooltipShowDelay]="1000"
-                                        aria-label="Copy" mat-icon-button matTooltip="Copy the key to the clipboard">
-                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+            <div class="table-area">
+                @if (busy$ | async) {
+                    <!-- Only once the wait is a second old - see SPINNER_DELAY_MS. A bucket with tens of
+                         thousands of objects takes that long to count and page, and this is the page where
+                         that is ordinary rather than a sign of something wrong. -->
+                    <div class="busy-overlay">
+                        <mat-spinner diameter="40"/>
+                        <span class="busy-label">Reading objects...</span>
+                    </div>
+                }
+                <div class="table-container">
+                    <!--
+                      Sized to content, with the key taking what is left: size, type, status and the dates are
+                      values of a settled length, and the key is the one with none - so it is the column that
+                      gives rather than the one that pushes the table off the side of the card.
+                    -->
+                    <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                           class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
+                        <ng-container matColumnDef="key">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The object's key">Key</th>
+                            <td *matCellDef="let object" mat-cell>
+                                <div class="with-icon">
+                                    <mat-nav-list>
+                                        <a [matTooltipShowDelay]="1000"
+                                           [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
+                                           mat-list-item
+                                           matTooltip="Show and edit the object">{{ object.key }}</a>
+                                    </mat-nav-list>
+                                    <button [cdkCopyToClipboard]="object.key" [matTooltipShowDelay]="1000"
+                                            aria-label="Copy" mat-icon-button matTooltip="Copy the key to the clipboard">
+                                        <mat-icon class="copy-icon">content_copy</mat-icon>
+                                    </button>
+                                </div>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="size">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Size of the object">Size</th>
+                            <td *matCellDef="let object" mat-cell>{{ byteConversion(object.size) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="contentType">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Content type">Type</th>
+                            <td *matCellDef="let object" mat-cell>{{ object.contentType }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="status">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header
+                                matTooltip="What the server has done with it. UPLOADING means it is not whole yet.">
+                                Status
+                            </th>
+                            <td *matCellDef="let object" mat-cell>
+                                <span [class.unfinished]="object.status === 'UPLOADING'">{{ object.status || '-' }}</span>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="encrypted">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Whether this object is encrypted">
+                                Encrypted
+                            </th>
+                            <td *matCellDef="let object" mat-cell>{{ object.encrypted ? 'yes' : 'no' }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="created">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it was stored">Created</th>
+                            <td *matCellDef="let object" mat-cell>{{ dateConversion(object.created) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="modified">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it last changed">Modified</th>
+                            <td *matCellDef="let object" mat-cell>{{ dateConversion(object.modified) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="actions">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                            <td *matCellDef="let object" mat-cell>
+                                <button [cdkCopyToClipboard]="object.ern" [matTooltipShowDelay]="1000" aria-label="Copy ERN"
+                                        mat-icon-button matTooltip="Copy the ERN">
+                                    <mat-icon>link</mat-icon>
                                 </button>
-                            </div>
-                        </td>
-                    </ng-container>
-                    <ng-container matColumnDef="size">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Size of the object">Size</th>
-                        <td *matCellDef="let object" mat-cell>{{ byteConversion(object.size) }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="contentType">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Content type">Type</th>
-                        <td *matCellDef="let object" mat-cell>{{ object.contentType }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="status">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header
-                            matTooltip="What the server has done with it. UPLOADING means it is not whole yet.">
-                            Status
-                        </th>
-                        <td *matCellDef="let object" mat-cell>
-                            <span [class.unfinished]="object.status === 'UPLOADING'">{{ object.status || '-' }}</span>
-                        </td>
-                    </ng-container>
-                    <ng-container matColumnDef="encrypted">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Whether this object is encrypted">
-                            Encrypted
-                        </th>
-                        <td *matCellDef="let object" mat-cell>{{ object.encrypted ? 'yes' : 'no' }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="created">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it was stored">Created</th>
-                        <td *matCellDef="let object" mat-cell>{{ dateConversion(object.created) }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="modified">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When it last changed">Modified</th>
-                        <td *matCellDef="let object" mat-cell>{{ dateConversion(object.modified) }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="actions">
-                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
-                        <td *matCellDef="let object" mat-cell>
-                            <button [cdkCopyToClipboard]="object.ern" [matTooltipShowDelay]="1000" aria-label="Copy ERN"
-                                    mat-icon-button matTooltip="Copy the ERN">
-                                <mat-icon>link</mat-icon>
-                            </button>
-                            <!-- The array form, because a key holds slashes and only this encodes them. -->
-                            <button [matTooltipShowDelay]="1000"
-                                    [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
-                                    aria-label="Edit" mat-icon-button matTooltip="Show and edit the object">
-                                <mat-icon>edit</mat-icon>
-                            </button>
-                            <button (click)="deleteObject(object)" [matTooltipShowDelay]="1000" aria-label="Delete"
-                                    mat-icon-button matTooltip="Delete this object">
-                                <mat-icon>delete</mat-icon>
-                            </button>
-                        </td>
-                    </ng-container>
-                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
-                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
-                    <tr *matNoDataRow class="mat-row">
-                        <td [attr.colspan]="columns.length" class="mat-cell">Nothing in this bucket.</td>
-                    </tr>
-                </table>
+                                <!-- The array form, because a key holds slashes and only this encodes them. -->
+                                <button [matTooltipShowDelay]="1000"
+                                        [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
+                                        aria-label="Edit" mat-icon-button matTooltip="Show and edit the object">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+                                <button (click)="deleteObject(object)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                        mat-icon-button matTooltip="Delete this object">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </td>
+                        </ng-container>
+                        <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                        <tr *matNoDataRow class="mat-row">
+                            <td [attr.colspan]="columns.length" class="mat-cell">Nothing in this bucket.</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
             <mat-paginator (page)="handlePageEvent($event)"
                            [disabled]="disabled"

@@ -5,6 +5,32 @@
             <div class="checkbox-row">
                 <mat-checkbox [(ngModel)]="values[field.name]" [name]="field.name">{{ field.label }}</mat-checkbox>
             </div>
+        } @else if (field.type === 'file') {
+            <!--
+              A button rather than the input itself: a bare file input shows the browser's own control,
+              which is styled by the browser and sits oddly among Material's fields. The input is still
+              what opens the picker - no page can do that on its own - so it is here and hidden, and the
+              button clicks it.
+            -->
+            <div class="file-row">
+                <span class="file-label">{{ field.label }}</span>
+                <div class="file-pick">
+                    <button (click)="picker.click()" mat-stroked-button type="button">Browse...</button>
+                    @if (fileOf(field.name); as file) {
+                        <span class="file-name" [title]="file.name">
+                            {{ file.name }} ({{ byteConversion(file.size) }})
+                        </span>
+                    } @else {
+                        <span class="file-name muted">No file chosen</span>
+                    }
+                </div>
+                <!-- An empty `accept` is no filter at all, which is what a field that named none wants. -->
+                <input #picker (change)="choose(field.name, $event)" [accept]="field.accept ?? ''"
+                       class="file-input" type="file">
+                @if (field.hint) {
+                    <span class="file-hint">{{ field.hint }}</span>
+                }
+            </div>
         } @else if (field.type === 'select') {
             <mat-form-field class="field">
                 <mat-label>{{ field.label }}</mat-label>

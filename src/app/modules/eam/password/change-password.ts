@@ -1,6 +1,6 @@
 import {Observable, throwError} from 'rxjs';
 
-import {ResourceField} from '../../../shared/resource-add/resource-add.component';
+import {FieldValue, ResourceField} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * What setting a password asks for: the new one twice, and the old one when it is your own.
@@ -48,7 +48,7 @@ export function passwordFields(own: boolean): ResourceField[] {
  * itself lives.
  */
 export function withMatchingPassword(
-    values: Record<string, string | number | boolean>,
+    values: Record<string, FieldValue>,
     change: (password: string) => Observable<unknown>,
 ): Observable<unknown> {
     const password = String(values['password']);

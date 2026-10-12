@@ -3,12 +3,21 @@ import {MatDialogConfig} from '@angular/material/dialog';
 import {PageEvent} from '@angular/material/paginator';
 import {Sort} from '@angular/material/sort';
 import {Store} from '@ngrx/store';
-import {interval, Observable, Subscription} from 'rxjs';
+import {distinctUntilChanged, interval, map, Observable, of, Subscription, switchMap, timer} from 'rxjs';
 
 import {SortColumn} from '../sorting/sorting.component';
 import {AutoReloadComponent, MIN_AUTO_RELOAD_MS} from '../autoreload/auto-reload.component';
 import {EuclidResourceComponent} from '../resource/euclid-resource.component';
 import {ListFeature} from './list-feature';
+
+/**
+ * How long a listing may take before the view says it is waiting.
+ *
+ * Long enough that an ordinary page never shows a spinner at all, short enough that a listing somebody is
+ * actually waiting on does - a bucket with tens of thousands of objects takes seconds to count and page,
+ * and silence for that long is indistinguishable from nothing having happened.
+ */
+export const SPINNER_DELAY_MS = 1000;
 
 /**
  * What every one of euclid's list views does: page, sort, narrow by prefix, reload on a timer.
@@ -46,6 +55,8 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
 
     items$!: Observable<T[]>;
     total$!: Observable<number>;
+    /** Whether this view has been waiting long enough for the wait to be worth showing. */
+    busy$!: Observable<boolean>;
     pageSize$!: Observable<number>;
     pageIndex$!: Observable<number>;
 
@@ -79,8 +90,21 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
         this.total$ = this.store.select(selectors.selectTotal);
         this.pageSize$ = this.store.select(selectors.selectPageSize);
         this.pageIndex$ = this.store.select(selectors.selectPageIndex);
+        this.busy$ = this.store.select(selectors.selectLoading).pipe(
+            // Delayed rather than immediate: a listing that answers in 80 milliseconds would otherwise
+            // flash a spinner on every page, every sort and every auto-reload, which reads as a page that
+            // cannot settle. A listing that takes a second is a different thing, and saying so is the
+            // difference between "it is working on it" and "it is broken". Cancelled the moment the answer
+            // arrives, because `switchMap` drops the timer that was counting towards showing it.
+            switchMap((loading: boolean) => loading ? timer(SPINNER_DELAY_MS).pipe(map(() => true)) : of(false)),
+            distinctUntilChanged(),
+        );
 
-        this.sortColumn = this.feature.defaultSort;
+        // Through the same mapping a clicked header goes through: a default named for the column it
+        // sorts - "messages" - is as likely to be stored under another name as one somebody clicked,
+        // and euclid sorts by the stored name. Without this the first page of a list would come back
+        // in whatever order the database felt like while every later sort worked.
+        this.sortColumn = this.serverSort(this.feature.defaultSort);
         this.load();
         this.startAutoReload(autoReloadPeriod());
     }
@@ -126,11 +150,16 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
         if (!sort.direction) {
             return;
         }
-        this.sortColumn = {
-            column: this.sortFields[sort.active] ?? sort.active,
+        this.sortColumn = this.serverSort({
+            column: sort.active,
             direction: sort.direction === 'asc' ? 'asc' : 'desc',
-        };
+        });
         this.load();
+    }
+
+    /** One sort, with the column named as the server stores it rather than as the table shows it. */
+    private serverSort(sort: SortColumn): SortColumn {
+        return {column: this.sortFields[sort.column] ?? sort.column, direction: sort.direction};
     }
 
     /** The reload period, asked for and then applied without having to leave the page. */

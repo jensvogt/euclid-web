@@ -1,5 +1,17 @@
 import {Injectable} from '@angular/core';
-import {from, map, mergeMap, MonoTypeOperatorFunction, Observable, retry, throwError, timer} from 'rxjs';
+import {
+    catchError,
+    from,
+    map,
+    mergeMap,
+    MonoTypeOperatorFunction,
+    Observable,
+    of,
+    retry,
+    throwError,
+    timer,
+    toArray,
+} from 'rxjs';
 import type {
     Bucket,
     CreateUploadResult,
@@ -42,6 +54,10 @@ export const UPLOAD_CONCURRENCY = 4;
  */
 export const UPLOADING = 'UPLOADING';
 
+/** How long {@link EsmService.awaitSettled} waits for the server to finish with an object, and in what steps. */
+const SETTLE_ATTEMPTS = 30;
+const SETTLE_DELAY_MS = 1000;
+
 /**
  * The largest object a page will pull into the browser to show.
  *
@@ -70,6 +86,11 @@ export function isMultipart(file: Blob): boolean {
 /** How many parts this file becomes. One, for a file that takes the single-request path. */
 export function partCountOf(file: Blob): number {
     return Math.max(1, Math.ceil(file.size / PART_SIZE));
+}
+
+/** Every part number of this file, in order, which is what a whole upload has to send. */
+export function partNumbersOf(file: Blob): number[] {
+    return Array.from({length: partCountOf(file)}, (unused, index) => index + 1);
 }
 
 /** The bytes of one part, numbered from one. A slice holds no memory until it is read. */
@@ -312,6 +333,57 @@ export class EsmService {
                 ),
                 concurrency,
             ),
+        );
+    }
+
+    /**
+     * Stores a whole file, by whichever of the two paths its size calls for.
+     *
+     * For a caller that wants the file stored and nothing else to do with how. The upload dialog does
+     * not use this and should not: it has to survive a session expiring mid-transfer and pick up from
+     * the parts already sent, which means holding the upload ID and the outstanding part numbers where a
+     * person can act on them. This is the version for an upload nobody is watching - an application's
+     * artifact on its way to a redeploy - where a failure is one message and a fresh attempt.
+     *
+     * Emits once, when the object is the server's.
+     */
+    uploadFile(bucketErn: string, key: string, file: File): Observable<unknown> {
+        if (!isMultipart(file)) {
+            return this.putObject(bucketErn, key, file, file.type);
+        }
+        return this.createUpload(bucketErn, key, UPLOAD_CONCURRENCY).pipe(
+            mergeMap((upload: CreateUploadResult) => this.uploadParts(
+                upload.uploadId,
+                file,
+                partNumbersOf(file),
+            ).pipe(
+                // `toArray` rather than `last`: the parts emit as they land, and what matters here is
+                // that they all did before the assembly is asked for.
+                toArray(),
+                mergeMap(() => this.completeUpload(upload.uploadId)),
+            )),
+        );
+    }
+
+    /**
+     * Waits for the server to finish with an object it has already accepted.
+     *
+     * Both ways of writing an object leave the row `UPLOADING` and settle it afterwards, and until that
+     * has happened the object is not something another module will act on: EAP refuses to deploy an
+     * artifact mid-upload, because the checksum on the row still belongs to the build being replaced.
+     * So an upload that is the first half of something else has to wait here.
+     *
+     * Polls, because there is nothing to subscribe to - and gives up saying so, since a large object
+     * assembling for longer than this is still assembling rather than broken.
+     */
+    awaitSettled(bucketErn: string, key: string, attempts = SETTLE_ATTEMPTS): Observable<EsmObject> {
+        return this.getObject(bucketErn, key).pipe(
+            mergeMap((object: EsmObject) => object.status === UPLOADING
+                ? throwError(() => new Error('pending'))
+                : of(object)),
+            retry({count: attempts, delay: SETTLE_DELAY_MS}),
+            catchError(() => throwError(() => new Error(
+                `${key} is stored but the server has not finished with it yet. Try again in a moment.`))),
         );
     }
 

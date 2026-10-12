@@ -31,6 +31,26 @@ export class EnsMessageListComponent extends EuclidListComponent<TopicMessage> {
     // yields it without going there.
     override readonly columns = ['messageId', 'status', 'contentType', 'created', 'actions'];
 
+    /**
+     * Sorted by `_id`, which is the index a topic's messages actually have.
+     *
+     * ENS indexes its messages on `(topicErn)` and `(topicErn, _id)` and nothing else, so asking for a
+     * page ordered by `created` makes the database match the topic and then sort every match: on a topic
+     * holding nine million messages that is a blocking sort of nine million documents, which does not
+     * finish inside the gateway's timeout. The page never arrives - and not only here, since
+     * `euclid-cli ens list-messages` defaults to the same column and times out the same way.
+     *
+     * `_id` costs nothing instead: an ObjectId leads with its creation second, so descending `_id` is
+     * newest-published-first - the same order `created` was asking for - and the walk is the index order
+     * rather than a sort. Measured against protokollierung-topic: `created` times out at 30 seconds,
+     * `_id` answers in about five, which is the count of nine million documents and not the page.
+     *
+     * The real fix is a `(topicErn, created)` index in ENS, which is exactly what EQS already has for
+     * the same reason - see MongoEqsRepository::ensureIndexes(). Until then this is the column to sort
+     * on, and it is why Status and Type are not sortable here at all: they have no index either.
+     */
+    protected override readonly sortFields: Record<string, string> = {created: '_id'};
+
     topicErn = '';
 
     protected readonly dateConversion = dateConversion;

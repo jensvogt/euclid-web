@@ -6,3 +6,53 @@
 .checkbox-row {
   padding: 12px 0 20px 0;
 }
+
+/*
+ * A file field, which is not a `mat-form-field` because there is nothing to type into: a label, the
+ * button that opens the picker, and what was picked. Laid out to line up with the fields around it.
+ */
+.file-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 20px 0;
+}
+
+.file-label {
+  font-size: small;
+  opacity: 0.75;
+}
+
+.file-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* The name of a build is long and the end of it is the part that identifies it, so it is cut at the
+   front rather than wrapped. */
+.file-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  font-size: small;
+}
+
+.file-hint {
+  font-size: x-small;
+  opacity: 0.6;
+}
+
+.muted {
+  opacity: 0.6;
+}
+
+/* Hidden, but still the thing that opens the picker - see the template. */
+.file-input {
+  display: none;
+}

@@ -1,10 +1,14 @@
-import {Component} from '@angular/core';
+import {Component, inject} from '@angular/core';
+import {defer, mergeMap, Observable} from 'rxjs';
 import type {Application} from 'euclid-ndk';
 
+import {byteConversion} from '../../../shared/byte-utils.component';
 import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
+import {FieldValue} from '../../../shared/resource-add/resource-add.component';
+import {bucketNameOf, EsmService} from '../../esm/service/esm.service';
 import {
     DEFAULT_MAX_INSTANCES,
     DEFAULT_MIN_INSTANCES,
@@ -15,6 +19,15 @@ import {
     STATE_RUNNING,
 } from '../service/eap.service';
 import {eapApplicationListFeature} from './state/eap-application-list.state';
+
+/**
+ * What the artifact picker offers, which is every runtime euclid can start something in.
+ *
+ * A filter rather than a rule: the server takes whatever bytes it is given, and a `*` entry would turn
+ * the picker into a file manager. Anything not listed is still reachable - every picker lets a person
+ * widen it - so this is a default, not a refusal.
+ */
+const ARTIFACT_TYPES = '.jar,.war,.zip,.tar,.tar.gz,.tgz,.py,.js,.mjs,.cjs';
 
 /** The deployed applications, and how many instances are currently answering for each. */
 @Component({
@@ -33,6 +46,9 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
 
     protected readonly dateConversion = dateConversion;
     protected readonly STATE_RUNNING = STATE_RUNNING;
+
+    /** The artifact's bucket is ESM's, so putting a build there is ESM's call rather than EAP's. */
+    private readonly esmService = inject(EsmService);
 
     constructor(private readonly eapService: EapService) {
         super();
@@ -84,20 +100,76 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
         );
     }
 
-    /** A new build of the same application, under the artifact already deployed unless another is named. */
+    /**
+     * A new build of the same application: a local file, or an artifact already in its bucket.
+     *
+     * Both, because a deployment is two things and only one of them is EAP's. The bytes live in the
+     * application's own bucket, so a build on somebody's machine has to be put there first and the
+     * redeploy then names its key - which is why this dialog has a file picker and why choosing a file
+     * makes the call three: upload, wait for the server to settle the object, redeploy.
+     */
     redeploy(application: Application): void {
         this.addThen(
             'Redeploy ' + application.applicationId,
             [
-                {name: 'artifact', label: 'Artifact key', hint: 'Empty keeps the artifact already deployed.'},
-                {name: 'version', label: 'Version', hint: 'Empty takes it from the artifact name.'},
+                {
+                    name: 'file',
+                    label: 'Artifact file',
+                    type: 'file',
+                    accept: ARTIFACT_TYPES,
+                    hint: `Uploaded into ${bucketNameOf(application.bucketErn)}, the application's own bucket.`
+                        + ' Leave it empty to redeploy an artifact that is already there.',
+                },
+                {
+                    name: 'artifact',
+                    label: 'Artifact key',
+                    hint: `Empty takes the chosen file's name, or keeps ${application.artifactKey || 'what is deployed'}.`,
+                },
+                {name: 'version', label: 'Version', hint: 'Empty takes it from the artifact name, as in app-1.4.0.jar.'},
+                {
+                    name: 'force',
+                    label: 'Redeploy even if the bytes have not changed',
+                    type: 'boolean',
+                    hint: 'The server refuses a redeploy of the build already running unless this is set.',
+                },
             ],
-            values => this.eapService.redeployApplication(
-                application.applicationId,
-                String(values['artifact']),
-                String(values['version']),
-            ),
+            values => this.deploy(application, values),
             'Redeploy requested',
+            'Redeploy',
+        );
+    }
+
+    /**
+     * What the redeploy dialog does with what it was given.
+     *
+     * The key is the one piece that is decided here rather than typed: a chosen file goes up under its
+     * own name, because the version is read from the artifact name when none is given and a build called
+     * `app-1.5.0.jar` already says which version it is. A key typed into the dialog wins over both.
+     *
+     * The wait between the upload and the redeploy is not politeness - EAP refuses an artifact that is
+     * still being written, since the checksum on the row is still the old build's. See
+     * {@link EsmService.awaitSettled}.
+     */
+    private deploy(application: Application, values: Record<string, FieldValue>): Observable<unknown> {
+        const chosen = values['file'];
+        const file = chosen instanceof File ? chosen : null;
+        const key = String(values['artifact'] ?? '').trim() || file?.name || application.artifactKey;
+        const version = String(values['version'] ?? '').trim();
+        const force = values['force'] === true;
+
+        const redeploy = () => this.eapService.redeployApplication(application.applicationId, key, version, force);
+        if (!file) {
+            return redeploy();
+        }
+
+        // `defer`, so the snackbar is opened when somebody is waiting on the upload rather than when the
+        // chain is built. The one that reports the outcome replaces it.
+        return defer(() => {
+            this.snackBar.open(`Uploading ${file.name} (${byteConversion(file.size)})...`, '', {duration: 0});
+            return this.esmService.uploadFile(application.bucketErn, key, file);
+        }).pipe(
+            mergeMap(() => this.esmService.awaitSettled(application.bucketErn, key)),
+            mergeMap(redeploy),
         );
     }
 

@@ -22,6 +22,15 @@ export class EnsTopicListComponent extends EuclidListComponent<Topic> {
     override readonly feature: ListFeature<Topic> = ensTopicListFeature;
     override readonly columns = ['name', 'messages', 'size', 'status', 'retentionPeriod', 'created', 'actions'];
 
+    /**
+     * The message count is stored under another name.
+     *
+     * euclid sorts by the field as the database holds it, and a topic's `messages` is `available` there -
+     * the DTO renames it on the way out. Sorting by `messages` would name a field no document has, which
+     * a database answers by leaving the order to itself rather than by refusing.
+     */
+    protected override readonly sortFields: Record<string, string> = {messages: 'available'};
+
     protected readonly byteConversion = byteConversion;
     protected readonly dateConversion = dateConversion;
 
