@@ -13,6 +13,19 @@ export function serviceCountMetric(target: string): string {
 }
 
 /**
+ * What every module process records about itself, and the label that says which process.
+ *
+ * Recorded by `HttpActionServer`'s own sampler rather than by any module's code, which is why the
+ * metric is one series for the whole installation and the module is a label on it - see
+ * recordCpuUsage() and recordMemoryUsage(). A page about one module therefore has to ask for its own
+ * label rather than for the metric, or it gets every module's figures folded into one line.
+ */
+export const PROCESS_CPU_METRIC = 'euclid-cpu-usage';
+export const PROCESS_MEMORY_REAL_METRIC = 'euclid-memory-usage-real-mb';
+export const PROCESS_MEMORY_VIRTUAL_METRIC = 'euclid-memory-usage-virtual-mb';
+export const MODULE_LABEL = 'module';
+
+/**
  * One bucket of one series, as emo's `list` answers: a row per label per bucket.
  *
  * A GAUGE is what the readings averaged to over the bucket - how long a method took, how much memory -
@@ -226,9 +239,20 @@ export class MetricsService {
      * with every other module's metrics. This one is narrowed to a single metric, so the cap buys buckets
      * of it - which is what a chart of one thing over time needs.
      */
-    history(metric: string, buckets: number, resolution: 'RAW' | 'HOUR' | 'DAY' = 'RAW'): Observable<MetricPoint[]> {
-        const limit = buckets * LABEL_CAP;
-        const payload = {name: metric, limit: limit, resolution: resolution};
+    history(
+        metric: string,
+        buckets: number,
+        label?: {name: string; value: string},
+        resolution: 'RAW' | 'HOUR' | 'DAY' = 'RAW',
+    ): Observable<MetricPoint[]> {
+        // A metric narrowed to one label has one row per bucket rather than one per label, so the same
+        // cap buys a hundred times the history. A metric asked for whole still needs the room.
+        const limit = label ? buckets : buckets * LABEL_CAP;
+        const payload: Record<string, unknown> = {name: metric, limit: limit, resolution: resolution};
+        if (label) {
+            payload['labelName'] = label.name;
+            payload['labelValue'] = label.value;
+        }
         return this.http.all<MonitoringRow>('emo', 'list', 'items', payload).pipe(
             map((rows: MonitoringRow[]) => foldIntoBuckets(rows, limit)),
         );

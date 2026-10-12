@@ -31,6 +31,15 @@
                 } @else {
                     <div class="note">{{ responseNote }}</div>
             }
+            <!--
+              What the process costs the machine, beside what it is being asked to do. Only once it has
+              reported it: the figures are sampled once a minute by the module's own process, so a module
+              that has just started has nothing here yet.
+            -->
+            @if (sampled) {
+                <div class="chart" [options]="cpuOptions" echarts></div>
+                <div class="chart" [options]="memoryOptions" echarts></div>
+            }
             <div class="chart" [options]="gaugeOptions" echarts></div>
             <div class="chart" [options]="historyOptions" echarts></div>
         </div>

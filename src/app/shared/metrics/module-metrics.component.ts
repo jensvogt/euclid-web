@@ -20,6 +20,10 @@ import {EuclidModule, moduleOf, parentRouteOf} from './euclid-modules';
 import {
     MetricPoint,
     MetricsService,
+    MODULE_LABEL,
+    PROCESS_CPU_METRIC,
+    PROCESS_MEMORY_REAL_METRIC,
+    PROCESS_MEMORY_VIRTUAL_METRIC,
     ModuleReadings,
     RAW_PERIOD_MINUTES,
     StoredSample,
@@ -84,6 +88,11 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
     gaugeOptions: Record<string, unknown> = {};
     historyOptions: Record<string, unknown> = {};
     responseOptions: Record<string, unknown> = {};
+    cpuOptions: Record<string, unknown> = {};
+    memoryOptions: Record<string, unknown> = {};
+
+    /** Whether the process has reported anything about itself yet, which decides whether to draw it. */
+    sampled = false;
 
     /** Whether the response chart has anything to draw, and what to say instead when it has not. */
     served = false;
@@ -139,12 +148,26 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
         if (!this.target) {
             return;
         }
+        // The module is a label on these three rather than part of their name - every module process
+        // records them under the same metric - so they are asked for by label. See PROCESS_CPU_METRIC.
+        const ofThisModule = {name: MODULE_LABEL, value: this.target};
+
         forkJoin({
             readings: this.metricsService.readings(this.target),
             times: this.metricsService.history(this.timeMetric, RESPONSE_BUCKETS),
             calls: this.metricsService.history(this.countMetric, RESPONSE_BUCKETS),
+            cpu: this.metricsService.history(PROCESS_CPU_METRIC, RESPONSE_BUCKETS, ofThisModule),
+            real: this.metricsService.history(PROCESS_MEMORY_REAL_METRIC, RESPONSE_BUCKETS, ofThisModule),
+            virtual: this.metricsService.history(PROCESS_MEMORY_VIRTUAL_METRIC, RESPONSE_BUCKETS, ofThisModule),
         }).subscribe({
-            next: ({readings, times, calls}: {readings: ModuleReadings; times: MetricPoint[]; calls: MetricPoint[]}) => {
+            next: ({readings, times, calls, cpu, real, virtual}: {
+                readings: ModuleReadings;
+                times: MetricPoint[];
+                calls: MetricPoint[];
+                cpu: MetricPoint[];
+                real: MetricPoint[];
+                virtual: MetricPoint[];
+            }) => {
                 this.lastUpdate = new Date();
                 this.note = '';
                 this.samples = readings.latest;
@@ -154,6 +177,10 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
 
                 this.served = times.length > 0 || calls.length > 0;
                 this.responseOptions = this.served ? this.buildResponseChart(times, calls) : {};
+                this.sampled = cpu.length > 0 || real.length > 0 || virtual.length > 0;
+                this.cpuOptions = this.buildCpuChart(cpu);
+                this.memoryOptions = this.buildMemoryChart(real, virtual);
+
                 this.responseNote = this.served
                     ? ''
                     : `Nothing recorded for ${this.timeMetric} yet. Readings are averaged into`
@@ -165,6 +192,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
                 this.samples = [];
                 this.asOf = '';
                 this.served = false;
+                this.sampled = false;
             },
         });
     }
@@ -247,6 +275,98 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
                     showSymbol: false,
                     areaStyle: {opacity: 0.1},
                     data: buckets.map(bucket => callOf.get(bucket) ?? null),
+                    itemStyle: {color: '#c8781e'},
+                },
+            ],
+        };
+    }
+
+    /**
+     * What the process is costing the machine it runs on: its share of the CPU, over time.
+     *
+     * A different question from the two charts above it, which are about what the module is being asked
+     * to do - and the pair is what makes either one worth reading. Service time climbing on its own is a
+     * module working harder; service time climbing beside this is a module that has run out of room.
+     *
+     * The figure is the process's own usage as `HttpActionServer` samples it once a minute, not the
+     * host's: a busy machine with an idle module reads low here and high in EMO's system-cpu-usage.
+     */
+    private buildCpuChart(cpu: MetricPoint[]): Record<string, unknown> {
+        return {
+            title: {
+                text: 'CPU',
+                subtext: `What the ${this.target.toUpperCase()} process itself used, per cent`,
+                left: 'center',
+                textStyle: {fontSize: 14},
+                subtextStyle: {fontSize: 10},
+            },
+            tooltip: {trigger: 'axis', valueFormatter: (value: number) => `${value?.toFixed(1)} %`},
+            grid: {left: '3%', right: '4%', bottom: '3%', top: 60, containLabel: true},
+            xAxis: {
+                type: 'category',
+                data: cpu.map(point => new Date(point.timestamp).toLocaleTimeString()),
+                axisLabel: {fontSize: 10},
+            },
+            // Fixed to a hundred: a process idling at two per cent should look idle rather than fill the
+            // chart with the shape of its own rounding, which an axis fitted to the data would do.
+            yAxis: {type: 'value', min: 0, max: 100, name: '%', nameTextStyle: {fontSize: 10}, axisLabel: {fontSize: 10}},
+            series: [{
+                name: 'CPU',
+                type: 'line',
+                showSymbol: false,
+                smooth: true,
+                areaStyle: {opacity: 0.1},
+                data: cpu.map(point => point.value),
+                itemStyle: {color: '#004a9f'},
+            }],
+        };
+    }
+
+    /**
+     * What the process is holding, as the two figures that mean different things.
+     *
+     * Resident is what is actually in RAM and virtual is what has been mapped, which for a JVM or a
+     * process using memory-mapped files are far apart and only one of them is the machine's problem.
+     * Both in MB on one axis, since they are the same unit and the gap between them is the point.
+     */
+    private buildMemoryChart(real: MetricPoint[], virtual: MetricPoint[]): Record<string, unknown> {
+        const realOf = new Map(real.map(point => [point.timestamp, point.value]));
+        const virtualOf = new Map(virtual.map(point => [point.timestamp, point.value]));
+        const buckets = [...new Set([...realOf.keys(), ...virtualOf.keys()])].sort();
+
+        return {
+            title: {
+                text: 'Memory',
+                subtext: `What the ${this.target.toUpperCase()} process itself holds, MB`,
+                left: 'center',
+                textStyle: {fontSize: 14},
+                subtextStyle: {fontSize: 10},
+            },
+            tooltip: {trigger: 'axis', valueFormatter: (value: number) => `${value?.toFixed(0)} MB`},
+            legend: {bottom: 0, textStyle: {fontSize: 10}},
+            grid: {left: '3%', right: '4%', bottom: 30, top: 60, containLabel: true},
+            xAxis: {
+                type: 'category',
+                data: buckets.map(bucket => new Date(bucket).toLocaleTimeString()),
+                axisLabel: {fontSize: 10},
+            },
+            yAxis: {type: 'value', min: 0, name: 'MB', nameTextStyle: {fontSize: 10}, axisLabel: {fontSize: 10}},
+            series: [
+                {
+                    name: 'Resident',
+                    type: 'line',
+                    showSymbol: false,
+                    smooth: true,
+                    areaStyle: {opacity: 0.1},
+                    data: buckets.map(bucket => realOf.get(bucket) ?? null),
+                    itemStyle: {color: '#004a9f'},
+                },
+                {
+                    name: 'Virtual',
+                    type: 'line',
+                    showSymbol: false,
+                    smooth: true,
+                    data: buckets.map(bucket => virtualOf.get(bucket) ?? null),
                     itemStyle: {color: '#c8781e'},
                 },
             ],
