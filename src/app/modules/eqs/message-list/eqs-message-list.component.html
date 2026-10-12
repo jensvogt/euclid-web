@@ -35,65 +35,81 @@
     <mat-card-content>
         <module-stats/>
         <mat-card appearance="outlined" style="margin: -10px;">
-            <div class="table-container">
-                <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
-                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
-                    <ng-container matColumnDef="messageId">
-                        <th *matHeaderCellDef mat-header-cell matTooltip="The ID the server gave the message">Message ID</th>
-                        <td *matCellDef="let message" mat-cell>
-                            <div class="with-icon">
-                                <mat-nav-list>
-                                    <a [routerLink]="['/eqs-queue-list', 'messages', queueErn, message.messageId]"
-                                       [matTooltipShowDelay]="1000" class="ern" mat-list-item
-                                       matTooltip="Show the message, its body and its attributes">{{ message.messageId }}</a>
-                                </mat-nav-list>
-                                <button [cdkCopyToClipboard]="message.messageId" [matTooltipShowDelay]="1000"
-                                        aria-label="Copy" mat-icon-button matTooltip="Copy to clipboard">
-                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+            <div class="table-area">
+                @if (busy$ | async) {
+                    <!-- Only once the wait is a second old - see SPINNER_DELAY_MS. A queue that has been
+                         written to faster than it is read holds millions, and counting them is what takes
+                         the time rather than the page itself. -->
+                    <div class="busy-overlay">
+                        <mat-spinner diameter="40"/>
+                        <span class="busy-label">Reading messages...</span>
+                    </div>
+                }
+                <div class="table-container">
+                    <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                           class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
+                        <ng-container matColumnDef="messageId">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="The ID the server gave the message">Message ID</th>
+                            <td *matCellDef="let message" mat-cell>
+                                <div class="with-icon">
+                                    <mat-nav-list>
+                                        <a [routerLink]="['/eqs-queue-list', 'messages', queueErn, message.messageId]"
+                                           [matTooltipShowDelay]="1000" class="ern" mat-list-item
+                                           matTooltip="Show the message, its body and its attributes">{{ message.messageId }}</a>
+                                    </mat-nav-list>
+                                    <button [cdkCopyToClipboard]="message.messageId" [matTooltipShowDelay]="1000"
+                                            aria-label="Copy" mat-icon-button matTooltip="Copy to clipboard">
+                                        <mat-icon class="copy-icon">content_copy</mat-icon>
+                                    </button>
+                                </div>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="status">
+                            <!-- Status, Size and Received are not sortable: EQS indexes its messages on
+                                 the queue and the date, and a sort it cannot serve is a blocking sort of
+                                 every message in the queue. Measured against bilderlink-queue, which
+                                 holds 3.2 million, each of the three times out at 30 seconds - so a click
+                                 on one of these headers was a page that never came back. -->
+                            <th *matHeaderCellDef mat-header-cell
+                                matTooltip="Whether the message is available, in flight or delayed">Status
+                            </th>
+                            <td *matCellDef="let message" mat-cell>{{ message.status }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="size">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Size of the body">Size</th>
+                            <td *matCellDef="let message" mat-cell>{{ byteConversion(message.size) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="receivedCount">
+                            <th *matHeaderCellDef mat-header-cell
+                                matTooltip="How often the message has been received. Past the queue's maximum it goes to the DLQ.">
+                                Received
+                            </th>
+                            <td *matCellDef="let message" mat-cell>{{ message.receivedCount }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="created">
+                            <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the message arrived">Created</th>
+                            <td *matCellDef="let message" mat-cell>{{ dateConversion(message.created) }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="actions">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                            <td *matCellDef="let message" mat-cell>
+                                <button [cdkCopyToClipboard]="message.body" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy body" mat-icon-button matTooltip="Copy the whole body">
+                                    <mat-icon>content_paste</mat-icon>
                                 </button>
-                            </div>
-                        </td>
-                    </ng-container>
-                    <ng-container matColumnDef="status">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header
-                            matTooltip="Whether the message is available, in flight or delayed">Status
-                        </th>
-                        <td *matCellDef="let message" mat-cell>{{ message.status }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="size">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="Size of the body">Size</th>
-                        <td *matCellDef="let message" mat-cell>{{ byteConversion(message.size) }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="receivedCount">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header
-                            matTooltip="How often the message has been received. Past the queue's maximum it goes to the DLQ.">
-                            Received
-                        </th>
-                        <td *matCellDef="let message" mat-cell>{{ message.receivedCount }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="created">
-                        <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the message arrived">Created</th>
-                        <td *matCellDef="let message" mat-cell>{{ dateConversion(message.created) }}</td>
-                    </ng-container>
-                    <ng-container matColumnDef="actions">
-                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
-                        <td *matCellDef="let message" mat-cell>
-                            <button [cdkCopyToClipboard]="message.body" [matTooltipShowDelay]="1000"
-                                    aria-label="Copy body" mat-icon-button matTooltip="Copy the whole body">
-                                <mat-icon>content_paste</mat-icon>
-                            </button>
-                            <button (click)="deleteMessage(message)" [matTooltipShowDelay]="1000" aria-label="Delete"
-                                    mat-icon-button matTooltip="Delete this message">
-                                <mat-icon>delete</mat-icon>
-                            </button>
-                        </td>
-                    </ng-container>
-                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
-                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
-                    <tr *matNoDataRow class="mat-row">
-                        <td [attr.colspan]="columns.length" class="mat-cell">This queue is empty.</td>
-                    </tr>
-                </table>
+                                <button (click)="deleteMessage(message)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                        mat-icon-button matTooltip="Delete this message">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </td>
+                        </ng-container>
+                        <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                        <tr *matNoDataRow class="mat-row">
+                            <td [attr.colspan]="columns.length" class="mat-cell">This queue is empty.</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
             <mat-paginator (page)="handlePageEvent($event)"
                            [disabled]="disabled"
