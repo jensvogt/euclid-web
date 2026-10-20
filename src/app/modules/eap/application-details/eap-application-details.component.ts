@@ -12,7 +12,7 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {MatTooltip} from '@angular/material/tooltip';
 import {Store} from '@ngrx/store';
 import {interval, map, Observable, Subscription} from 'rxjs';
-import type {Application} from 'euclid-ndk';
+import type {Application, EgressLimits, EgressSite, EgressSites} from 'euclid-ndk';
 
 import {namespaceOf} from '../../../services/euclid-http.service';
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -20,7 +20,7 @@ import {FooterComponent} from '../../../shared/footer/footer.component';
 import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {ResourceTag} from '../../../shared/tags/resource-tags.component';
-import {EapService, LOG_LEVELS, STATE_RUNNING} from '../service/eap.service';
+import {EapService, EGRESS_ALL_SITES, LOG_LEVELS, STATE_RUNNING} from '../service/eap.service';
 import {eapApplicationDetailsActions, eapApplicationDetailsSelectors} from './state/eap-application-details.state';
 
 /**
@@ -63,11 +63,22 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
     /** Instance ID to the machine it is on, as EMM's module registry reports it. */
     hosts$!: Observable<Record<string, string>>;
     environment$!: Observable<ResourceTag[]>;
+
+    /** What the rate limiter holds this application to, and nothing when it could not be read. */
+    egress$!: Observable<EgressSites | null>;
+
+    /** Its sites, in name order so the table does not reshuffle itself on a reload. */
+    egressSites$!: Observable<EgressSite[]>;
+
     error$!: Observable<string | null>;
 
     readonly instanceColumns = ['instanceId', 'pid', 'host', 'httpPort'];
     readonly environmentColumns = ['key', 'value', 'actions'];
     readonly resourceColumns = ['ern', 'actions'];
+    readonly egressColumns = [
+        'site', 'requestsPerSecond', 'burst', 'concurrent', 'limitsSet', 'tokens', 'inFlight', 'blockedUntil',
+        'lastUsed', 'actions',
+    ];
 
     /** The application this page is about. Nothing here renames one, so this does not change. */
     applicationId = '';
@@ -75,6 +86,7 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
     protected readonly dateConversion = dateConversion;
     protected readonly namespaceOf = namespaceOf;
     protected readonly running = STATE_RUNNING;
+    protected readonly allSites = EGRESS_ALL_SITES;
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
@@ -87,6 +99,8 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
         this.application$ = this.store.select(eapApplicationDetailsSelectors.selectApplication);
         this.hosts$ = this.store.select(eapApplicationDetailsSelectors.selectHosts);
         this.environment$ = this.application$.pipe(map(application => environmentOf(application)));
+        this.egress$ = this.store.select(eapApplicationDetailsSelectors.selectEgress);
+        this.egressSites$ = this.egress$.pipe(map(egress => egressSitesOf(egress)));
         this.error$ = this.store.select(eapApplicationDetailsSelectors.selectError);
         this.load();
         this.updateSubscription = interval(autoReloadPeriod()).subscribe(() => this.load());
@@ -270,6 +284,120 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
         );
     }
 
+    // -- egress rate limiting ------------------------------------------------------------------------
+
+    /**
+     * What a site with no limit of its own is held to: this application's own `*`, or the installation's.
+     *
+     * Two fallbacks deep because the server has two. Saying which of them is in force matters more than
+     * the numbers do - "inherited" on a row is only readable next to what it was inherited from.
+     */
+    egressFallback(egress: EgressSites): {limits: EgressLimits; source: string} | null {
+        const own = (egress.sites ?? []).find(site => site.site === EGRESS_ALL_SITES);
+        if (own) {
+            return {limits: own.limits, source: "this application's own default"};
+        }
+        if (egress.defaultLimits) {
+            return {limits: egress.defaultLimits, source: "the installation's default"};
+        }
+        return null;
+    }
+
+    /** One set of limits in a sentence, which is what a note wants and a row of columns does not. */
+    egressLimits(limits: EgressLimits): string {
+        return `${limits.requestsPerSecond}/s, burst ${limits.burst}, ${limits.concurrent} at once`;
+    }
+
+    /**
+     * A column that means nothing for the `*` row, as a dash.
+     *
+     * Nobody acquires a permit for `*` - it is a set of numbers other sites fall back to - so its bucket
+     * is never drawn on and its slots are never held. The server reports those as zero, and a zero in a
+     * column of real readings is a claim about a bucket rather than the absence of one.
+     */
+    egressState(site: EgressSite, value: number): string {
+        return site.site === EGRESS_ALL_SITES ? '-' : String(value);
+    }
+
+    /**
+     * Sets what this application may do to one site.
+     *
+     * All three numbers are asked for and all three are sent, even though the server changes only what it
+     * is given: the dialog shows what the site is held to now, so leaving a field alone and leaving it out
+     * come to the same thing. A site is typed only when adding one - editing a row names it in the title,
+     * because changing the host here would set a limit on a different site rather than move this one.
+     */
+    setEgressLimit(application: Application, site?: EgressSite): void {
+        const limits = site?.limits;
+        this.addThen(
+            site ? 'Egress limit for ' + site.site : 'Egress limit on ' + application.applicationId,
+            [
+                ...(site ? [] : [{
+                    name: 'site',
+                    label: 'Site',
+                    required: true,
+                    hint: `A host name, or ${EGRESS_ALL_SITES} for every site without a limit of its own.`,
+                }]),
+                {
+                    name: 'requestsPerSecond',
+                    label: 'Requests per second',
+                    type: 'number',
+                    required: true,
+                    value: limits?.requestsPerSecond ?? 0,
+                    hint: 'The rate the bucket refills at.',
+                },
+                {
+                    name: 'burst',
+                    label: 'Burst',
+                    type: 'number',
+                    required: true,
+                    value: limits?.burst ?? 0,
+                    hint: 'How many the bucket holds, so a site left alone can be called this many at once.',
+                },
+                {
+                    name: 'concurrent',
+                    label: 'Concurrent',
+                    type: 'number',
+                    required: true,
+                    value: limits?.concurrent ?? 0,
+                    hint: 'Requests in flight at one time, whatever the rate allows.',
+                },
+            ],
+            values => this.eapService.setEgressLimit(
+                application.applicationId,
+                site ? site.site : String(values['site']).trim(),
+                {
+                    requestsPerSecond: Number(values['requestsPerSecond']),
+                    burst: Number(values['burst']),
+                    concurrent: Number(values['concurrent']),
+                },
+            ),
+            site ? 'Egress limit changed' : 'Egress limit set',
+            'Save',
+        );
+    }
+
+    /**
+     * Takes a site's own limit away, so it falls back to the application's `*` or the installation default.
+     *
+     * Offered on every row rather than only the ones that have a limit of their own: `limitsSet` is what
+     * says which those are, and a button that is there or not depending on a field is a button that
+     * disappears for the wrong reason the day the field does. A site with nothing to remove is refused by
+     * the server with its own 404, which reaches the snackbar.
+     */
+    deleteEgressLimit(application: Application, site: EgressSite): void {
+        this.confirmThen(
+            {
+                title: 'Delete egress limit',
+                message: `Take ${site.site} back to what ${application.applicationId} is allowed without a`
+                    + ' limit of its own? The bucket is left as it stands - the tokens, the requests in'
+                    + ' flight and any block all survive, so the site cannot be overrun by tidying this up.',
+            },
+            this.eapService.deleteEgressLimit(application.applicationId, site.site),
+            'Egress limit deleted',
+        );
+    }
+
     deleteVariable(application: Application, variable: ResourceTag): void {
         const environment = {...(application.environment ?? {})};
         delete environment[variable.key];
@@ -296,4 +424,23 @@ function environmentOf(application: Application | null): ResourceTag[] {
     return Object.entries(application?.environment ?? {})
         .map(([key, value]) => ({key: key, value: String(value)}))
         .sort((left, right) => left.key.localeCompare(right.key));
+}
+
+/**
+ * The egress sites, as rows.
+ *
+ * `*` first and the rest by name: it is not a site but what the others fall back to, so it belongs at the
+ * top of the list it governs rather than wherever an asterisk happens to sort. Built once per answer the
+ * store hands out rather than in the template, since `mat-table` takes its rows by reference.
+ */
+function egressSitesOf(egress: EgressSites | null): EgressSite[] {
+    return [...(egress?.sites ?? [])].sort((left, right) => {
+        if (left.site === EGRESS_ALL_SITES) {
+            return -1;
+        }
+        if (right.site === EGRESS_ALL_SITES) {
+            return 1;
+        }
+        return left.site.localeCompare(right.site);
+    });
 }

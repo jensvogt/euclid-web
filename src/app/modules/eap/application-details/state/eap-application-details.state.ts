@@ -1,8 +1,8 @@
 import {inject} from '@angular/core';
 import {Actions, createEffect, ofType} from '@ngrx/effects';
 import {createAction, createFeatureSelector, createReducer, createSelector, on, props} from '@ngrx/store';
-import {catchError, map, of, switchMap} from 'rxjs';
-import type {Application} from 'euclid-ndk';
+import {catchError, forkJoin, map, of, switchMap} from 'rxjs';
+import type {Application, EgressSites} from 'euclid-ndk';
 
 import {EmmService} from '../../../emm/service/emm.service';
 import {EapService} from '../../service/eap.service';
@@ -19,6 +19,8 @@ export interface EapApplicationDetailsState {
     application: Application | null;
     /** Instance ID to the machine it is on. Empty string means the manager's own host. */
     hosts: Record<string, string>;
+    /** The outside sites this application calls and what it is allowed for each. Null when unreadable. */
+    egress: EgressSites | null;
     loading: boolean;
     error: string | null;
 }
@@ -29,7 +31,7 @@ export const eapApplicationDetailsActions = {
     load: createAction(`[${eapApplicationDetailsFeatureKey}] Load`, props<{applicationId: string}>()),
     loadSuccess: createAction(
         `[${eapApplicationDetailsFeatureKey}] Load success`,
-        props<{application: Application; hosts: Record<string, string>}>(),
+        props<{application: Application; hosts: Record<string, string>; egress: EgressSites | null}>(),
     ),
     loadFailure: createAction(`[${eapApplicationDetailsFeatureKey}] Load failure`, props<{error: string}>()),
 };
@@ -37,6 +39,7 @@ export const eapApplicationDetailsActions = {
 const initialState: EapApplicationDetailsState = {
     application: null,
     hosts: {},
+    egress: null,
     loading: false,
     error: null,
 };
@@ -51,14 +54,16 @@ export const eapApplicationDetailsReducer = createReducer(
         return {
             application: same ? state.application : null,
             hosts: same ? state.hosts : {},
+            egress: same ? state.egress : null,
             error: same ? state.error : null,
             loading: true,
         };
     }),
-    on(eapApplicationDetailsActions.loadSuccess, (state: EapApplicationDetailsState, {application, hosts}): EapApplicationDetailsState => ({
+    on(eapApplicationDetailsActions.loadSuccess, (state: EapApplicationDetailsState, {application, hosts, egress}): EapApplicationDetailsState => ({
         ...state,
         application: application,
         hosts: hosts,
+        egress: egress,
         loading: false,
         error: null,
     })),
@@ -76,6 +81,7 @@ const selectFeature = createFeatureSelector<EapApplicationDetailsState>(eapAppli
 export const eapApplicationDetailsSelectors = {
     selectApplication: createSelector(selectFeature, state => state?.application ?? null),
     selectHosts: createSelector(selectFeature, state => state?.hosts ?? {}),
+    selectEgress: createSelector(selectFeature, state => state?.egress ?? null),
     selectLoading: createSelector(selectFeature, state => state?.loading ?? false),
     selectError: createSelector(selectFeature, state => state?.error ?? null),
 };
@@ -86,11 +92,16 @@ export const eapApplicationDetailsSelectors = {
  * The registry is asked after the application rather than beside it, because it has to be: a pool is
  * found by the application's runtime name, and the route carries only an ID.
  *
- * A failing registry does not fail the page. EMM is not wrapped by euclid-ndk and an older server may
- * not answer `list-modules` at all, so the hosts are the one part of this allowed to come back empty -
- * a details page that refused to show an application because it could not name its machines would be
- * worse than one with a column of dashes. `switchMap`, as elsewhere: the answer for an application the
- * page has left is of no interest.
+ * Neither of the two follow-ups can fail the page, and for the same reason in both cases: only the
+ * application itself is what this page is about. EMM is not wrapped by euclid-ndk and an older server may
+ * not answer `list-modules` at all; `list-egress-sites` arrived in euclid-ndk 0.19 and a server from
+ * before it answers 404. A details page that refused to show an application because it could not name the
+ * machines, or could not read a rate limiter, would be worse than one with a column of dashes and an empty
+ * tab - so each falls back to nothing of its own and the page renders either way.
+ *
+ * `forkJoin` because the two are independent of each other and both depend on the application: the hosts
+ * are found by its runtime name and the sites by its ID, neither of which the route carries. `switchMap`
+ * on the outside, as elsewhere: the answer for an application the page has left is of no interest.
  */
 export const loadApplication$ = createEffect(
     () => {
@@ -100,9 +111,15 @@ export const loadApplication$ = createEffect(
         return actions$.pipe(
             ofType(eapApplicationDetailsActions.load),
             switchMap(({applicationId}) => service.getApplication(applicationId).pipe(
-                switchMap((application: Application) => registry.hostsOf(application.runtimeName).pipe(
-                    catchError(() => of({} as Record<string, string>)),
-                    map((hosts: Record<string, string>) => eapApplicationDetailsActions.loadSuccess({application, hosts})),
+                switchMap((application: Application) => forkJoin({
+                    hosts: registry.hostsOf(application.runtimeName).pipe(
+                        catchError(() => of({} as Record<string, string>)),
+                    ),
+                    egress: service.listEgressSites(application.applicationId).pipe(
+                        catchError(() => of(null as EgressSites | null)),
+                    ),
+                }).pipe(
+                    map(({hosts, egress}) => eapApplicationDetailsActions.loadSuccess({application, hosts, egress})),
                 )),
                 catchError((error: Error) => of(eapApplicationDetailsActions.loadFailure({error: error.message}))),
             )),

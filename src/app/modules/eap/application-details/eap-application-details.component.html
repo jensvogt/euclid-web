@@ -341,6 +341,148 @@
                             </div>
                         </mat-tab>
 
+                        <mat-tab label="Egress ({{ (egressSites$ | async)?.length ?? 0 }})">
+                            <div class="tab-body">
+                                @if (egress$ | async; as egress) {
+                                    <div class="tab-actions">
+                                        <p class="note">
+                                            How often this application may call each outside site, all of its
+                                            instances together. A row is a reading rather than a record &mdash;
+                                            a bucket nobody drew on for a while reads full, and slots whose
+                                            lease ran out read free.
+                                            @if (egressFallback(egress); as fallback) {
+                                                A site with no limit of its own is held to
+                                                {{ egressLimits(fallback.limits) }}, which is
+                                                {{ fallback.source }}.
+                                            }
+                                        </p>
+                                        <button (click)="setEgressLimit(application)" [matTooltipShowDelay]="1000"
+                                                aria-label="Set egress limit" mat-icon-button
+                                                matTooltip="Set a limit for a site, or for {{ allSites }} to change what every other site falls back to">
+                                            <mat-icon>add</mat-icon>
+                                        </button>
+                                    </div>
+                                    <table [dataSource]="(egressSites$ | async) ?? []"
+                                           class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                        <ng-container matColumnDef="site">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="The host this limit is about">Site
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                <span [matTooltipShowDelay]="1000" [matTooltip]="site.site"
+                                                      class="text">{{ site.site }}</span>
+                                                @if (site.site === allSites) {
+                                                    <span class="unfinished"
+                                                          matTooltip="Not a site: what the others fall back to">
+                                                        default
+                                                    </span>
+                                                }
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="requestsPerSecond">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="The rate the bucket refills at">Rate
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                {{ site.limits.requestsPerSecond }}/s
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="burst">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="How many the bucket holds, so a site left alone can be called this many at once">
+                                                Burst
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>{{ site.limits.burst }}</td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="concurrent">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="Requests in flight at one time, whatever the rate allows">
+                                                Concurrent
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>{{ site.limits.concurrent }}</td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="limitsSet">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="Whether these numbers were set for this site, or inherited">
+                                                Limits
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                {{ site.limitsSet ? 'own' : 'inherited' }}
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="tokens">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="What is left in the bucket now">Tokens
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                {{ egressState(site, site.tokens) }}
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="inFlight">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="Requests out to this site right now">In flight
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                {{ egressState(site, site.inFlight) }}
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="blockedUntil">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="The site asked to be left alone, so no instance is granted a permit until then">
+                                                Blocked
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                @if (site.blockedUntil) {
+                                                    <span class="unfinished">
+                                                        {{ dateConversion(site.blockedUntil) }}
+                                                    </span>
+                                                } @else {
+                                                    -
+                                                }
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="lastUsed">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="When a permit for it was last granted">Last used
+                                            </th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                {{ site.lastUsed ? dateConversion(site.lastUsed) : '-' }}
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="actions">
+                                            <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                            <td *matCellDef="let site" mat-cell>
+                                                <button (click)="setEgressLimit(application, site)"
+                                                        [matTooltipShowDelay]="1000" aria-label="Edit"
+                                                        mat-icon-button matTooltip="Change what it is allowed">
+                                                    <mat-icon>edit</mat-icon>
+                                                </button>
+                                                <button (click)="deleteEgressLimit(application, site)"
+                                                        [matTooltipShowDelay]="1000" aria-label="Delete"
+                                                        mat-icon-button
+                                                        matTooltip="Take its own limit away, so it falls back. Refused for a site that has none.">
+                                                    <mat-icon>delete</mat-icon>
+                                                </button>
+                                            </td>
+                                        </ng-container>
+                                        <tr *matHeaderRowDef="egressColumns" mat-header-row></tr>
+                                        <tr *matRowDef="let row; columns: egressColumns;" mat-row></tr>
+                                        <tr *matNoDataRow class="mat-row">
+                                            <td [attr.colspan]="egressColumns.length" class="mat-cell">
+                                                This application has called no outside site through the rate
+                                                limiter, and has no limit of its own.
+                                            </td>
+                                        </tr>
+                                    </table>
+                                } @else {
+                                    <p class="nothing">
+                                        The rate limiter could not be read. `list-egress-sites` arrived in
+                                        euclid 0.19, and a server from before it does not answer.
+                                    </p>
+                                }
+                            </div>
+                        </mat-tab>
+
                     </mat-tab-group>
                 </mat-card-content>
             </mat-card>

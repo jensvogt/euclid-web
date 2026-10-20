@@ -1,6 +1,14 @@
 import {Injectable} from '@angular/core';
-import {map, Observable} from 'rxjs';
-import type {Application, RebalanceResult, RestartResult, WorkerNode, WorkerNodeDetails} from 'euclid-ndk';
+import {map, Observable, throwError} from 'rxjs';
+import type {
+    Application,
+    EgressLimits,
+    EgressSites,
+    RebalanceResult,
+    RestartResult,
+    WorkerNode,
+    WorkerNodeDetails,
+} from 'euclid-ndk';
 
 import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
 
@@ -16,6 +24,14 @@ export const LOG_LEVELS = ['trace', 'debug', 'info', 'warning', 'error', 'fatal'
 
 export const STATE_RUNNING = 'RUNNING';
 export const STATE_STOPPED = 'STOPPED';
+
+/**
+ * The site standing for every site of an application that has no limit of its own.
+ *
+ * Only {@link EapService.setEgressLimit} and {@link EapService.deleteEgressLimit} take it; nothing acquires
+ * a permit for it, which is why its row reports no tokens, nothing in flight and no last use.
+ */
+export const EGRESS_ALL_SITES = '*';
 
 export const DEFAULT_MIN_INSTANCES = 1;
 export const DEFAULT_MAX_INSTANCES = 1;
@@ -209,6 +225,56 @@ export class EapService {
      */
     rebalanceApplication(applicationId: string): Observable<RebalanceResult> {
         return this.http.call<RebalanceResult>(TARGET, 'rebalance-application', {applicationId: applicationId});
+    }
+
+    // -- egress rate limiting ------------------------------------------------------------------
+
+    /**
+     * Every outside site this application calls, what it is allowed for each, and how each stands now.
+     *
+     * A reading rather than a record: the server reports the bucket as of the moment it was asked, so a
+     * site nobody drew on for an hour reads full and slots whose lease ran out read free. `defaultLimits`
+     * on the answer is what the installation holds an application to when it has no limit of its own.
+     */
+    listEgressSites(applicationId: string): Observable<EgressSites> {
+        return this.http.call<EgressSites>(TARGET, 'list-egress-sites', {applicationId: applicationId});
+    }
+
+    /**
+     * Sets what this application is allowed for one site, over the installation's default.
+     *
+     * Only the fields named are changed - the server leaves the rest as the site is held to now - so this
+     * takes the changes rather than a whole {@link EgressLimits}, the same bargain
+     * {@link updateApplication} strikes. A call naming none of the three would change nothing, so it is
+     * refused here rather than sent.
+     *
+     * `site` is a host name, or {@link EGRESS_ALL_SITES} for everything without a limit of its own. The
+     * server raises a `burst` below 1 to 1 and the answer says what it stored.
+     */
+    setEgressLimit(applicationId: string, site: string, limits: Partial<EgressLimits>): Observable<unknown> {
+        const payload: Record<string, unknown> = {applicationId: applicationId, site: site};
+        for (const field of ['requestsPerSecond', 'burst', 'concurrent'] as const) {
+            if (limits[field] !== undefined) {
+                payload[field] = limits[field];
+            }
+        }
+        if (Object.keys(payload).length === 2) {
+            return throwError(() => new Error('Name at least one of the rate, the burst or the concurrency.'));
+        }
+        return this.http.call(TARGET, 'set-egress-limit', payload);
+    }
+
+    /**
+     * Takes one site back to what the application would be held to without a limit of its own.
+     *
+     * Which is its `*` entry, or the installation's default. Refused with HTTP 404 for a site that had no
+     * limit of its own - there is nothing to remove, and the row says so as "inherited".
+     *
+     * The bucket is left as it stands. Forgetting the tokens and the slots in flight would let the site be
+     * overrun the moment somebody tidied up a limit.
+     */
+    deleteEgressLimit(applicationId: string, site: string): Observable<unknown> {
+        return this.http.call(TARGET, 'delete-egress-limit', {applicationId: applicationId, site: site});
     }
 
     /**
