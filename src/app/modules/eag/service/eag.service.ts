@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {map, Observable} from 'rxjs';
 import type {Listener, Route} from 'euclid-ndk';
 
-import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
+import {EuclidHttpService, namespaceOf, Page} from '../../../services/euclid-http.service';
 
 export const TARGET = 'eag';
 
@@ -129,7 +129,7 @@ function listenerOf(wire: Record<string, unknown>): Listener {
     const found = Boolean(wire['certificateFound']);
 
     return {
-        namespace: String(wire['namespace'] ?? ''),
+        namespace: namespaceOf(wire),
         port: Number(wire['port'] ?? 0),
         protocol: String(wire['protocol'] ?? ''),
         serving: Boolean(wire['serving']),

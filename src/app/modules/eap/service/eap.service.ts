@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {map, Observable} from 'rxjs';
-import type {Application, RestartResult, WorkerNode, WorkerNodeDetails} from 'euclid-ndk';
+import type {Application, RebalanceResult, RestartResult, WorkerNode, WorkerNodeDetails} from 'euclid-ndk';
 
 import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
 
@@ -189,6 +189,26 @@ export class EapService {
      */
     restartApplication(applicationId: string): Observable<RestartResult> {
         return this.http.call<RestartResult>(TARGET, 'restart-application', {applicationId: applicationId});
+    }
+
+    /**
+     * Moves the instances to where placement would put them now.
+     *
+     * Onto a node that has joined since they were placed, off one holding more than its share for the cores
+     * it has, and off one that is drained, no longer live or no longer matches the application's node
+     * labels. The manager does this by itself after an instance goes away; this is for every other time - a
+     * new node, or a pool that ended up lopsided and was never scaled since.
+     *
+     * Asking, like restarting: the request is recorded and nothing has moved when it answers. One instance
+     * moves per pass, each move stopping one and starting its replacement on the better node, so the pool
+     * is at most one instance short while a move is under way and a pool already balanced is left exactly
+     * as it is. Nothing else is restarted.
+     *
+     * Refused with HTTP 400 for a job, since moving one of its runs would start that run again - the
+     * server's own refusal, which is what reaches the snackbar.
+     */
+    rebalanceApplication(applicationId: string): Observable<RebalanceResult> {
+        return this.http.call<RebalanceResult>(TARGET, 'rebalance-application', {applicationId: applicationId});
     }
 
     /**

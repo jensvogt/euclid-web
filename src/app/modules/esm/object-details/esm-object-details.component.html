@@ -70,7 +70,7 @@
 
                         <span class="property">ERN</span>
                         <span class="value">
-                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.ern" class="text ern">{{ object.ern }}</span>
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="object.ern" class="text">{{ object.ern }}</span>
                             <button [cdkCopyToClipboard]="object.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
                                     mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                 <mat-icon class="inline-icon">content_copy</mat-icon>
@@ -106,7 +106,7 @@
                         <span class="property" matTooltip="The checksum euclid stored with the object">MD5</span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="object.md5Sum"
-                                  class="text ern">{{ object.md5Sum || '-' }}</span>
+                                  class="text">{{ object.md5Sum || '-' }}</span>
                             @if (object.md5Sum) {
                                 <button [cdkCopyToClipboard]="object.md5Sum" [matTooltipShowDelay]="1000"
                                         aria-label="Copy" mat-icon-button matTooltip="Copy the checksum to the clipboard">

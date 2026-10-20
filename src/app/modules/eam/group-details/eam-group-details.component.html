@@ -45,7 +45,7 @@
 
                         <span class="property">ERN</span>
                         <span class="value">
-                            <span [matTooltipShowDelay]="1000" [matTooltip]="group.ern" class="text ern">{{ group.ern }}</span>
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="group.ern" class="text">{{ group.ern }}</span>
                             <button [cdkCopyToClipboard]="group.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
                                     mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                 <mat-icon class="inline-icon">content_copy</mat-icon>
@@ -103,7 +103,7 @@
                                         <th *matHeaderCellDef mat-header-cell>ERN</th>
                                         <td *matCellDef="let member" mat-cell>
                                             <span [matTooltipShowDelay]="1000" [matTooltip]="member.ern"
-                                                  class="text ern">{{ member.ern }}</span>
+                                                  class="text">{{ member.ern }}</span>
                                         </td>
                                     </ng-container>
                                     <ng-container matColumnDef="actions">

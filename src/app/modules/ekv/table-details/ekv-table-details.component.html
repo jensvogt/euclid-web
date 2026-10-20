@@ -50,7 +50,7 @@
 
                         <span class="property">ERN</span>
                         <span class="value">
-                            <span [matTooltipShowDelay]="1000" [matTooltip]="table.ern" class="text ern">{{ table.ern }}</span>
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="table.ern" class="text">{{ table.ern }}</span>
                             <button [cdkCopyToClipboard]="table.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
                                     mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                 <mat-icon class="inline-icon">content_copy</mat-icon>
@@ -125,7 +125,7 @@
                             <th *matHeaderCellDef mat-header-cell matTooltip="Everything except the key">Attributes</th>
                             <td *matCellDef="let item" mat-cell>
                                 <span [matTooltipShowDelay]="1000" [matTooltip]="attributesOf(item, table)"
-                                      class="text ern">{{ attributesOf(item, table) }}</span>
+                                      class="text">{{ attributesOf(item, table) }}</span>
                             </td>
                         </ng-container>
                         <ng-container matColumnDef="created">

@@ -133,10 +133,16 @@
   min-width: 0;
 }
 
-.ern {
-  font-family: monospace;
-  font-size: small;
-}
+/*
+ * An ERN, or another long machine-readable value in a row.
+ *
+ * The page's own font, as everything else here is: a monospace block among proportional text reads as a
+ * different kind of thing, and an ERN is a value to recognise rather than one whose characters anybody
+ * counts or lines up. Only the size is its own, because the value is long and the column is not.
+ */
+//.ern {
+//  font-size: small;
+//}
 
 /*
  * The value in a row that is the way to that row's own page - a message ID against its details page.

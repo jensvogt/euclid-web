@@ -88,8 +88,8 @@
   flex: 0 0 auto;
 }
 
+/* An ERN, in the page's own font - see the same rule in `list.component.scss`. Only the size is its own. */
 .ern {
-  font-family: monospace;
   font-size: small;
 }
 
@@ -108,6 +108,33 @@
 .mat-column-actions {
   width: 120px;
   white-space: nowrap;
+}
+
+/*
+ * Every column as wide as what is in it, for the tables that ask for it with `sized-to-content` on the
+ * table - the same opt-in `list.component.scss` gives the listings, where the reasoning is written out.
+ *
+ * Repeated here rather than shared, as the heading and the monospace ERN are: component styles are scoped
+ * to the component that declares them, and a details page points at this file and not at that one.
+ *
+ * One difference, and it is the clipping. A listing's first cell holds a flex row that ellipsises its own
+ * text, so the cell needs only to claim the slack; a table on a details page holds the value directly, so
+ * the cell has to do the clipping itself - `max-width: 0` with `nowrap` would otherwise push a long value
+ * out of the card rather than cut it off inside it.
+ */
+.euclid-table.sized-to-content th,
+.euclid-table.sized-to-content td {
+  width: 1px;
+  white-space: nowrap;
+  padding-right: 16px;
+}
+
+.euclid-table.sized-to-content th:first-child,
+.euclid-table.sized-to-content td:first-child {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /*
@@ -151,10 +178,13 @@
  * A body shown as it was sent, in a box that can be typed into - a queue message's payload.
  *
  * A `textarea` rather than a `pre`, because a plain text box is the one control that shows an arbitrary
- * payload exactly as it is: monospace, whitespace preserved, no interpretation of what might be markup.
- * Whitespace is part of what was sent - a JSON document somebody formatted before sending it is
- * unreadable with the newlines collapsed - and reformatting it would be showing something other than the
- * bytes on the queue.
+ * payload exactly as it is: whitespace preserved, no interpretation of what might be markup. Whitespace
+ * is part of what was sent - a JSON document somebody formatted before sending it is unreadable with the
+ * newlines collapsed - and reformatting it would be showing something other than the bytes on the queue.
+ *
+ * `font-family: inherit` rather than nothing at all: a textarea does not inherit the page's font the way
+ * ordinary text does - the browser gives form controls their own, which for this one is monospace - so
+ * leaving it unsaid is how the box ends up in a font nothing else on the page uses.
  *
  * Sized rather than grown to fit: a body has no limit worth designing around, so it is a tall box that
  * scrolls, and `resize: vertical` lets it be dragged taller for one that needs it. Not horizontally -
@@ -173,7 +203,7 @@
   background: rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 4px;
-  font-family: monospace;
+  font-family: inherit;
   font-size: small;
   line-height: 1.4;
 }

@@ -188,6 +188,30 @@ export function listPayload(query: ListQuery, defaultSortColumn: string): Record
 }
 
 /**
+ * The namespace an answer puts a thing in, under either of the two names euclid sends it by.
+ *
+ * The server spells this field both ways and which one depends on the module. `nameSpace` is the C++
+ * member name - `namespace` is a reserved word there - and it reaches the wire as written for EQS's queue
+ * metadata and ENS's topic metadata; EAG's routes and listeners, EAP's applications and ETS's servers send
+ * `namespace` instead. euclid-ndk's parsers read whichever its module actually gets, and this UI never
+ * runs those parsers: it reads the raw answer, so it has to know the same thing.
+ *
+ * Reading both is the one version of this that cannot be wrong. A reader that picked a side would be
+ * wrong for some module today and wrong again the day the server is made consistent - and wrong silently,
+ * since an absent field is not an error but an empty namespace, which reads on screen as the account root.
+ * That is the account's own scope, so the mistake looks like an answer.
+ *
+ * `unknown` rather than a shape, because the euclid-ndk types this UI imports declare only `namespace` -
+ * they describe what their parser produces rather than what the server sent, so naming either field on
+ * one of them would not type-check.
+ */
+export function namespaceOf(item: unknown): string {
+    const record = (item ?? {}) as Record<string, unknown>;
+    const value = record['nameSpace'] ?? record['namespace'];
+    return typeof value === 'string' ? value : '';
+}
+
+/**
  * A refusal, with the status still readable on it.
  *
  * The message is what reaches the snackbar, and the status is what a caller decides by: a part of a

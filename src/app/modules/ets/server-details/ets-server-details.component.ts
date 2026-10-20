@@ -14,6 +14,7 @@ import {Store} from '@ngrx/store';
 import {interval, Observable, Subscription} from 'rxjs';
 import type {TransferServer} from 'euclid-ndk';
 
+import {namespaceOf} from '../../../services/euclid-http.service';
 import {dateConversion} from '../../../shared/date-utils.component';
 import {FooterComponent} from '../../../shared/footer/footer.component';
 import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
@@ -70,6 +71,7 @@ export class EtsServerDetailsComponent extends EuclidResourceComponent implement
     serverId = '';
 
     protected readonly dateConversion = dateConversion;
+    protected readonly namespaceOf = namespaceOf;
     protected readonly running = STATE_RUNNING;
     protected readonly ftp = PROTOCOL_FTP;
 

@@ -136,6 +136,11 @@
                                     <mat-icon>upgrade</mat-icon>
                                     <span>Redeploy</span>
                                 </button>
+                                <button (click)="rebalance(application)" mat-menu-item
+                                        matTooltip="Move its instances to where placement would put them now - onto a node that has joined, off one holding more than its share. Refused for a job.">
+                                    <mat-icon>balance</mat-icon>
+                                    <span>Rebalance</span>
+                                </button>
                                 <button (click)="setLogLevel(application)" mat-menu-item
                                         matTooltip="Change the log level without restarting it">
                                     <mat-icon>notes</mat-icon>

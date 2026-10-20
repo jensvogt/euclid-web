@@ -13,6 +13,7 @@ import {Store} from '@ngrx/store';
 import {interval, Observable, Subscription} from 'rxjs';
 import type {WorkerNode, WorkerNodeDetails} from 'euclid-ndk';
 
+import {namespaceOf} from '../../../services/euclid-http.service';
 import {dateConversion} from '../../../shared/date-utils.component';
 import {FooterComponent} from '../../../shared/footer/footer.component';
 import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
@@ -60,12 +61,13 @@ export class EapNodeDetailsComponent extends EuclidResourceComponent implements 
     node$!: Observable<WorkerNodeDetails | null>;
     error$!: Observable<string | null>;
 
-    readonly applicationColumns = ['applicationId', 'namespace', 'runtime', 'instances', 'running'];
+    readonly applicationColumns = ['applicationId', 'namespace', 'runtime', 'instances', 'running', 'actions'];
 
     /** The node this page is about, by name - which is what every node action takes. */
     name = '';
 
     protected readonly dateConversion = dateConversion;
+    protected readonly namespaceOf = namespaceOf;
 
     private readonly store = inject(Store);
     private readonly route = inject(ActivatedRoute);
@@ -116,6 +118,7 @@ export class EapNodeDetailsComponent extends EuclidResourceComponent implements 
     running(node: WorkerNodeDetails): number {
         return (node.applications ?? []).reduce((total, application) => total + application.running, 0);
     }
+
 
     // -- taking it out of service --------------------------------------------------------------------
 

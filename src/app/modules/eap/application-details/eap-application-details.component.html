@@ -68,7 +68,7 @@
                         <span class="property">ERN</span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="application.ern"
-                                  class="text ern">{{ application.ern }}</span>
+                                  class="text">{{ application.ern }}</span>
                             <button [cdkCopyToClipboard]="application.ern" [matTooltipShowDelay]="1000"
                                     aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                 <mat-icon class="inline-icon">content_copy</mat-icon>
@@ -118,7 +118,7 @@
                         <span class="property" matTooltip="The bucket the artifact was deployed from">Artifact bucket</span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="application.bucketErn"
-                                  class="text ern">{{ application.bucketErn || '-' }}</span>
+                                  class="text">{{ application.bucketErn || '-' }}</span>
                             @if (application.bucketErn) {
                                 <button [matTooltipShowDelay]="1000"
                                         [routerLink]="['/esm-bucket-list', 'bucket', application.bucketErn]"
@@ -143,7 +143,7 @@
                         </span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="application.md5Sum"
-                                  class="text ern">{{ application.md5Sum || '-' }}</span>
+                                  class="text">{{ application.md5Sum || '-' }}</span>
                         </span>
 
                         <span class="property" matTooltip="The command and its arguments, as they would be typed">
@@ -151,7 +151,7 @@
                         </span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="commandLine(application)"
-                                  class="text ern">{{ commandLine(application) }}</span>
+                                  class="text">{{ commandLine(application) }}</span>
                         </span>
 
                         <span class="property" matTooltip="Empty means it follows the installation's logging configuration">
@@ -182,7 +182,7 @@
                         </span>
 
                         <span class="property">Namespace</span>
-                        <span class="value"><span class="text">{{ application.namespace || 'account root' }}</span></span>
+                        <span class="value"><span class="text">{{ namespaceOf(application) || 'account root' }}</span></span>
 
                         <span class="property">Region</span>
                         <span class="value"><span class="text">{{ application.region || '-' }}</span></span>
@@ -218,7 +218,7 @@
                                         <th *matHeaderCellDef mat-header-cell>Instance</th>
                                         <td *matCellDef="let endpoint" mat-cell>
                                             <span [matTooltipShowDelay]="1000" [matTooltip]="endpoint.instanceId"
-                                                  class="text ern">{{ endpoint.instanceId }}</span>
+                                                  class="text">{{ endpoint.instanceId }}</span>
                                         </td>
                                     </ng-container>
                                     <ng-container matColumnDef="pid">
@@ -318,7 +318,7 @@
                                         <th *matHeaderCellDef mat-header-cell>ERN</th>
                                         <td *matCellDef="let resource" mat-cell>
                                             <span [matTooltipShowDelay]="1000" [matTooltip]="resource"
-                                                  class="text ern">{{ resource }}</span>
+                                                  class="text">{{ resource }}</span>
                                         </td>
                                     </ng-container>
                                     <ng-container matColumnDef="actions">

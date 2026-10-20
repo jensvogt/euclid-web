@@ -103,7 +103,7 @@
                         </span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="node.principal"
-                                  class="text ern">{{ node.principal || '-' }}</span>
+                                  class="text">{{ node.principal || '-' }}</span>
                         </span>
 
                         <span class="property"
@@ -138,16 +138,17 @@
                         <ng-container matColumnDef="applicationId">
                             <th *matHeaderCellDef mat-header-cell>Application</th>
                             <td *matCellDef="let application" mat-cell>
-                                <a [routerLink]="['/eap-application-list', 'application', application.applicationId]"
-                                   [matTooltip]="'Show ' + application.applicationId"
-                                   [matTooltipShowDelay]="1000" class="row-link">{{ application.applicationId }}</a>
+                                <span [matTooltipShowDelay]="1000" [matTooltip]="application.applicationId"
+                                      class="text">{{ application.applicationId }}</span>
                             </td>
                         </ng-container>
                         <ng-container matColumnDef="namespace">
                             <th *matHeaderCellDef mat-header-cell
                                 matTooltip="An application ID is unique within an account and namespace">Namespace
                             </th>
-                            <td *matCellDef="let application" mat-cell>{{ application.namespace || 'account root' }}</td>
+                            <td *matCellDef="let application" mat-cell>
+                                {{ namespaceOf(application) || 'account root' }}
+                            </td>
                         </ng-container>
                         <ng-container matColumnDef="runtime">
                             <th *matHeaderCellDef mat-header-cell>Runtime</th>
@@ -166,6 +167,17 @@
                                 <span [class.unfinished]="application.running < application.instances">
                                     {{ application.running }}
                                 </span>
+                            </td>
+                        </ng-container>
+                        <ng-container matColumnDef="actions">
+                            <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                            <td *matCellDef="let application" mat-cell>
+                                <button [matTooltipShowDelay]="1000"
+                                        [routerLink]="['/eap-application-list', 'application', application.applicationId]"
+                                        aria-label="Edit" mat-icon-button
+                                        matTooltip="Show the application, its instances and its environment">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
                             </td>
                         </ng-container>
                         <tr *matHeaderRowDef="applicationColumns" mat-header-row></tr>

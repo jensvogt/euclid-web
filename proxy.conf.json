@@ -1,6 +1,6 @@
 {
   "/euclid": {
-    "target": "https://localhost:5566",
+    "target": "https://192.168.178.45:5566",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug",

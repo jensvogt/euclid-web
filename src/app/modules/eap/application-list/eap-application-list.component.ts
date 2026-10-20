@@ -1,6 +1,6 @@
 import {Component, inject} from '@angular/core';
 import {defer, mergeMap, Observable} from 'rxjs';
-import type {Application} from 'euclid-ndk';
+import type {Application, RebalanceResult} from 'euclid-ndk';
 
 import {byteConversion} from '../../../shared/byte-utils.component';
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -136,6 +136,35 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
             values => this.deploy(application, values),
             'Redeploy requested',
             'Redeploy',
+        );
+    }
+
+    /**
+     * Asks for the instances to be moved to where placement would put them now.
+     *
+     * Behind a confirmation because it restarts instances, one at a time: each move stops one and starts
+     * its replacement on the better node, so the pool runs at most one instance short while that happens.
+     * Worth a nod rather than a dialog - there is nothing to fill in, and a pool that is already balanced
+     * is left exactly as it is.
+     *
+     * What comes back says whether the request was recorded, not that anything has moved, so the snackbar
+     * reports that rather than claiming the pool has been spread. A job is refused by the server with its
+     * own sentence, which lands in the snackbar the way every other refusal does.
+     */
+    rebalance(application: Application): void {
+        this.confirmThen(
+            {
+                title: 'Rebalance',
+                message: `Move ${application.applicationId}'s instances to where placement would put them now?`
+                    + ' One moves at a time, each stopping an instance and starting its replacement on the'
+                    + ' better node, so the pool runs at most one short while it happens. A pool that is'
+                    + ' already balanced is left as it is.',
+                confirm: 'Rebalance',
+            },
+            this.eapService.rebalanceApplication(application.applicationId),
+            (result: RebalanceResult) => result.rebalancing
+                ? `Rebalance requested, with ${result.instances} instances running`
+                : 'The server did not start a rebalance',
         );
     }
 

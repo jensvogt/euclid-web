@@ -77,7 +77,7 @@
 
                         <span class="property">ERN</span>
                         <span class="value">
-                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.ern" class="text ern">{{ bucket.ern }}</span>
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.ern" class="text">{{ bucket.ern }}</span>
                             <button [cdkCopyToClipboard]="bucket.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
                                     mat-icon-button matTooltip="Copy the ERN to the clipboard">
                                 <mat-icon class="inline-icon">content_copy</mat-icon>
@@ -136,7 +136,7 @@
                         <span class="property" matTooltip="The EKM key new objects are written under">Encryption key</span>
                         <span class="value">
                             <span [matTooltipShowDelay]="1000" [matTooltip]="bucket.encryptionKeyErn"
-                                  class="text ern">{{ bucket.encryptionKeyErn || '-' }}</span>
+                                  class="text">{{ bucket.encryptionKeyErn || '-' }}</span>
                             @if (bucket.encryptionKeyErn) {
                                 <button [cdkCopyToClipboard]="bucket.encryptionKeyErn" [matTooltipShowDelay]="1000"
                                         aria-label="Copy" mat-icon-button matTooltip="Copy the key ERN to the clipboard">
