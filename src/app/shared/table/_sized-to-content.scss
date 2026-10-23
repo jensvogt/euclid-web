@@ -1,0 +1,69 @@
+/*
+ * A table whose columns are as wide as what is in them, with the first one taking the rest.
+ *
+ * Its own file because two stylesheets need it and the rules are not ones to retype from memory: a
+ * listing opts in with `sized-to-content` on the table, and so does a table on a details page, where
+ * the columns are the same shape of thing. `list.component.scss` and `details.component.scss` both
+ * `@use` this; everything else that differs between a list and a detail view stays in those two.
+ */
+
+/*
+ * A cell that is a value and the buttons belonging to it - the name of the row beside the button that
+ * copies it. Here rather than in either stylesheet because the rule below already has to know about it:
+ * this is the shape of first cell whose width has to be allowed to give.
+ */
+.with-icon {
+  display: flex;
+  align-items: center;
+}
+
+/* Smaller than a button's usual icon, because it sits inside a line of text rather than beside one. */
+.copy-icon {
+  display: inline-flex;
+  vertical-align: bottom;
+  font-size: 16px !important;
+}
+
+/*
+ * Every column as wide as what is in it, for the lists that ask for it with `sized-to-content` on the
+ * table. Opt-in rather than the rule, because a table of short settled values is what it is for.
+ *
+ * `width: 1px` is not a width but a request to be as narrow as possible - a cell is never laid out below
+ * its content - and `nowrap` is what stops that narrowness being taken as permission to wrap a value onto
+ * a second line, which would make one row twice the height of its neighbours.
+ *
+ * The table still spans the card, so the slack has to go somewhere: it goes to the first column, which on
+ * every one of these lists is the name the row is about and the one value with no bound on its length. By
+ * position rather than by name, since each module calls it something else.
+ */
+.euclid-table.sized-to-content th,
+.euclid-table.sized-to-content td {
+  width: 1px;
+  white-space: nowrap;
+  padding-right: 16px;
+}
+
+/*
+ * The first column takes the rest, and gives when there is not enough.
+ *
+ * `width: 100%` is the claim on the slack. `max-width: 0` is what makes the column able to give it back:
+ * without it a value longer than the room available - an object key, which has no bound at all - is a
+ * width the column insists on, and a table whose columns all insist is a table wider than its card with a
+ * horizontal scrollbar under it. Neither property is a width that is used; between them they say "as much
+ * as is left, and no more".
+ *
+ * A cell is still never laid out below the minimum width of what is in it, so the value inside has to be
+ * able to shrink for any of this to hold. For the usual first cell - a `mat-nav-list` link beside a copy
+ * button - that is what these `min-width: 0` lines are: a flex item does not go below its content unless
+ * told to, and Material's list item clips and ellipsises its own text once its box is settled.
+ */
+.euclid-table.sized-to-content th:first-child,
+.euclid-table.sized-to-content td:first-child {
+  width: 100%;
+  max-width: 0;
+}
+
+.euclid-table.sized-to-content td:first-child .with-icon,
+.euclid-table.sized-to-content td:first-child .with-icon > * {
+  min-width: 0;
+}

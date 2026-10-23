@@ -138,8 +138,20 @@
                         <ng-container matColumnDef="applicationId">
                             <th *matHeaderCellDef mat-header-cell>Application</th>
                             <td *matCellDef="let application" mat-cell>
-                                <span [matTooltipShowDelay]="1000" [matTooltip]="application.applicationId"
-                                      class="text">{{ application.applicationId }}</span>
+                                <div class="with-icon">
+                                    <mat-nav-list>
+                                        <a [routerLink]="['/eap-application-list', 'application', application.applicationId]"
+                                           [matTooltipShowDelay]="1000" mat-list-item
+                                           matTooltip="Show the application, its instances and its environment">{{ application.applicationId }}</a>
+                                    </mat-nav-list>
+                                    <!-- The ID rather than an ERN: a node's row carries no ERN, and the ID is
+                                         what every eap action and the CLI take. -->
+                                    <button [cdkCopyToClipboard]="application.applicationId" [matTooltipShowDelay]="1000"
+                                            aria-label="Copy" mat-icon-button
+                                            matTooltip="Copy the application ID to the clipboard">
+                                        <mat-icon class="copy-icon">content_copy</mat-icon>
+                                    </button>
+                                </div>
                             </td>
                         </ng-container>
                         <ng-container matColumnDef="namespace">

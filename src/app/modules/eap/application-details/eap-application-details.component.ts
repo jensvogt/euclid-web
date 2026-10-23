@@ -309,14 +309,23 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
     }
 
     /**
-     * A column that means nothing for the `*` row, as a dash.
+     * A column that means nothing for the `*` row, as a dash. Otherwise the figure, read to two places.
      *
      * Nobody acquires a permit for `*` - it is a set of numbers other sites fall back to - so its bucket
      * is never drawn on and its slots are never held. The server reports those as zero, and a zero in a
      * column of real readings is a claim about a bucket rather than the absence of one.
+     *
+     * Rounded because one of these two columns is not a count. Tokens is the level of a bucket that
+     * refills continuously - the server adds `elapsed seconds x rate` to it and takes exactly one away
+     * per request - so a reading between two whole numbers is the ordinary case, and the seventeen digits
+     * a double prints in full are an artefact of adding fractions in binary rather than a figure anybody
+     * means. Two places is as fine as this is worth reading; a whole number still shows as one.
      */
     egressState(site: EgressSite, value: number): string {
-        return site.site === EGRESS_ALL_SITES ? '-' : String(value);
+        if (site.site === EGRESS_ALL_SITES) {
+            return '-';
+        }
+        return Number.isInteger(value) ? String(value) : value.toFixed(2);
     }
 
     /**

@@ -6,6 +6,7 @@ import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatDivider} from '@angular/material/divider';
 import {MatIcon} from '@angular/material/icon';
+import {MatListItem, MatNavList} from '@angular/material/list';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTableModule} from '@angular/material/table';
 import {MatTooltip} from '@angular/material/tooltip';
@@ -50,6 +51,8 @@ import {eapNodeDetailsActions, eapNodeDetailsSelectors} from './state/eap-node-d
         MatMenuModule,
         MatDivider,
         MatTableModule,
+        MatNavList,
+        MatListItem,
         CdkCopyToClipboard,
         RouterLink,
         AsyncPipe,
@@ -167,3 +170,4 @@ export class EapNodeDetailsComponent extends EuclidResourceComponent implements 
         );
     }
 }
+
