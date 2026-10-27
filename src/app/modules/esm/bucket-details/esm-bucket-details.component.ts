@@ -7,6 +7,8 @@ import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatDivider} from '@angular/material/divider';
 import {MatIcon} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
+import {MatTableModule} from '@angular/material/table';
+import {MatTabsModule} from '@angular/material/tabs';
 import {MatTooltip} from '@angular/material/tooltip';
 import {Store} from '@ngrx/store';
 import {interval, Observable, Subscription, tap} from 'rxjs';
@@ -18,7 +20,13 @@ import {FooterComponent} from '../../../shared/footer/footer.component';
 import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {ResourceTag, ResourceTagsComponent} from '../../../shared/tags/resource-tags.component';
-import {bucketNameOf, EsmService} from '../service/esm.service';
+import {
+    bucketNameOf,
+    EsmService,
+    LifecycleRule,
+    MAX_LIFECYCLE_DAYS,
+    MIN_LIFECYCLE_DAYS,
+} from '../service/esm.service';
 import {esmBucketDetailsActions, esmBucketDetailsSelectors} from './state/esm-bucket-details.state';
 
 /**
@@ -43,6 +51,8 @@ import {esmBucketDetailsActions, esmBucketDetailsSelectors} from './state/esm-bu
         MatTooltip,
         MatMenuModule,
         MatDivider,
+        MatTableModule,
+        MatTabsModule,
         ResourceTagsComponent,
         CdkCopyToClipboard,
         RouterLink,
@@ -57,6 +67,21 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
 
     /** The bucket this page is about. Not `readonly`: a rename gives the bucket a new one. */
     ern = '';
+
+    /**
+     * The bucket's lifecycle rules, read beside the bucket rather than with it.
+     *
+     * `get-bucket-lifecycle` is its own action: a bucket listing says nothing about rules, so the page
+     * asks for them itself. Held as an array rather than built per change-detection pass, because
+     * `mat-table` takes its rows by reference.
+     */
+    rules: LifecycleRule[] = [];
+    readonly ruleColumns = ['id', 'prefix', 'archiveAfterDays', 'restoreDays', 'enabled', 'actions'];
+
+    /** How many tags the bucket carries, for the tab that holds them: the table itself is the shared component's. */
+    tagCount(bucket: Bucket): number {
+        return Object.keys(bucket.tags ?? {}).length;
+    }
 
     protected readonly byteConversion = byteConversion;
     protected readonly dateConversion = dateConversion;
@@ -90,6 +115,20 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
         }
         this.lastUpdate = new Date();
         this.store.dispatch(esmBucketDetailsActions.load({ern: this.ern}));
+        this.loadLifecycle();
+    }
+
+    /**
+     * Reads the rules.
+     *
+     * Quietly on a failure rather than into the snackbar: this runs on every reload, and a bucket whose
+     * rules cannot be read is a bucket whose other half of the page is still worth showing.
+     */
+    private loadLifecycle(): void {
+        this.esmService.getBucketLifecycle(this.ern).subscribe({
+            next: (rules: LifecycleRule[]) => this.rules = [...rules].sort((left, right) => left.id.localeCompare(right.id)),
+            error: () => this.rules = [],
+        });
     }
 
     // -- the bucket itself ---------------------------------------------------------------------------
@@ -244,6 +283,105 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
             {title: 'Delete tag', message: `Remove the tag ${tag.key} from ${bucket.name}?`},
             this.esmService.deleteBucketTag(bucket.ern, tag.key),
             'Tag deleted',
+        );
+    }
+
+    // -- lifecycle -----------------------------------------------------------------------------------
+
+    /**
+     * Adds a rule, or changes the one named in the dialog's title.
+     *
+     * One method for both because the call is the same: `set-bucket-lifecycle` takes the whole set, so
+     * adding and editing are each the current rules with one of them replaced. The ID is what a rule is
+     * known by within its bucket, so editing one does not offer it - changing it there would leave the
+     * old rule behind and add a second.
+     */
+    setRule(bucket: Bucket, rule?: LifecycleRule): void {
+        const days = `From ${MIN_LIFECYCLE_DAYS} to ${MAX_LIFECYCLE_DAYS} days.`;
+        this.addThen(
+            rule ? `Rule ${rule.id}` : 'Add a lifecycle rule to ' + bucket.name,
+            [
+                ...(rule ? [] : [{name: 'id', label: 'Rule ID', required: true, hint: 'What the rule is known by in this bucket.'}]),
+                {
+                    name: 'prefix',
+                    label: 'Key prefix',
+                    value: rule?.prefix ?? '',
+                    hint: 'The keys this covers. Empty is the whole bucket, and the longest matching prefix wins.',
+                },
+                {
+                    name: 'archiveAfterDays',
+                    label: 'Archive after (days)',
+                    type: 'number',
+                    required: true,
+                    value: rule?.archiveAfterDays ?? 30,
+                    hint: `Days an object may go unused - unread, or unchanged if never read - before it is archived. ${days}`,
+                },
+                {
+                    name: 'restoreDays',
+                    label: 'Restore grace (days)',
+                    type: 'number',
+                    required: true,
+                    value: rule?.restoreDays ?? 7,
+                    hint: `How long a restored object stays online before this applies to it again. ${days}`,
+                },
+                {name: 'enabled', label: 'Enabled', type: 'boolean', value: rule?.enabled ?? true},
+            ],
+            values => {
+                const changed: LifecycleRule = {
+                    id: rule ? rule.id : String(values['id']).trim(),
+                    prefix: String(values['prefix'] ?? ''),
+                    archiveAfterDays: Number(values['archiveAfterDays']),
+                    restoreDays: Number(values['restoreDays']),
+                    enabled: values['enabled'] === true,
+                };
+                const rest = this.rules.filter(other => other.id !== changed.id);
+                return this.esmService.setBucketLifecycle(bucket.ern, [...rest, changed]);
+            },
+            rule ? 'Rule saved' : 'Rule added',
+            rule ? 'Save' : 'Add',
+        );
+    }
+
+    /** Switches one rule off, or back on, without asking anything else about it. */
+    toggleRule(bucket: Bucket, rule: LifecycleRule): void {
+        this.run(
+            this.esmService.setBucketLifecycle(
+                bucket.ern,
+                this.rules.map(other => other.id === rule.id ? {...other, enabled: !other.enabled} : other),
+            ),
+            rule.enabled ? `${rule.id} switched off` : `${rule.id} switched on`,
+        );
+    }
+
+    /**
+     * Removes one rule, by sending the others.
+     *
+     * Worth confirming though nothing is deleted by it: what the rule was doing was archiving objects,
+     * and whoever is looking at this table may be about to stop that happening.
+     */
+    deleteRule(bucket: Bucket, rule: LifecycleRule): void {
+        this.confirmThen(
+            {
+                title: 'Delete lifecycle rule',
+                message: `Remove ${rule.id} from ${bucket.name}? Objects it has already archived stay archived`
+                    + ' - a rule decides what to archive, not what to bring back.',
+            },
+            this.esmService.setBucketLifecycle(bucket.ern, this.rules.filter(other => other.id !== rule.id)),
+            'Rule deleted',
+        );
+    }
+
+    /** Removes every rule at once, which is what `delete-bucket-lifecycle` is for. */
+    clearLifecycle(bucket: Bucket): void {
+        this.confirmThen(
+            {
+                title: 'Delete every lifecycle rule',
+                message: `Remove all ${this.rules.length} rules from ${bucket.name}? Nothing new will be archived.`
+                    + ' What is already archived stays archived.',
+                confirm: 'Remove all',
+            },
+            this.esmService.deleteBucketLifecycle(bucket.ern),
+            'Lifecycle rules deleted',
         );
     }
 }

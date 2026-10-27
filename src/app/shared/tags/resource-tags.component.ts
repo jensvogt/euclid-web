@@ -1,4 +1,5 @@
 import {Component, EventEmitter, Input, OnChanges, Output} from '@angular/core';
+import {NgTemplateOutlet} from '@angular/common';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatIconButton} from '@angular/material/button';
 import {MatIcon} from '@angular/material/icon';
@@ -30,7 +31,7 @@ export interface ResourceTag {
     templateUrl: './resource-tags.component.html',
     styleUrls: ['../resource/details.component.scss'],
     standalone: true,
-    imports: [MatCard, MatCardHeader, MatCardContent, MatIconButton, MatIcon, MatTooltip, MatTableModule],
+    imports: [MatCard, MatCardHeader, MatCardContent, MatIconButton, MatIcon, MatTooltip, MatTableModule, NgTemplateOutlet],
 })
 export class ResourceTagsComponent implements OnChanges {
 
@@ -39,6 +40,16 @@ export class ResourceTagsComponent implements OnChanges {
 
     /** What the resource is called, for the tooltips that name it. */
     @Input() resource = '';
+
+    /**
+     * Whether this is the body of a tab rather than a section of its own.
+     *
+     * A page with tabs has already drawn the card and already names the thing in the tab's own label, so
+     * the card and the heading here would be a second frame around the same table and a count printed
+     * twice. The add button moves to the line that introduces it, which is where every other tabbed page
+     * on a details view puts the action belonging to its table.
+     */
+    @Input() inTab = false;
 
     @Output() readonly add = new EventEmitter<void>();
     @Output() readonly edit = new EventEmitter<ResourceTag>();

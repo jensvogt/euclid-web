@@ -1,39 +1,61 @@
-<mat-card appearance="outlined" class="section">
-    <mat-card-header>
-        <span class="section-title">Tags ({{ rows.length }})</span>
-        <button (click)="add.emit()" [matTooltip]="'Add a tag to ' + resource" [matTooltipShowDelay]="1000"
-                aria-label="Add tag" mat-icon-button>
-            <mat-icon>add</mat-icon>
-        </button>
-    </mat-card-header>
-    <mat-card-content>
-        <table [dataSource]="rows" class="mat-elevation-z8 euclid-table" mat-table>
-            <ng-container matColumnDef="key">
-                <th *matHeaderCellDef mat-header-cell>Key</th>
-                <td *matCellDef="let tag" mat-cell>{{ tag.key }}</td>
-            </ng-container>
-            <ng-container matColumnDef="value">
-                <th *matHeaderCellDef mat-header-cell>Value</th>
-                <td *matCellDef="let tag" mat-cell>{{ tag.value }}</td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-                <th *matHeaderCellDef mat-header-cell>Actions</th>
-                <td *matCellDef="let tag" mat-cell>
-                    <button (click)="edit.emit(tag)" [matTooltipShowDelay]="1000" aria-label="Edit"
-                            mat-icon-button matTooltip="Change the value">
-                        <mat-icon>edit</mat-icon>
-                    </button>
-                    <button (click)="remove.emit(tag)" [matTooltipShowDelay]="1000" aria-label="Delete"
-                            mat-icon-button matTooltip="Remove the tag">
-                        <mat-icon>delete</mat-icon>
-                    </button>
-                </td>
-            </ng-container>
-            <tr *matHeaderRowDef="columns" mat-header-row></tr>
-            <tr *matRowDef="let row; columns: columns;" mat-row></tr>
-            <tr *matNoDataRow class="mat-row">
-                <td [attr.colspan]="columns.length" class="mat-cell">No tags here.</td>
-            </tr>
-        </table>
-    </mat-card-content>
-</mat-card>
+<!--
+  The same table either way: as a section card of its own, which is what a details page without tabs
+  wants, or as the body of a tab on one that has them. The markup is held once and placed twice - see
+  `inTab` - because what differs is the frame around it rather than the table.
+-->
+@if (inTab) {
+    <div class="tab-body">
+        <div class="tab-actions">
+            <p class="note">What has been hung off {{ resource }}, as names and values of your own.</p>
+            <button (click)="add.emit()" [matTooltip]="'Add a tag to ' + resource" [matTooltipShowDelay]="1000"
+                    aria-label="Add tag" mat-icon-button>
+                <mat-icon>add</mat-icon>
+            </button>
+        </div>
+        <ng-container [ngTemplateOutlet]="tagTable"/>
+    </div>
+} @else {
+    <mat-card appearance="outlined" class="section">
+        <mat-card-header>
+            <span class="section-title">Tags ({{ rows.length }})</span>
+            <button (click)="add.emit()" [matTooltip]="'Add a tag to ' + resource" [matTooltipShowDelay]="1000"
+                    aria-label="Add tag" mat-icon-button>
+                <mat-icon>add</mat-icon>
+            </button>
+        </mat-card-header>
+        <mat-card-content>
+            <ng-container [ngTemplateOutlet]="tagTable"/>
+        </mat-card-content>
+    </mat-card>
+}
+
+<ng-template #tagTable>
+    <table [dataSource]="rows" class="mat-elevation-z8 euclid-table" mat-table>
+        <ng-container matColumnDef="key">
+            <th *matHeaderCellDef mat-header-cell>Key</th>
+            <td *matCellDef="let tag" mat-cell>{{ tag.key }}</td>
+        </ng-container>
+        <ng-container matColumnDef="value">
+            <th *matHeaderCellDef mat-header-cell>Value</th>
+            <td *matCellDef="let tag" mat-cell>{{ tag.value }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+            <th *matHeaderCellDef mat-header-cell>Actions</th>
+            <td *matCellDef="let tag" mat-cell>
+                <button (click)="edit.emit(tag)" [matTooltipShowDelay]="1000" aria-label="Edit"
+                        mat-icon-button matTooltip="Change the value">
+                    <mat-icon>edit</mat-icon>
+                </button>
+                <button (click)="remove.emit(tag)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                        mat-icon-button matTooltip="Remove the tag">
+                    <mat-icon>delete</mat-icon>
+                </button>
+            </td>
+        </ng-container>
+        <tr *matHeaderRowDef="columns" mat-header-row></tr>
+        <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+        <tr *matNoDataRow class="mat-row">
+            <td [attr.colspan]="columns.length" class="mat-cell">No tags here.</td>
+        </tr>
+    </table>
+</ng-template>

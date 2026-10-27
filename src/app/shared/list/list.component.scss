@@ -129,3 +129,99 @@
   background: #fff8e1;
   font-size: small;
 }
+
+/*
+ * The object browser: a tree of a bucket's folders beside the objects of the level that is open.
+ *
+ * `with-tree` rather than always two columns, because searching the whole bucket has no level to draw a
+ * tree of - the same table then takes the full width it always had. The tree is a fixed column so that
+ * a long folder name widens nothing: it is cut instead, and the full path is in the tooltip.
+ */
+.browser {
+  display: grid;
+  gap: 10px;
+}
+
+.browser.with-tree {
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+}
+
+.tree {
+  max-height: calc(100vh - 10px);
+  overflow: auto;
+  padding: 4px 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* A folder and the control that opens it, which are two targets doing two different things. */
+.node-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.twist {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+
+  .mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 8px 2px 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* The level the table is showing, which is the one thing the tree has to say without being read. */
+.node.current {
+  background: rgba(0, 74, 159, 0.08);
+  color: var(--mat-sys-primary, #004a9f);
+}
+
+.node-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+
+/* Cut rather than wrapped: a folder is one line, and the whole path is a tooltip away. */
+.node-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Where you are, as the parts you can go back to. */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 0 8px;
+
+  .separator {
+    opacity: 0.4;
+  }
+}

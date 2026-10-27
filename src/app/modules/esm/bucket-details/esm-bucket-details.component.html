@@ -154,8 +154,103 @@
                 </mat-card-content>
             </mat-card>
 
-            <resource-tags (add)="addTag(bucket)" (edit)="editTag(bucket, $event)"
-                           (remove)="deleteTag(bucket, $event)" [resource]="bucket.name" [tags]="bucket.tags"/>
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Lifecycle ({{ rules.length }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        When an object may be archived for going unused. <em>Unused</em> is its last
+                                        read, or its last change for one never read &mdash; and where two rules match a
+                                        key, the one with the longer prefix decides. A rule says what to archive and
+                                        never what to bring back: that is what restoring an object is for.
+                                    </p>
+                                    <button (click)="setRule(bucket)" [matTooltipShowDelay]="1000"
+                                            aria-label="Add rule" mat-icon-button
+                                            matTooltip="Add a lifecycle rule to this bucket">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                    @if (rules.length > 0) {
+                                        <button (click)="clearLifecycle(bucket)" [matTooltipShowDelay]="1000"
+                                                aria-label="Delete all" mat-icon-button
+                                                matTooltip="Remove every rule, so nothing new is archived">
+                                            <mat-icon>delete_sweep</mat-icon>
+                                        </button>
+                                    }
+                                </div>
+                                <table [dataSource]="rules" class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                    <ng-container matColumnDef="id">
+                                        <th *matHeaderCellDef mat-header-cell matTooltip="What the rule is known by in this bucket">
+                                            Rule
+                                        </th>
+                                        <td *matCellDef="let rule" mat-cell>
+                                            <span [class.unfinished]="!rule.enabled">{{ rule.id }}</span>
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="prefix">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The keys it covers. Empty is the whole bucket.">Prefix
+                                        </th>
+                                        <td *matCellDef="let rule" mat-cell>{{ rule.prefix || 'the whole bucket' }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="archiveAfterDays">
+                                        <th *matHeaderCellDef mat-header-cell matTooltip="Days unused before an object is archived">
+                                            Archive after
+                                        </th>
+                                        <td *matCellDef="let rule" mat-cell>{{ rule.archiveAfterDays }} days</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="restoreDays">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="How long a restored object stays online before the rule applies again">
+                                            Restore grace
+                                        </th>
+                                        <td *matCellDef="let rule" mat-cell>{{ rule.restoreDays }} days</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="enabled">
+                                        <th *matHeaderCellDef mat-header-cell matTooltip="A rule switched off archives nothing">
+                                            Enabled
+                                        </th>
+                                        <td *matCellDef="let rule" mat-cell>{{ rule.enabled ? 'yes' : 'no' }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell>Actions</th>
+                                        <td *matCellDef="let rule" mat-cell>
+                                            <button (click)="toggleRule(bucket, rule)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Switch on or off" mat-icon-button
+                                                    [matTooltip]="rule.enabled ? 'Switch the rule off' : 'Switch the rule on'">
+                                                <mat-icon>{{ rule.enabled ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                                            </button>
+                                            <button (click)="setRule(bucket, rule)" [matTooltipShowDelay]="1000" aria-label="Edit"
+                                                    mat-icon-button matTooltip="Change what this rule covers and when">
+                                                <mat-icon>edit</mat-icon>
+                                            </button>
+                                            <button (click)="deleteRule(bucket, rule)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Delete" mat-icon-button matTooltip="Remove the rule">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="ruleColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: ruleColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="ruleColumns.length" class="mat-cell">
+                                            No rules, so nothing in this bucket is archived for going unused.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Tags ({{ tagCount(bucket) }})">
+                            <resource-tags (add)="addTag(bucket)" (edit)="editTag(bucket, $event)"
+                                           (remove)="deleteTag(bucket, $event)" [inTab]="true"
+                                           [resource]="bucket.name" [tags]="bucket.tags"/>
+                        </mat-tab>
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
         } @else {
             <p class="nothing">{{ (error$ | async) ?? 'Reading the bucket...' }}</p>
         }

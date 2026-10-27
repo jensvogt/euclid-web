@@ -1,7 +1,7 @@
 import {AsyncPipe} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
-import {MatIconButton} from '@angular/material/button';
+import {MatButton, MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardActions, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatDivider} from '@angular/material/divider';
 import {MatFormField, MatLabel, MatSuffix} from '@angular/material/form-field';
@@ -31,6 +31,7 @@ export const EUCLID_LIST_IMPORTS = [
     MatCardContent,
     MatCardActions,
     MatIconButton,
+    MatButton,
     MatIcon,
     MatTooltip,
     MatMenuModule,

@@ -82,6 +82,14 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
      */
     protected parent = '';
 
+    /**
+     * What a view sets to page a level instead of a prefix - see {@link ListQueryProps.delimiter}.
+     *
+     * Empty here, because searching a prefix is what a listing does; the object list is the one view
+     * that browses, and it sets this while it is showing a tree.
+     */
+    protected delimiter = '';
+
     private updateSubscription: Subscription | undefined;
 
     ngOnInit(): void {
@@ -123,6 +131,7 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
             sortColumn: this.sortColumn.column,
             sortDirection: this.sortColumn.direction,
             parent: this.parent,
+            delimiter: this.delimiter,
         }));
     }
 

@@ -10,14 +10,43 @@ import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EsmObjectUploadDialog, ObjectUploadData} from '../object-upload/esm-object-upload.component';
-import {bucketNameOf, EsmService, UPLOADING} from '../service/esm.service';
+import {
+    bucketNameOf,
+    EsmService,
+    LEVEL_SEPARATOR,
+    levelName,
+    levelOf,
+    UPLOADING,
+} from '../service/esm.service';
 import {esmObjectListFeature} from './state/esm-object-list.state';
 
+/** One folder of a bucket, as the tree shows it: a path, and whether what is under it is on screen. */
+export interface FolderNode {
+    /** The level, ending in the separator: `2026/01/`. */
+    path: string;
+    /** Its last segment, which is what the tree prints. */
+    name: string;
+    depth: number;
+    expanded: boolean;
+    loading: boolean;
+    /** Whether its children have been asked for, so a folder holding none is not asked about twice. */
+    loaded: boolean;
+    /** Its folders, kept while it is closed so that opening it again costs nothing. */
+    children: FolderNode[];
+}
+
 /**
- * One bucket's objects.
+ * One bucket's objects, as a tree of the folders their keys describe.
  *
- * The prefix box narrows by key, which is the only structure a bucket has: keys are opaque strings, and a
- * "directory" is nothing more than a set of them that share a leading segment.
+ * A bucket has no directories. A key is one opaque string, and a folder is nothing but the set of keys
+ * sharing a leading segment up to a "/" - which is why the tree is built from the keys rather than read
+ * from anywhere, and why an empty folder is a thing that cannot exist.
+ *
+ * Browsing and searching are the two questions a bucket can be asked, and they are not the same one.
+ * Browsing shows one level: the objects directly in it, with what lies below as folders to open.
+ * Searching matches a prefix against every key in the bucket and answers with the whole subtree, which
+ * is what the prefix box has always done and what the tree switches off while it is on. The server
+ * decides between them by the delimiter - see {@link EsmService.listLevel}.
  */
 @Component({
     selector: 'esm-object-list',
@@ -35,6 +64,21 @@ export class EsmObjectListComponent extends EuclidListComponent<EsmObject> {
 
     bucketErn = '';
 
+    /**
+     * Whether the page is browsing a tree or searching the whole bucket.
+     *
+     * On by default: a bucket of any size is organised by somebody, and showing the root of that is more
+     * use than the first ten of three million keys in alphabetical order. The menu switches it off, and
+     * then this is the flat listing with its prefix box.
+     */
+    tree = true;
+
+    /** The folders on screen, flattened: a tree is a list of rows that know their own depth. */
+    nodes: FolderNode[] = [];
+
+    protected readonly levelName = levelName;
+    protected readonly separator = LEVEL_SEPARATOR;
+
     protected readonly byteConversion = byteConversion;
     protected readonly dateConversion = dateConversion;
 
@@ -47,7 +91,132 @@ export class EsmObjectListComponent extends EuclidListComponent<EsmObject> {
     override ngOnInit(): void {
         this.bucketErn = this.route.snapshot.paramMap.get('bucketErn') ?? '';
         this.parent = this.bucketErn;
+        this.delimiter = LEVEL_SEPARATOR;
         super.ngOnInit();
+        this.loadRoot();
+    }
+
+    // -- the tree ------------------------------------------------------------------------------------
+
+    /** The level the table is showing, which in tree mode is what the prefix holds. */
+    get level(): string {
+        return this.tree ? this.prefixValue : '';
+    }
+
+    /**
+     * The path to the level on screen, as the parts somebody can go back to.
+     *
+     * The root is not in it: the bucket's own name stands for that, and it is already the heading.
+     */
+    get breadcrumb(): {name: string; path: string}[] {
+        const segments = this.level.split(LEVEL_SEPARATOR).filter(segment => segment !== '');
+        return segments.map((name, index) => ({
+            name: name,
+            path: segments.slice(0, index + 1).join(LEVEL_SEPARATOR) + LEVEL_SEPARATOR,
+        }));
+    }
+
+    /**
+     * Browsing or searching, which the server is asked differently.
+     *
+     * The prefix survives the switch, because a level is a legal prefix: leaving the tree at `2026/01/`
+     * searches the bucket for every key starting with it, which is the same place seen the other way.
+     */
+    toggleTree(): void {
+        this.tree = !this.tree;
+        this.delimiter = this.tree ? LEVEL_SEPARATOR : '';
+        this.pageIndex = 0;
+        if (this.tree) {
+            this.prefixValue = levelOf(this.prefixValue);
+            this.loadRoot();
+        }
+        this.load();
+    }
+
+    /** Shows one level, and leaves the tree as it is - what was open stays open. */
+    openLevel(path: string): void {
+        this.prefixValue = path;
+        this.prefixSet = path !== '';
+        this.pageIndex = 0;
+        this.load();
+    }
+
+    /**
+     * Opens or closes one folder.
+     *
+     * Children are asked for the first time a folder is opened and kept after that: a level's folders
+     * cost one index seek each, but a tree somebody is clicking through would ask for the same ones
+     * again on every open. Closing drops the rows below it from the screen rather than from the node, so
+     * reopening is free.
+     */
+    toggleNode(node: FolderNode): void {
+        if (node.expanded) {
+            node.expanded = false;
+            // What was open below closes with it. Reopening then shows this folder's own children rather
+            // than restoring a shape somebody left three clicks ago and has since stopped expecting.
+            for (const other of this.nodes) {
+                if (isUnder(other, node)) {
+                    other.expanded = false;
+                }
+            }
+            this.nodes = this.nodes.filter(other => !isUnder(other, node));
+            return;
+        }
+
+        node.expanded = true;
+        if (node.loaded) {
+            this.insert(node, node.children);
+            return;
+        }
+        node.loading = true;
+        this.esmService.listDirectories(this.bucketErn, node.path).subscribe({
+            next: (directories: string[]) => {
+                node.loading = false;
+                node.loaded = true;
+                node.children = nodesOf(directories, node.depth + 1);
+                this.insert(node, node.children);
+            },
+            error: () => {
+                node.loading = false;
+                node.loaded = true;
+                node.expanded = false;
+            },
+        });
+    }
+
+    /**
+     * Shows a folder's contents and opens it in the tree, which is one gesture rather than two.
+     *
+     * A folder clicked in a tree is both "show me this" and "what is in it" - the chevron is there for
+     * the second without the first, when somebody is looking for a path rather than at a level.
+     */
+    openNode(node: FolderNode): void {
+        this.openLevel(node.path);
+        if (!node.expanded) {
+            this.toggleNode(node);
+        }
+    }
+
+    /** Whether this node is the level the table is showing. */
+    isOpen(node: FolderNode): boolean {
+        return this.level === node.path;
+    }
+
+    /** The bucket's own folders, which is the tree's first row and the root the breadcrumb goes back to. */
+    private loadRoot(): void {
+        this.esmService.listDirectories(this.bucketErn, '').subscribe({
+            next: (directories: string[]) => this.nodes = nodesOf(directories, 0),
+            error: () => this.nodes = [],
+        });
+    }
+
+    /** Puts a folder's children directly under it, which is where the screen expects them. */
+    private insert(node: FolderNode, children: FolderNode[]): void {
+        const at = this.nodes.indexOf(node);
+        if (at < 0) {
+            return;
+        }
+        this.nodes = [...this.nodes.slice(0, at + 1), ...children, ...this.nodes.slice(at + 1)];
     }
 
     get bucketName(): string {
@@ -168,4 +337,22 @@ function purgeStarted(result: PurgeBucketResult): string {
     return result.jobId
         ? `Purging ${result.count} objects in the background (job ${result.jobId})`
         : `Purging ${result.count} objects in the background`;
+}
+
+/** The directories of one level as rows, in the order the server found them, which is key order. */
+function nodesOf(directories: string[], depth: number): FolderNode[] {
+    return directories.map(path => ({
+        path: path,
+        name: levelName(path),
+        depth: depth,
+        expanded: false,
+        loading: false,
+        loaded: false,
+        children: [],
+    }));
+}
+
+/** Whether one row is somewhere below another, which is what closing a folder has to take off the screen. */
+function isUnder(node: FolderNode, parent: FolderNode): boolean {
+    return node !== parent && node.path.startsWith(parent.path);
 }

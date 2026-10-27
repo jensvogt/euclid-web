@@ -31,9 +31,68 @@ import {
     ListQuery,
     listPayload,
     Page,
+    PageQuery,
+    pagePayload,
 } from '../../../services/euclid-http.service';
 
 export const TARGET = 'esm';
+
+/**
+ * One lifecycle rule of a bucket: which keys it covers, and how long they may go unused.
+ *
+ * Declared here rather than imported, because euclid-ndk does not carry the lifecycle actions yet. The
+ * shape is EsmServer's `lifecycleRuleToJson()`, which is what both reading and writing them use.
+ *
+ * `archiveAfterDays` counts from an object's last use - its last read, or its last change for one never
+ * read - and `restoreDays` is the grace period a restored object stays online for before the rule
+ * applies to it again. The server holds both to 1..36500 days.
+ *
+ * Where two rules match a key the longer prefix wins, which is how a bucket-wide rule and a stricter one
+ * for one folder live together.
+ */
+export interface LifecycleRule {
+    id: string;
+    prefix: string;
+    archiveAfterDays: number;
+    restoreDays: number;
+    enabled: boolean;
+}
+
+/**
+ * The separator a key's path is cut at, which is the only one the server takes.
+ *
+ * A bucket has no directories: a key is one opaque string, and a "directory" is the set of keys sharing
+ * a leading segment up to one of these. Everything a tree shows is derived from that.
+ */
+export const LEVEL_SEPARATOR = '/';
+
+/** One level of a bucket: a page of the objects in it, and every directory below it. */
+export interface ObjectLevel extends Page<EsmObject> {
+    directories: string[];
+}
+
+/** The path as the server wants a level named: ending in the separator, or empty for the root. */
+export function levelOf(path: string): string {
+    if (!path || path.endsWith(LEVEL_SEPARATOR)) {
+        return path;
+    }
+    return path + LEVEL_SEPARATOR;
+}
+
+/** Whether this prefix names a level rather than the start of a key. */
+export function isLevel(prefix: string): boolean {
+    return prefix === '' || prefix.endsWith(LEVEL_SEPARATOR);
+}
+
+/** The last segment of a directory path: `2026/01/` is `01`. */
+export function levelName(path: string): string {
+    const segments = path.split(LEVEL_SEPARATOR).filter(segment => segment !== '');
+    return segments.length === 0 ? '' : segments[segments.length - 1];
+}
+
+/** What the server holds a rule's two periods to. */
+export const MIN_LIFECYCLE_DAYS = 1;
+export const MAX_LIFECYCLE_DAYS = 36500;
 
 /**
  * How much of a file goes into one part, and how many parts travel at once.
@@ -229,6 +288,29 @@ export class EsmService {
         return this.http.call(TARGET, 'delete-bucket-tag', {ern: ern, key: key});
     }
 
+    // -- lifecycle -----------------------------------------------------------------------------
+
+    /** A bucket's lifecycle rules, which is the whole set or none: there is no reading one of them. */
+    getBucketLifecycle(ern: string): Observable<LifecycleRule[]> {
+        return this.http.all<LifecycleRule>(TARGET, 'get-bucket-lifecycle', 'rules', {ern: ern});
+    }
+
+    /**
+     * Replaces a bucket's lifecycle rules with these.
+     *
+     * The whole set, because that is what the action takes - and what it validates: the server checks
+     * every rule before it stores any of them, so a bucket never ends up holding half of a set. Adding,
+     * changing and removing one rule are therefore all the same call, with the array composed here.
+     */
+    setBucketLifecycle(ern: string, rules: LifecycleRule[]): Observable<LifecycleRule[]> {
+        return this.http.all<LifecycleRule>(TARGET, 'set-bucket-lifecycle', 'rules', {ern: ern, rules: rules});
+    }
+
+    /** Removes every rule. What was already archived stays archived - a rule says what to archive, not what to bring back. */
+    deleteBucketLifecycle(ern: string): Observable<unknown> {
+        return this.http.call(TARGET, 'delete-bucket-lifecycle', {ern: ern});
+    }
+
     // -- objects -------------------------------------------------------------------------------
 
     /**
@@ -288,6 +370,50 @@ export class EsmService {
             'x-euclid-key': key,
             'x-euclid-part-size': String(maxInlineSize + 1),
         });
+    }
+
+    /**
+     * One level of a bucket: the objects directly in it, and the directories below it.
+     *
+     * The same action as {@link listObjects} asked a different question. Without a delimiter the prefix
+     * is matched against every key and the answer is the whole subtree; with one it names a level, and
+     * what lies below comes back as `commonPrefixes` rather than as the keys inside them. That is what
+     * makes a tree affordable: the server finds a level's directories with one index seek each - eight
+     * seeks and 28ms for the root of a bucket holding 7.9 million objects - instead of reading the
+     * subtree to work out what the folders are.
+     *
+     * A level is a path that ends in its separator, and the root is the empty string; the server refuses
+     * anything else, because `notes` and `notes/` are different questions and only one of them was asked.
+     *
+     * Ordered by key, always: in this mode the server reads the page straight out of the
+     * `(bucketErn, parent, directory, key)` index, and any other column would throw that away.
+     */
+    listLevel(bucketErn: string, level: string, query: PageQuery): Observable<ObjectLevel> {
+        const payload = {
+            bucketErn: bucketErn,
+            prefix: levelOf(level),
+            delimiter: LEVEL_SEPARATOR,
+            ...pagePayload(query, 'key'),
+        };
+        return this.http.call<Record<string, unknown>>(TARGET, 'list-objects', payload).pipe(
+            map((response: Record<string, unknown>) => ({
+                total: typeof response['total'] === 'number' ? response['total'] : 0,
+                items: Array.isArray(response['objects']) ? response['objects'] as EsmObject[] : [],
+                directories: Array.isArray(response['commonPrefixes']) ? response['commonPrefixes'] as string[] : [],
+            })),
+        );
+    }
+
+    /**
+     * Only the directories of a level, for the tree that shows them.
+     *
+     * One row asked for and ignored: the directories come whole whatever the page size, and a page of
+     * objects is what the table is separately asking for.
+     */
+    listDirectories(bucketErn: string, level: string): Observable<string[]> {
+        return this.listLevel(bucketErn, level, {pageSize: 1, pageIndex: 0}).pipe(
+            map((level: ObjectLevel) => level.directories),
+        );
     }
 
     /**

@@ -23,6 +23,13 @@ export interface ListQueryProps {
     sortColumn: string;
     sortDirection: 'asc' | 'desc';
     /**
+     * The separator that turns a prefix into a level, for the one listing that browses rather than
+     * searches: ESM's objects, where a key's path is cut at "/" and a bucket is shown a directory at a
+     * time. Empty everywhere else, which is the flat listing every other module has.
+     */
+    delimiter?: string;
+
+    /**
      * The ERN of the thing being listed into, for the views that list a resource's contents.
      *
      * A queue's messages and a bucket's objects are pages like any other, but of one parent rather than of
