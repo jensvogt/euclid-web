@@ -53,24 +53,26 @@
         <mat-card appearance="outlined" style="margin: -10px;">
             <mat-card-actions align="start">
                 <!--
-                  One or the other, because they are different questions: the tree shows one level and
-                  the box searches every key in the bucket. The path is the same string either way, so
-                  switching keeps where you are - see toggleTree().
+                  One box, in the same place either way, because it is the same question asked of a
+                  different scope: browsing, it looks under the folder on screen; searching, it looks
+                  through the whole bucket. What it is bound to is the only difference - see apply().
                 -->
                 @if (tree) {
-                    <div class="breadcrumb">
-                        <button (click)="openLevel('')" [disabled]="level === ''" mat-button
-                                [matTooltipShowDelay]="1000" matTooltip="Back to the root of the bucket">
-                            <mat-icon>folder_open</mat-icon>
-                            {{ bucketName }}
-                        </button>
-                        @for (part of breadcrumb; track part.path) {
-                            <span class="separator">{{ separator }}</span>
-                            <button (click)="openLevel(part.path)" [disabled]="level === part.path" mat-button>
-                                {{ part.name }}
+                    <mat-form-field style="width:100%">
+                        <mat-label>Find under this folder</mat-label>
+                        <input (keyup.enter)="setSearch()" [(ngModel)]="search" matInput name="levelSearch"
+                               placeholder="Key prefix" type="text">
+                        @if (search) {
+                            <button (click)="unsetSearch()" aria-label="Clear" mat-icon-button matSuffix
+                                    style="float: right">
+                                <mat-icon matSuffix>close</mat-icon>
                             </button>
                         }
-                    </div>
+                        <button (click)="setSearch()" aria-label="Search" mat-icon-button matSuffix
+                                style="float: right">
+                            <mat-icon matSuffix>search</mat-icon>
+                        </button>
+                    </mat-form-field>
                 } @else {
                     <mat-form-field style="width:100%">
                         <mat-label>Key prefix</mat-label>
@@ -87,40 +89,32 @@
                     </mat-form-field>
                 }
             </mat-card-actions>
-            <div class="browser" [class.with-tree]="tree">
-                @if (tree) {
-                    <!--
-                      The folders a bucket's keys describe, a level at a time. Opening one asks the server
-                      what is below it, which costs an index seek per folder rather than a read of what is
-                      inside them - so a bucket of millions opens as quickly as an empty one.
-                    -->
-                    <div class="tree">
-                        <button (click)="openLevel('')" [class.current]="level === ''" class="node"
-                                [style.padding-left.px]="8">
-                            <mat-icon class="node-icon">{{ level === '' ? 'folder_open' : 'folder' }}</mat-icon>
-                            <span class="node-name">{{ bucketName }}</span>
+
+            <!-- Where the listing below is, and the way back up out of it. -->
+            @if (tree) {
+                <div class="breadcrumb">
+                    <button (click)="openParent()" [disabled]="level === ''" aria-label="Up one"
+                            [matTooltipShowDelay]="1000" mat-icon-button matTooltip="Up one folder">
+                        <mat-icon>arrow_upward</mat-icon>
+                    </button>
+                    <button (click)="openLevel('')" [disabled]="level === ''" mat-button
+                            [matTooltipShowDelay]="1000" matTooltip="Back to the root of the bucket">
+                        {{ bucketName }}
+                    </button>
+                    @for (part of breadcrumb; track part.path) {
+                        <span class="separator">{{ separator }}</span>
+                        <button (click)="openLevel(part.path)" [disabled]="level === part.path && !search"
+                                mat-button>
+                            {{ part.name }}
                         </button>
-                        @for (node of nodes; track node.path) {
-                            <div class="node-row" [style.padding-left.px]="8 + node.depth * 14">
-                                <button (click)="toggleNode(node)" aria-label="Open or close" class="twist"
-                                        mat-icon-button>
-                                    <mat-icon>{{ node.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
-                                </button>
-                                <button (click)="openNode(node)" [class.current]="isOpen(node)"
-                                        [matTooltip]="node.path" [matTooltipShowDelay]="1000" class="node">
-                                    <mat-icon class="node-icon">{{ isOpen(node) ? 'folder_open' : 'folder' }}</mat-icon>
-                                    <span class="node-name">{{ node.name }}</span>
-                                    @if (node.loading) {
-                                        <mat-spinner diameter="14"/>
-                                    }
-                                </button>
-                            </div>
-                        }
-                        @if (nodes.length === 0) {
-                            <p class="nothing">No folders: every key in this bucket is at its root.</p>
-                        }
-                    </div>
-                }
+                    }
+                    @if (search) {
+                        <span class="searching">
+                            &mdash; everything under this starting with <strong>{{ search }}</strong>
+                        </span>
+                    }
+                </div>
+            }
             <div class="table-area">
                 @if (busy$ | async) {
                     <!-- Only once the wait is a second old - see SPINNER_DELAY_MS. A bucket with tens of
@@ -137,17 +131,16 @@
                       values of a settled length, and the key is the one with none - so it is the column that
                       gives rather than the one that pushes the table off the side of the card.
                     -->
-                    <table (matSortChange)="sortChange($event)" [dataSource]="(items$ | async) ?? []"
+                    <table (matSortChange)="sortChange($event)" [dataSource]="rows"
                            class="mat-elevation-z8 euclid-table sized-to-content" mat-table matSort>
                         <ng-container matColumnDef="key">
                             <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="The object's key. Browsing a level, this is the only column a page can be ordered by - the server reads it straight out of the index.">Key</th>
                             <td *matCellDef="let object" mat-cell>
                                 <div class="with-icon">
                                     <mat-nav-list>
-                                        <a [matTooltipShowDelay]="1000"
+                                        <a [matTooltip]="object.key" [matTooltipShowDelay]="1000"
                                            [routerLink]="['/esm-bucket-list', 'objects', bucketErn, object.key]"
-                                           mat-list-item
-                                           matTooltip="Show and edit the object">{{ object.key }}</a>
+                                           mat-list-item>{{ displayKey(object) }}</a>
                                     </mat-nav-list>
                                     <button [cdkCopyToClipboard]="object.key" [matTooltipShowDelay]="1000"
                                             aria-label="Copy" mat-icon-button matTooltip="Copy the key to the clipboard">
@@ -206,14 +199,39 @@
                                 </button>
                             </td>
                         </ng-container>
+                        <!--
+                          A folder is one cell across the whole row rather than a key with empty columns
+                          beside it: it has no size, no type and no dates, and a row of dashes would say
+                          it does. `colspan` on a single-column row is how a table says "this row is not
+                          about those columns" - the same way the no-data row below does.
+                        -->
+                        <ng-container matColumnDef="folder">
+                            <td *matCellDef="let row" [attr.colspan]="columns.length" mat-cell>
+                                <!-- The same control a row's own name is everywhere else. No route: a
+                                     level is where this page is looking rather than somewhere to go. -->
+                                <mat-nav-list>
+                                    <a (click)="openLevel(row.path)" [matTooltip]="row.path"
+                                       [matTooltipShowDelay]="1000" mat-list-item>{{ row.name }}</a>
+                                </mat-nav-list>
+                            </td>
+                        </ng-container>
+
                         <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                        <tr *matRowDef="let row; columns: ['folder']; when: isFolderRow" mat-row></tr>
                         <tr *matRowDef="let row; columns: columns;" mat-row></tr>
                         <tr *matNoDataRow class="mat-row">
-                            <td [attr.colspan]="columns.length" class="mat-cell">Nothing in this bucket.</td>
+                            <td [attr.colspan]="columns.length" class="mat-cell">
+                                @if (search) {
+                                    Nothing here starts with "{{ search }}".
+                                } @else if (level) {
+                                    This folder is empty.
+                                } @else {
+                                    Nothing in this bucket.
+                                }
+                            </td>
                         </tr>
                     </table>
                 </div>
-            </div>
             </div>
             <mat-paginator (page)="handlePageEvent($event)"
                            [disabled]="disabled"
