@@ -4,7 +4,18 @@ import {createAction, createFeatureSelector, createReducer, createSelector, on, 
 import {catchError, map, of, switchMap} from 'rxjs';
 import type {Item, ScanResult, TableDescription} from 'euclid-ndk';
 
-import {EkvService} from '../../service/ekv.service';
+import {EkvService, QueryOptions, ScanOptions} from '../../service/ekv.service';
+
+/**
+ * What the page is showing: a scan of the table, or a query of one partition.
+ *
+ * Held as the request rather than as a mode and a pile of fields, because paging has to ask the same
+ * question again with another page - and "the same question" is exactly this object with one number
+ * changed.
+ */
+export type ItemRequest =
+    | ({mode: 'scan'} & ScanOptions)
+    | ({mode: 'query'} & QueryOptions);
 
 /**
  * One table, and a page of what is in it.
@@ -28,10 +39,14 @@ export const ekvTableDetailsFeatureKey = 'ekv-table-details';
 export const ekvTableDetailsActions = {
     load: createAction(`[${ekvTableDetailsFeatureKey}] Load`, props<{name: string}>()),
     loadSuccess: createAction(`[${ekvTableDetailsFeatureKey}] Load success`, props<{table: TableDescription}>()),
-    scan: createAction(
-        `[${ekvTableDetailsFeatureKey}] Scan`,
-        props<{name: string; pageSize: number; pageIndex: number}>(),
-    ),
+    /**
+     * Read the items, whichever way was asked for.
+     *
+     * One action for both because the page shows one answer either way: a scan walks the table and a
+     * query walks one partition, and what comes back is a page of items. Which of the two is on the
+     * request - see {@link ItemRequest}.
+     */
+    scan: createAction(`[${ekvTableDetailsFeatureKey}] Scan`, props<{request: ItemRequest}>()),
     scanSuccess: createAction(
         `[${ekvTableDetailsFeatureKey}] Scan success`,
         props<{items: Item[]; total: number}>(),
@@ -127,10 +142,14 @@ export const scanTable$ = createEffect(
         const service = inject(EkvService);
         return actions$.pipe(
             ofType(ekvTableDetailsActions.scan),
-            switchMap(({name, pageSize, pageIndex}) => service.scan(name, pageSize, pageIndex).pipe(
+            switchMap(({request}) => read(service, request).pipe(
                 map((result: ScanResult) => ekvTableDetailsActions.scanSuccess({
                     items: result.items ?? [],
-                    total: result.total ?? 0,
+                    // What matched, which both reads now answer with: a scan counts the table and a
+                    // query counts the partition it walked. A server too old to count a partition sends
+                    // no total, and the paginator is then told what has been seen plus one while full
+                    // pages keep coming - enough to keep "next" reachable without inventing a figure.
+                    total: result.total || seenSoFar(request, result),
                 })),
                 catchError((error: Error) => of(ekvTableDetailsActions.failure({error: error.message}))),
             )),
@@ -138,3 +157,19 @@ export const scanTable$ = createEffect(
     },
     {functional: true},
 );
+
+/**
+ * How many have been seen, for a server that does not say how many there are.
+ *
+ * Plus one while a full page keeps arriving, because a full page is the one case where there may be
+ * another - which is what keeps the paginator's "next" reachable.
+ */
+function seenSoFar(request: ItemRequest, result: ScanResult): number {
+    const items = result.items?.length ?? 0;
+    return request.pageIndex * request.pageSize + items + (items === request.pageSize ? 1 : 0);
+}
+
+/** Whichever read the request describes. */
+function read(service: EkvService, request: ItemRequest) {
+    return request.mode === 'scan' ? service.scan(request) : service.query(request);
+}

@@ -104,6 +104,34 @@ export abstract class EuclidResourceComponent {
      * creation: the dialog says "Create" otherwise, which is the wrong word for renaming something or
      * changing a value it already has.
      */
+    /**
+     * Asks for the same fields {@link addThen} does, and hands them back rather than sending anything.
+     *
+     * For the dialogs whose answer is not a request: narrowing what a page is showing is a question put
+     * to the view, and running it through an action would report "done" for work the server was never
+     * asked to do.
+     */
+    protected askThen(
+        title: string,
+        fields: ResourceField[],
+        confirm: string,
+        taken: (values: Record<string, FieldValue>) => void,
+    ): void {
+        const dialogConfig = new MatDialogConfig();
+        dialogConfig.disableClose = true;
+        dialogConfig.autoFocus = true;
+        dialogConfig.width = '32%';
+        dialogConfig.minWidth = '360px';
+        dialogConfig.data = {title: title, fields: fields, confirm: confirm} as ResourceAddData;
+
+        this.dialog.open(ResourceAddDialog, dialogConfig).afterClosed()
+            .subscribe((values: Record<string, FieldValue> | undefined) => {
+                if (values) {
+                    taken(values);
+                }
+            });
+    }
+
     protected addThen(
         title: string,
         fields: ResourceField[],

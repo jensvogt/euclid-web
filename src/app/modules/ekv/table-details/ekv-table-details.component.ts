@@ -17,8 +17,8 @@ import type {Item, TableDescription} from 'euclid-ndk';
 import {dateConversion} from '../../../shared/date-utils.component';
 import {FooterComponent} from '../../../shared/footer/footer.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
-import {EkvService} from '../service/ekv.service';
-import {ekvTableDetailsActions, ekvTableDetailsSelectors} from './state/ekv-table-details.state';
+import {EkvService, keyValueOf, SORT_OPERATORS, SortOperator} from '../service/ekv.service';
+import {ekvTableDetailsActions, ekvTableDetailsSelectors, ItemRequest} from './state/ekv-table-details.state';
 
 /**
  * One table: what it is keyed on, and what is in it.
@@ -73,6 +73,14 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
     pageSize = 10;
     readonly pageSizeOptions = [5, 10, 20, 50, 100];
 
+    /**
+     * What the page is showing, which is a plain scan until somebody asks for something else.
+     *
+     * Kept rather than re-derived, because paging asks the same question again with another page: the
+     * filters of a scan and the partition of a query have to survive that.
+     */
+    request: ItemRequest = {mode: 'scan', table: '', pageSize: 10, pageIndex: 0};
+
     /** The table this page is about, by name - which is what every EKV action takes. */
     name = '';
 
@@ -119,6 +127,154 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
     handlePageEvent(event: PageEvent): void {
         this.pageSize = event.pageSize;
         this.pageIndex = event.pageIndex;
+        this.scan();
+    }
+
+    // -- asking a different question -----------------------------------------------------------------
+
+    /** What the page is showing, as one line above the table. */
+    get reading(): string {
+        if (this.request.mode === 'query') {
+            const sort = this.request.sortOperator
+                ? `, sort key ${this.request.sortOperator} ${String(this.request.sortValue)}`
+                : '';
+            return `Partition ${String(this.request.partitionKey)}${sort}`;
+        }
+        const narrowed = this.request.attributeName
+            ? `${this.request.attributeName} ${this.request.attributeOperator} ${String(this.request.attributeValue)}`
+            : '';
+        const since = this.request.modifiedFrom || this.request.modifiedTo
+            ? `modified ${this.request.modifiedFrom || 'any'} to ${this.request.modifiedTo || 'now'}`
+            : '';
+        const both = [narrowed, since].filter(part => part !== '').join(', ');
+        return both ? `Scan, ${both}` : '';
+    }
+
+    /**
+     * Reads one partition, in sort-key order.
+     *
+     * The cheap read, and what a key-value store is for: a query goes to one partition where a scan
+     * walks the table. It needs the partition key's value, which is why it is asked for rather than
+     * being something the page could show by itself.
+     *
+     * The sort fields are offered only for a table that has a sort key, since there is otherwise
+     * nothing in a partition to narrow by - its items are the one item.
+     */
+    queryItems(table: TableDescription): void {
+        this.askThen(
+            `Query ${table.name}`,
+            [
+                {
+                    name: 'partitionKey',
+                    label: `${table.partitionKey} (${table.partitionKeyType})`,
+                    required: true,
+                    hint: 'The partition to read. A query is of one partition - that is what makes it cheap.',
+                },
+                ...(table.sortKey ? [
+                    {
+                        name: 'sortOperator',
+                        label: `Narrow by ${table.sortKey}`,
+                        type: 'select' as const,
+                        options: ['', ...SORT_OPERATORS],
+                        value: '',
+                        hint: 'Empty takes the whole partition. begins-with only applies to a string sort key.',
+                    },
+                    {name: 'sortValue', label: `${table.sortKey} (${table.sortKeyType})`},
+                    {name: 'sortUpper', label: 'Upper bound', hint: 'For between only.'},
+                ] : []),
+                {name: 'forward', label: 'Ascending sort-key order', type: 'boolean', value: true},
+            ],
+            'Query',
+            values => {
+                const operator = String(values['sortOperator'] ?? '') as SortOperator | '';
+                this.pageIndex = 0;
+                this.request = {
+                    mode: 'query',
+                    table: table.name,
+                    pageSize: this.pageSize,
+                    pageIndex: 0,
+                    partitionKey: keyValueOf(table.partitionKeyType, String(values['partitionKey']).trim()),
+                    sortOperator: operator === '' ? undefined : operator,
+                    sortValue: operator === '' ? undefined : keyValueOf(table.sortKeyType, String(values['sortValue'] ?? '')),
+                    sortUpper: operator === 'between'
+                        ? keyValueOf(table.sortKeyType, String(values['sortUpper'] ?? ''))
+                        : undefined,
+                    forward: values['forward'] === true,
+                };
+                this.scan();
+            },
+        );
+    }
+
+    /**
+     * Walks the table, narrowed by whatever was given.
+     *
+     * The filters are the server's: a scan still walks the table whatever is asked, and narrowing here
+     * would mean hiding rows from a page that had already paid for them. `attributeName` is any
+     * attribute, not only a key one, which is the whole difference from a query.
+     */
+    scanItems(table: TableDescription): void {
+        this.askThen(
+            `Scan ${table.name}`,
+            [
+                {
+                    name: 'attributeName',
+                    label: 'Attribute',
+                    hint: 'Any attribute, not only a key one. Empty narrows nothing.',
+                },
+                {
+                    name: 'attributeOperator',
+                    label: 'Compare',
+                    type: 'select',
+                    options: [...SORT_OPERATORS],
+                    value: 'eq',
+                },
+                {name: 'attributeValue', label: 'Value'},
+                {name: 'attributeUpper', label: 'Upper bound', hint: 'For between only.'},
+                {name: 'modifiedFrom', label: 'Modified from', hint: 'ISO-8601, as in 2026-10-01T00:00:00Z.'},
+                {name: 'modifiedTo', label: 'Modified to'},
+                {
+                    name: 'sortColumn',
+                    label: 'Order by',
+                    type: 'select',
+                    options: ['', 'pk', 'sk', 'modified'],
+                    value: '',
+                    hint: 'Empty is the order the table is stored in.',
+                },
+                {name: 'sortDirection', label: 'Direction', type: 'select', options: ['asc', 'desc'], value: 'asc'},
+            ],
+            'Scan',
+            values => {
+                const name = String(values['attributeName'] ?? '').trim();
+                const text = String(values['attributeValue'] ?? '');
+                this.pageIndex = 0;
+                this.request = {
+                    mode: 'scan',
+                    table: table.name,
+                    pageSize: this.pageSize,
+                    pageIndex: 0,
+                    sortColumn: String(values['sortColumn'] ?? ''),
+                    sortDirection: values['sortDirection'] === 'desc' ? 'desc' : 'asc',
+                    modifiedFrom: String(values['modifiedFrom'] ?? '').trim(),
+                    modifiedTo: String(values['modifiedTo'] ?? '').trim(),
+                    attributeName: name,
+                    attributeOperator: name ? String(values['attributeOperator'] ?? 'eq') as SortOperator : undefined,
+                    // Typed the way the key it may be is declared, and left as text otherwise: an
+                    // attribute is whatever was written, and the server compares it as what it is.
+                    attributeValue: name ? typedAttribute(table, name, text) : undefined,
+                    attributeUpper: name && values['attributeOperator'] === 'between'
+                        ? typedAttribute(table, name, String(values['attributeUpper'] ?? ''))
+                        : undefined,
+                };
+                this.scan();
+            },
+        );
+    }
+
+    /** Back to the whole table, which is where the page starts. */
+    clearReading(): void {
+        this.pageIndex = 0;
+        this.request = {mode: 'scan', table: this.name, pageSize: this.pageSize, pageIndex: 0};
         this.scan();
     }
 
@@ -183,11 +339,10 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
         );
     }
 
+    /** Asks again for the page that is on screen, which is the same request with the paging it now has. */
     private scan(): void {
         this.store.dispatch(ekvTableDetailsActions.scan({
-            name: this.name,
-            pageSize: this.pageSize,
-            pageIndex: this.pageIndex,
+            request: {...this.request, table: this.name, pageSize: this.pageSize, pageIndex: this.pageIndex},
         }));
     }
 }
@@ -199,4 +354,23 @@ function keyOf(table: TableDescription, item: Item): Record<string, unknown> {
         key[table.sortKey] = item.attributes?.[table.sortKey];
     }
     return key;
+}
+
+/**
+ * One filter value, typed the way the attribute it names is.
+ *
+ * Only the two keys have a declared type; every other attribute is whatever was written into it, and a
+ * number typed into the box for one is meant as a number. So a key is typed as the table declares it
+ * and anything else is read as a number when it looks like one - which is the same guess the server
+ * would have to make, made where the type is still known.
+ */
+function typedAttribute(table: TableDescription, name: string, text: string): unknown {
+    if (name === table.partitionKey) {
+        return keyValueOf(table.partitionKeyType, text);
+    }
+    if (name === table.sortKey) {
+        return keyValueOf(table.sortKeyType, text);
+    }
+    const trimmed = text.trim();
+    return trimmed !== '' && !Number.isNaN(Number(trimmed)) ? Number(trimmed) : text;
 }

@@ -18,6 +18,17 @@ export const TARGET = 'eam';
  * answers with, so restating them here would only be a second place for them to drift - and `import type`
  * is erased at compile time, so nothing of that Node-only package reaches the bundle.
  */
+/**
+ * Where a user may work: the accounts, and the one that is theirs.
+ *
+ * `homeAccountId` is the account their user record belongs to, which is the one to start in - the others
+ * are reachable because something was granted to them there.
+ */
+export interface MyAccounts {
+    accounts: Account[];
+    homeAccountId: string;
+}
+
 @Injectable({providedIn: 'root'})
 export class EamService {
 
@@ -180,6 +191,25 @@ export class EamService {
     }
 
     // -- namespaces ----------------------------------------------------------------------------
+
+    /**
+     * The accounts this user may work in, and which of them is their own.
+     *
+     * Its own action rather than `list-accounts`, because it answers a different question: not what the
+     * installation has, which only an administrator may ask, but where this user can do anything. The
+     * server builds it from their home account plus every account one of their grants names - and for an
+     * administrator, every account there is.
+     *
+     * Declared here rather than imported: euclid-ndk does not carry this action yet.
+     */
+    listMyAccounts(): Observable<MyAccounts> {
+        return this.http.call<Record<string, unknown>>(TARGET, 'list-my-accounts', {}).pipe(
+            map((response: Record<string, unknown>) => ({
+                accounts: Array.isArray(response['accounts']) ? response['accounts'] as Account[] : [],
+                homeAccountId: typeof response['homeAccountId'] === 'string' ? response['homeAccountId'] : '',
+            })),
+        );
+    }
 
     /** One page of an account's namespaces. The session's own account unless another is named. */
     listNamespaces(query: ListQuery, accountId?: string): Observable<Page<Namespace>> {

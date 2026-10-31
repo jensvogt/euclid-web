@@ -15,7 +15,26 @@
                            name="password" type="password">
                 </mat-form-field>
             } @else {
-                <p class="identity">{{ session.session?.userId }} &#64; {{ session.session?.accountId }}</p>
+                <p class="identity">{{ session.session?.userId }}</p>
+                <!--
+                  The account first, because a namespace belongs to one: choosing an account is what
+                  decides which namespaces there are to choose from. Shown only when there is more than
+                  one of them - with a single account there is nothing to decide, and the session is in
+                  it already.
+                -->
+                @if (accountChoice) {
+                    <mat-form-field class="field">
+                        <mat-label>Account</mat-label>
+                        <mat-select (ngModelChange)="useAccount($event)" [ngModel]="accountId" name="account">
+                            @for (account of accounts; track account.accountId) {
+                                <mat-option [value]="account.accountId">{{ label(account) }}</mat-option>
+                            }
+                        </mat-select>
+                        <mat-hint>Your own account, and wherever a grant of yours reaches.</mat-hint>
+                    </mat-form-field>
+                } @else {
+                    <p class="identity account">{{ session.session?.accountId }}</p>
+                }
                 <mat-form-field class="field">
                     <mat-label>Namespace</mat-label>
                     <mat-select [(ngModel)]="namespace" name="namespace">

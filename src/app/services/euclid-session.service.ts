@@ -155,6 +155,32 @@ export class EuclidSessionService {
     }
 
     /**
+     * Moves the session into another account.
+     *
+     * The accounts a user may work in are their own plus wherever a grant of theirs reaches - see
+     * `EamService.listMyAccounts`. Which of them a request is made in travels as `x-euclid-account-id`,
+     * so switching is a local change: every call after it says which account it is for, and the server
+     * decides whether this user may do that there.
+     *
+     * The namespace goes with it. A namespace belongs to an account, so one chosen in the last account
+     * means nothing in this one - and carrying it over would scope requests to a name that may not exist
+     * here. Whoever switches picks a namespace next; see the login card.
+     */
+    setAccount(accountId: string): void {
+        localStorage.setItem('accountId', accountId);
+        const session = this.session;
+        if (session !== null && session.accountId !== accountId) {
+            this.setNamespace('');
+            this.store({...this.session!, accountId: accountId});
+        }
+    }
+
+    /** The account this browser was last in, which is what the login card starts on. */
+    get rememberedAccount(): string {
+        return localStorage.getItem('accountId') ?? '';
+    }
+
+    /**
      * Records the namespace the session has switched to.
      *
      * Only the local half: the server validates a namespace against the account and the caller's

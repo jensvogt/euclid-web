@@ -96,12 +96,42 @@
             <mat-card appearance="outlined" class="section">
                 <mat-card-header>
                     <span class="section-title">Items ({{ total$ | async }})</span>
+                    <button (click)="queryItems(table)" [matTooltipShowDelay]="1000" aria-label="Query"
+                            mat-icon-button matTooltip="Read one partition, in sort-key order">
+                        <mat-icon>
+                            <span class="material-symbols-outlined">search</span>
+                        </mat-icon>
+                    </button>
+                    <button (click)="scanItems(table)" [matTooltipShowDelay]="1000" aria-label="Scan"
+                            mat-icon-button matTooltip="Walk the table, narrowed by an attribute or a date">
+                        <mat-icon>
+                            <span class="material-symbols-outlined">frame_inspect</span>
+                        </mat-icon>
+                    </button>
+                    @if (reading) {
+                        <button (click)="clearReading()" [matTooltipShowDelay]="1000" aria-label="Show everything"
+                                mat-icon-button matTooltip="Back to the whole table">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                    }
                 </mat-card-header>
                 <mat-card-content>
-                    <p class="note">
-                        A scan, not a query: this page has no key to narrow by, so it walks the table a page at
-                        a time. An item is a free-form map, so what is not part of the key is shown as JSON.
-                    </p>
+                    <!-- What the page is showing, when it is not simply the table. A scan that was narrowed
+                         and a query of one partition both answer with "some of the items", and a table
+                         saying which is the difference between a short answer and a missing one. -->
+                    @if (reading) {
+                        <p class="note warning">
+                            <mat-icon class="inline-icon">filter_alt</mat-icon>
+                            {{ reading }}
+                        </p>
+                    } @else {
+                        <p class="note">
+                            A scan unless something narrower is asked for: with no key to go on it walks the
+                            table a page at a time. <em>Query</em> reads one partition, which is the cheap
+                            read; <em>Scan</em> narrows by any attribute or by when an item was last written.
+                            An item is a free-form map, so what is not part of the key is shown as JSON.
+                        </p>
+                    }
                     <table [dataSource]="(items$ | async) ?? []" class="mat-elevation-z8 euclid-table" mat-table>
                         <ng-container matColumnDef="partition">
                             <th *matHeaderCellDef mat-header-cell

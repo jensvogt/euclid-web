@@ -33,3 +33,9 @@
   opacity: 0.7;
   padding: 0 16px 12px 16px;
 }
+
+/* The account under the user when there is only one of them: a fact, where the picker would be a choice. */
+.identity.account {
+  margin-top: -8px;
+  opacity: 0.75;
+}

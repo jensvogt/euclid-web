@@ -7,10 +7,10 @@ import {MatFormField, MatHint, MatLabel} from '@angular/material/form-field';
 import {MatInput} from '@angular/material/input';
 import {MatOption, MatSelect} from '@angular/material/select';
 import {MatProgressSpinner} from '@angular/material/progress-spinner';
-import type {Namespace} from 'euclid-ndk';
+import type {Account, Namespace} from 'euclid-ndk';
 
 import {environment} from '../../../environments/environment';
-import {EamService} from '../eam/service/eam.service';
+import {EamService, MyAccounts} from '../eam/service/eam.service';
 import {EuclidSessionService} from '../../services/euclid-session.service';
 import {Page} from '../../services/euclid-http.service';
 
@@ -29,10 +29,12 @@ const NAMESPACE_PAGE_SIZE = 500;
  * bearer token every other call presents - see {@link EuclidSessionService} for why a browser uses the
  * token rather than signing its requests.
  *
- * **Why the namespace is asked for second.** Only the server knows which namespaces an account has and
- * which of them this user has been granted anything in, and it will not answer that without a token. So
- * the card asks for the credentials, logs in, and only then offers the namespaces it has been told about
- * - a list to choose from rather than a name to remember and spell.
+ * **Why the account and namespace are asked for second.** Only the server knows which accounts this user
+ * may work in and which namespaces those hold, and it will not answer either without a token. So the
+ * card asks for the credentials, logs in, and only then offers what it has been told about - lists to
+ * choose from rather than names to remember and spell. The same two steps euclid-rui and euclid-amo
+ * have, and the same order, because a namespace belongs to an account: the account settles first, and
+ * the namespaces offered are that account's.
  */
 @Component({
     selector: 'login-component',
@@ -62,8 +64,17 @@ export class LoginComponent {
     password = '';
     endpoint = environment.euclidEndpoint;
 
-    /** Whether the login has succeeded, and the namespace is the only thing left to settle. */
+    /** Whether the login has succeeded, and the scope is all that is left to settle. */
     signedIn = false;
+
+    /** The accounts this user may work in, once there is a token to ask with. */
+    accounts: Account[] = [];
+
+    /** Which of them is their own, which is where a session starts when nobody has chosen. */
+    homeAccountId = '';
+
+    /** What the account picker is on. */
+    accountId = '';
 
     /** The namespaces the account has, once there is a token to ask with. Empty before that. */
     namespaces: string[] = [];
@@ -77,8 +88,9 @@ export class LoginComponent {
     busy = false;
     error = '';
 
-    /** The namespace this browser was last scoped to, which preselects the picker if it is still one. */
+    /** What this browser was last scoped to, which preselects the pickers if they are still offered. */
     private remembered = '';
+    private rememberedAccount = '';
 
     constructor(
         readonly session: EuclidSessionService,
@@ -90,6 +102,22 @@ export class LoginComponent {
 
     get valid(): boolean {
         return this.userId.trim().length > 0 && this.password.length > 0;
+    }
+
+    /**
+     * Whether there is an account to choose between.
+     *
+     * Asking somebody to choose from one option is not a choice, it is a click - so the picker is shown
+     * only when there is something to decide. The account is settled either way.
+     */
+    get accountChoice(): boolean {
+        return this.accounts.length > 1;
+    }
+
+    /** One account as the picker names it: what it is called, then the ID a request will actually carry. */
+    label(account: Account): string {
+        const named = account.name && account.name !== account.accountId ? account.name + ' · ' : '';
+        return named + account.accountId + (account.accountId === this.homeAccountId ? '   (home)' : '');
     }
 
     /** What the picker says under itself: the usual note, or that the account has more than fits one page. */
@@ -112,12 +140,13 @@ export class LoginComponent {
         // is chosen below rather than here. Listing the namespaces under a scope that may since have been
         // revoked would fail for a reason nobody asked about; the root is always a scope this user has.
         this.remembered = localStorage.getItem('namespace') ?? '';
+        this.rememberedAccount = this.session.rememberedAccount;
         localStorage.setItem('namespace', '');
 
         this.session.login(this.userId.trim(), this.password).subscribe({
             next: () => {
                 this.signedIn = true;
-                this.loadNamespaces();
+                this.loadAccounts();
             },
             error: (error: Error) => {
                 this.busy = false;
@@ -159,9 +188,53 @@ export class LoginComponent {
         });
     }
 
+    /**
+     * The accounts to offer, and the one to start on.
+     *
+     * Where to start, in order: what this browser was last in, if it is still one of theirs; else home,
+     * because home is where the user's own things are and it is the account every session worked in
+     * before this step existed.
+     *
+     * A server that will not answer leaves the session in the account the login put it in, which is that
+     * same home account - so the step degrades to the namespace picker it was, rather than to a page
+     * that cannot be got past.
+     */
+    private loadAccounts(): void {
+        this.eamService.listMyAccounts().subscribe({
+            next: (mine: MyAccounts) => {
+                this.accounts = mine.accounts;
+                this.homeAccountId = mine.homeAccountId;
+                const known = (id: string) => mine.accounts.some((account: Account) => account.accountId === id);
+                this.accountId = known(this.rememberedAccount) ? this.rememberedAccount
+                    : known(mine.homeAccountId) ? mine.homeAccountId
+                        : mine.accounts[0]?.accountId ?? this.session.session?.accountId ?? '';
+                this.useAccount(this.accountId);
+            },
+            error: () => {
+                this.accounts = [];
+                this.accountId = this.session.session?.accountId ?? '';
+                this.loadNamespaces();
+            },
+        });
+    }
+
+    /**
+     * Settles which account this session works in, and goes on to its namespaces.
+     *
+     * In that order, because a namespace belongs to an account: the request that lists them names the
+     * account, and the session has to be in it before anything else is asked for.
+     */
+    useAccount(accountId: string): void {
+        this.accountId = accountId;
+        this.busy = true;
+        this.error = '';
+        this.session.setAccount(accountId);
+        this.loadNamespaces();
+    }
+
     /** The namespaces to offer, asked for with the token the login just produced. */
     private loadNamespaces(): void {
-        this.eamService.listNamespaces({pageSize: NAMESPACE_PAGE_SIZE}).subscribe({
+        this.eamService.listNamespaces({pageSize: NAMESPACE_PAGE_SIZE}, this.accountId).subscribe({
             next: (page: Page<Namespace>) => {
                 this.busy = false;
                 this.namespaces = page.items.map((namespace: Namespace) => namespace.name);
