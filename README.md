@@ -9,6 +9,12 @@ Nine modules so far, which is what euclid-ndk wraps. EAM (access management), ES
 (notifications), EKM (keys), EKV (tables), EAP (applications), ESS (secrets) and EAG (the API gateway). EES and
 ETS speak the same protocol over the same gateway and will follow.
 
+![The EQS queue list: the module's figures above a sortable, paged table of its queues](docs/images/eqs-queue-list.png)
+
+One list view, which the others are the same page of: the module's own figures across the top - what EMM says
+it is running, and how many of each thing it holds - then the prefix box, the table, and the footer saying
+when the figures were read.
+
 ## Running it
 
 ```bash
