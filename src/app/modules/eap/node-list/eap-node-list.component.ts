@@ -5,7 +5,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {machineMemory, machineMemoryPercent, EapService, NodeWithMemory} from '../service/eap.service';
+import {loadText, machineMemory, machineMemoryPercent, saturated, EapService} from '../service/eap.service';
 import {eapNodeListFeature} from './state/eap-node-list.state';
 
 /**
@@ -36,7 +36,8 @@ export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
 
     override readonly feature: ListFeature<WorkerNode> = eapNodeListFeature;
     override readonly columns = [
-        'name', 'address', 'cpuCount', 'memory', 'labels', 'platform', 'version', 'state', 'lastSeen', 'actions',
+        'name', 'address', 'cpuCount', 'load', 'memory', 'labels', 'platform', 'version', 'state', 'lastSeen',
+        'actions',
     ];
 
     /** What a sortable column is called on the record, where the column shows more than one field. */
@@ -63,8 +64,18 @@ export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
     }
 
     /** The machine's memory in use against what is installed, as of the node's last renewal. */
-    memory(node: NodeWithMemory): string {
+    memory(node: WorkerNode): string {
         return machineMemory(node);
+    }
+
+    /** The one-minute load average, and what it comes to per CPU - which is the figure to read. */
+    loadAverage(node: WorkerNode): string {
+        return loadText(node);
+    }
+
+    /** Whether the node has no idle CPU left, which is one per core whatever the hardware. */
+    busy(node: WorkerNode): boolean {
+        return saturated(node);
     }
 
     /**
@@ -73,7 +84,7 @@ export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
      * The same two thresholds euclid-rui colours at. A node that did not report - a worker too old to
      * say, or a platform with no reading - is neither: it reads as a dash, and a dash is not a warning.
      */
-    tight(node: NodeWithMemory): boolean {
+    tight(node: WorkerNode): boolean {
         return machineMemoryPercent(node) >= 75;
     }
 

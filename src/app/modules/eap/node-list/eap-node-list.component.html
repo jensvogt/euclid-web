@@ -91,6 +91,15 @@
                         </th>
                         <td *matCellDef="let node" mat-cell>{{ node.cpuCount || '-' }}</td>
                     </ng-container>
+                    <ng-container matColumnDef="load">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The one-minute load average from the node's last heartbeat, and what it comes to per CPU - which is the figure placement compares machines on. One per core is saturation. Zero is an idle machine or a heartbeat that carried no reading; the two are not told apart.">
+                            Load
+                        </th>
+                        <td *matCellDef="let node" mat-cell>
+                            <span [class.unfinished]="busy(node)">{{ loadAverage(node) }}</span>
+                        </td>
+                    </ng-container>
                     <ng-container matColumnDef="memory">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header
                             matTooltip="The machine's memory in use against what is installed, as of the node's last renewal. The page cache does not count as used. A dash is a worker too old to say.">

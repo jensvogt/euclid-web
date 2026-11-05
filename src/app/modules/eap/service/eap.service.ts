@@ -15,34 +15,16 @@ import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
 export const TARGET = 'eap';
 
 /**
- * What a node reports about its machine's memory, which euclid-ndk's `WorkerNode` does not carry yet.
- *
- * Three figures and they are not the same one. `memoryTotalMb` is the machine - what an operator means
- * by "a 128 GB node" - and `memoryUsedMb` is how much of it was in use at the last renewal, the total
- * less what the kernel says is available, so the page cache does not count. `memoryMb` is neither: it
- * is what applications are offered, after the unit's reserve, and it is what admission measures a
- * limit against.
- *
- * All three are zero for a worker too old to say, or a platform with no reading - which is a dash
- * rather than an empty machine.
- */
-export interface NodeMemory {
-    memoryMb?: number;
-    memoryTotalMb?: number;
-    memoryUsedMb?: number;
-}
-
-/** A node as the server sends it, which is a little more than the SDK describes. */
-export type NodeWithMemory = WorkerNode & NodeMemory;
-
-/**
  * A machine's memory as a column reads it: `48 GiB / 128 GiB`, or the total alone when nothing said
  * how much is in use.
  *
  * Whole GiB from ten up, where a decimal changes on every renewal and says nothing; one decimal below
  * that, and MiB under a gibibyte. The same rounding euclid-rui uses, so the two agree about a machine.
+ *
+ * Zero is "the node has not said" rather than "no memory" - a platform with no reading, or a worker
+ * too old to report one - which is why that reads as a dash and not as an empty machine.
  */
-export function machineMemory(node: NodeMemory): string {
+export function machineMemory(node: WorkerNode): string {
     const total = node.memoryTotalMb ?? 0;
     if (total <= 0) {
         return '-';
@@ -52,10 +34,34 @@ export function machineMemory(node: NodeMemory): string {
 }
 
 /** The share in use, as a whole percentage, or -1 when the node did not say. */
-export function machineMemoryPercent(node: NodeMemory): number {
+export function machineMemoryPercent(node: WorkerNode): number {
     const total = node.memoryTotalMb ?? 0;
     const used = node.memoryUsedMb ?? 0;
     return total > 0 && used > 0 ? Math.round(100 * used / total) : -1;
+}
+
+/**
+ * The node's one-minute load average, and what it comes to per CPU.
+ *
+ * Per core is the figure placement compares nodes on, and the one worth reading: one per core is the
+ * saturation point whatever the hardware, where the raw number means nothing without knowing how big
+ * the machine is. A node that reported no CPU count shows the raw figure alone.
+ */
+export function loadText(node: WorkerNode): string {
+    const load = node.loadAverage ?? 0;
+    const cores = node.cpuCount ?? 0;
+    return cores > 0 ? `${load.toFixed(2)} (${(load / cores).toFixed(2)}/core)` : load.toFixed(2);
+}
+
+/**
+ * Whether this node is at or past one per core, which is where it has no idle CPU left.
+ *
+ * Zero is not idle and not busy: a heartbeat that carried no reading looks exactly like an idle
+ * machine, and a node sharing the manager's own host publishes none at all - so it is never flagged.
+ */
+export function saturated(node: WorkerNode): boolean {
+    const cores = node.cpuCount ?? 0;
+    return cores > 0 && (node.loadAverage ?? 0) / cores >= 1;
 }
 
 function gibText(mb: number): string {
