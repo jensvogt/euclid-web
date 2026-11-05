@@ -14,6 +14,58 @@ import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
 
 export const TARGET = 'eap';
 
+/**
+ * What a node reports about its machine's memory, which euclid-ndk's `WorkerNode` does not carry yet.
+ *
+ * Three figures and they are not the same one. `memoryTotalMb` is the machine - what an operator means
+ * by "a 128 GB node" - and `memoryUsedMb` is how much of it was in use at the last renewal, the total
+ * less what the kernel says is available, so the page cache does not count. `memoryMb` is neither: it
+ * is what applications are offered, after the unit's reserve, and it is what admission measures a
+ * limit against.
+ *
+ * All three are zero for a worker too old to say, or a platform with no reading - which is a dash
+ * rather than an empty machine.
+ */
+export interface NodeMemory {
+    memoryMb?: number;
+    memoryTotalMb?: number;
+    memoryUsedMb?: number;
+}
+
+/** A node as the server sends it, which is a little more than the SDK describes. */
+export type NodeWithMemory = WorkerNode & NodeMemory;
+
+/**
+ * A machine's memory as a column reads it: `48 GiB / 128 GiB`, or the total alone when nothing said
+ * how much is in use.
+ *
+ * Whole GiB from ten up, where a decimal changes on every renewal and says nothing; one decimal below
+ * that, and MiB under a gibibyte. The same rounding euclid-rui uses, so the two agree about a machine.
+ */
+export function machineMemory(node: NodeMemory): string {
+    const total = node.memoryTotalMb ?? 0;
+    if (total <= 0) {
+        return '-';
+    }
+    const used = node.memoryUsedMb ?? 0;
+    return used > 0 ? `${gibText(used)} / ${gibText(total)}` : gibText(total);
+}
+
+/** The share in use, as a whole percentage, or -1 when the node did not say. */
+export function machineMemoryPercent(node: NodeMemory): number {
+    const total = node.memoryTotalMb ?? 0;
+    const used = node.memoryUsedMb ?? 0;
+    return total > 0 && used > 0 ? Math.round(100 * used / total) : -1;
+}
+
+function gibText(mb: number): string {
+    const gib = mb / 1024;
+    if (gib < 1) {
+        return `${Math.round(mb)} MiB`;
+    }
+    return `${gib >= 10 ? Math.round(gib) : Math.round(gib * 10) / 10} GiB`;
+}
+
 export const RUNTIME_JAVA = 'JAVA';
 export const RUNTIME_PYTHON = 'PYTHON';
 export const RUNTIME_NODEJS = 'NODEJS';

@@ -84,6 +84,22 @@
                         </th>
                         <td *matCellDef="let node" mat-cell [matTooltip]="labels(node)">{{ labels(node) }}</td>
                     </ng-container>
+                    <ng-container matColumnDef="cpuCount">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="How many CPUs the worker reported. Placement divides the node's load average by this, so machines of different sizes compare.">
+                            CPUs
+                        </th>
+                        <td *matCellDef="let node" mat-cell>{{ node.cpuCount || '-' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="memory">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="The machine's memory in use against what is installed, as of the node's last renewal. The page cache does not count as used. A dash is a worker too old to say.">
+                            Memory
+                        </th>
+                        <td *matCellDef="let node" mat-cell>
+                            <span [class.unfinished]="tight(node)">{{ memory(node) }}</span>
+                        </td>
+                    </ng-container>
                     <ng-container matColumnDef="platform">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="What the host runs on">
                             Platform

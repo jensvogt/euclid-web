@@ -5,7 +5,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {EapService} from '../service/eap.service';
+import {machineMemory, machineMemoryPercent, EapService, NodeWithMemory} from '../service/eap.service';
 import {eapNodeListFeature} from './state/eap-node-list.state';
 
 /**
@@ -35,7 +35,9 @@ import {eapNodeListFeature} from './state/eap-node-list.state';
 export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
 
     override readonly feature: ListFeature<WorkerNode> = eapNodeListFeature;
-    override readonly columns = ['name', 'address', 'labels', 'platform', 'version', 'state', 'lastSeen', 'actions'];
+    override readonly columns = [
+        'name', 'address', 'cpuCount', 'memory', 'labels', 'platform', 'version', 'state', 'lastSeen', 'actions',
+    ];
 
     /** What a sortable column is called on the record, where the column shows more than one field. */
     protected override readonly sortFields: Record<string, string> = {platform: 'os', state: 'live'};
@@ -56,8 +58,23 @@ export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
 
     /** The host as a machine: what it runs on, and how much of it there is. */
     platform(node: WorkerNode): string {
-        const platform = [node.os, node.arch].filter(part => part).join('/') || '-';
-        return node.cpuCount ? `${platform}, ${node.cpuCount} CPU` : platform;
+        // The CPU count has its own column now, as it has in euclid-rui: this one is the machine.
+        return [node.os, node.arch].filter(part => part).join('/') || '-';
+    }
+
+    /** The machine's memory in use against what is installed, as of the node's last renewal. */
+    memory(node: NodeWithMemory): string {
+        return machineMemory(node);
+    }
+
+    /**
+     * Whether a node's memory is worth looking at twice.
+     *
+     * The same two thresholds euclid-rui colours at. A node that did not report - a worker too old to
+     * say, or a platform with no reading - is neither: it reads as a dash, and a dash is not a warning.
+     */
+    tight(node: NodeWithMemory): boolean {
+        return machineMemoryPercent(node) >= 75;
     }
 
     /**
