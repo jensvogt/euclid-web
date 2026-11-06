@@ -50,6 +50,11 @@
                             <mat-icon>{{ bucket.internal ? 'visibility' : 'visibility_off' }}</mat-icon>
                             <span>{{ bucket.internal ? 'Make visible' : 'Mark as internal' }}</span>
                         </button>
+                        <button (click)="toggleVersioning(bucket)" mat-menu-item
+                                matTooltip="Keep the object an upload replaces, rather than overwriting it">
+                            <mat-icon>{{ bucket.versioning ? 'layers_clear' : 'layers' }}</mat-icon>
+                            <span>{{ bucket.versioning ? 'Stop keeping versions' : 'Keep versions' }}</span>
+                        </button>
                         <button (click)="purgeBucket(bucket)" mat-menu-item
                                 matTooltip="Delete every object and keep the bucket">
                             <mat-icon>clear_all</mat-icon>
@@ -96,6 +101,21 @@
                                     mat-icon-button
                                     matTooltip="An internal bucket is left out of ordinary listings">
                                 <mat-icon class="inline-icon">{{ bucket.internal ? 'visibility' : 'visibility_off' }}</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property"
+                              matTooltip="Whether an upload over an existing key keeps the object it replaces">
+                            Versioning
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ bucket.versioning ? 'on' : 'off' }}</span>
+                            <button (click)="toggleVersioning(bucket)" [matTooltipShowDelay]="1000"
+                                    aria-label="Versioning" mat-icon-button
+                                    [matTooltip]="bucket.versioning
+                                        ? 'Stop keeping versions. The ones already kept stay.'
+                                        : 'Keep the object an upload replaces, rather than overwriting it'">
+                                <mat-icon class="inline-icon">{{ bucket.versioning ? 'layers_clear' : 'layers' }}</mat-icon>
                             </button>
                         </span>
 

@@ -14,6 +14,7 @@ import {
 } from 'rxjs';
 import type {
     Bucket,
+    BucketVersioningResult,
     CreateUploadResult,
     EsmObject,
     PurgeBucketResult,
@@ -272,6 +273,23 @@ export class EsmService {
 
     setBucketInternal(ern: string, internal: boolean): Observable<unknown> {
         return this.http.call(TARGET, 'set-bucket-internal', {ern: ern, internal: internal});
+    }
+
+    /**
+     * Keeps the object an upload replaces, instead of overwriting it.
+     *
+     * With it on, an upload over an existing key becomes the current object and the one it replaces is
+     * kept as a non-current version - its file stays on disk and its row moves to the version
+     * collection. Off, which is how every bucket starts, an upload replaces the object and its file.
+     *
+     * Turning it off keeps the versions already made; it only stops new ones being kept. Nothing here
+     * deletes a version: `delete-object` with a `versionId` is the only thing that does.
+     */
+    setBucketVersioning(bucketErn: string, enabled: boolean): Observable<BucketVersioningResult> {
+        return this.http.call<BucketVersioningResult>(TARGET, 'set-bucket-versioning', {
+            ern: bucketErn,
+            enabled: enabled,
+        });
     }
 
     /** Tags a bucket. A key that is already tagged keeps its value - {@link setBucketTag} overwrites. */

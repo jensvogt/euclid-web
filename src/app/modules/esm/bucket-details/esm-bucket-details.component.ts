@@ -203,6 +203,31 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
         );
     }
 
+    /**
+     * Keeps what an upload replaces, or stops keeping it.
+     *
+     * Worth confirming in both directions, because each has a consequence that is not in the name.
+     * Turning it on changes what an upload of bytes the key already holds does: nothing is written and
+     * no event is published, which a subscriber waiting on one would notice. Turning it off keeps every
+     * version already made - it only stops new ones, and those versions go on taking up the disk until
+     * something deletes them one at a time.
+     */
+    toggleVersioning(bucket: Bucket): void {
+        this.confirmThen(
+            {
+                title: bucket.versioning ? 'Stop keeping versions' : 'Keep versions',
+                message: bucket.versioning
+                    ? `Stop keeping replaced objects in ${bucket.name}? The versions already kept stay where`
+                        + ' they are - only a delete of one removes it - and an upload over a key overwrites again.'
+                    : `Keep the object an upload replaces in ${bucket.name}? An upload of bytes a key already`
+                        + ' holds is then ignored: nothing is written and no event is published.',
+                confirm: bucket.versioning ? 'Stop' : 'Keep',
+            },
+            this.esmService.setBucketVersioning(bucket.ern, !bucket.versioning),
+            bucket.versioning ? 'Versions are no longer kept' : 'Versions are kept',
+        );
+    }
+
     purgeBucket(bucket: Bucket): void {
         this.confirmThen(
             {

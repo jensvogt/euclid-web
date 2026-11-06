@@ -20,7 +20,9 @@ import {esmBucketListFeature} from './state/esm-bucket-list.state';
 export class EsmBucketListComponent extends EuclidListComponent<Bucket> {
 
     override readonly feature: ListFeature<Bucket> = esmBucketListFeature;
-    override readonly columns = ['name', 'objects', 'size', 'encrypted', 'created', 'modified', 'actions'];
+    override readonly columns = [
+        'name', 'objects', 'size', 'encrypted', 'versioning', 'created', 'modified', 'actions',
+    ];
 
     protected readonly byteConversion = byteConversion;
     protected readonly dateConversion = dateConversion;

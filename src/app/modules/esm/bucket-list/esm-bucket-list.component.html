@@ -83,6 +83,13 @@
                             {{ bucket.encrypted ? 'yes' : 'no' }}
                         </td>
                     </ng-container>
+                    <ng-container matColumnDef="versioning">
+                        <th *matHeaderCellDef mat-header-cell mat-sort-header
+                            matTooltip="Whether an upload over an existing key keeps the object it replaces">
+                            Versioning
+                        </th>
+                        <td *matCellDef="let bucket" mat-cell>{{ bucket.versioning ? 'on' : 'off' }}</td>
+                    </ng-container>
                     <ng-container matColumnDef="created">
                         <th *matHeaderCellDef mat-header-cell mat-sort-header matTooltip="When the bucket was created">Created</th>
                         <td *matCellDef="let bucket" mat-cell>{{ dateConversion(bucket.created) }}</td>
