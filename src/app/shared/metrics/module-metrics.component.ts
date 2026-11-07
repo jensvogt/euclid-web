@@ -307,9 +307,11 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
                 data: cpu.map(point => timeConversion(point.timestamp)),
                 axisLabel: {fontSize: 10},
             },
-            // Fixed to a hundred: a process idling at two per cent should look idle rather than fill the
-            // chart with the shape of its own rounding, which an axis fitted to the data would do.
-            yAxis: {type: 'value', min: 0, max: 100, name: '%', nameTextStyle: {fontSize: 10}, axisLabel: {fontSize: 10}},
+            // Fitted to the readings, as the dashboard's manager charts are: a module uses a few per
+            // cent of a machine, and against the whole of one its line is flat on the floor and says
+            // nothing about what it has been doing. Still from zero, so the shape stays proportional -
+            // an axis fitted at both ends turns 1.9 per cent to 2.1 into what looks like a doubling.
+            yAxis: {type: 'value', min: 0, name: '%', nameTextStyle: {fontSize: 10}, axisLabel: {fontSize: 10}},
             series: [{
                 name: 'CPU',
                 type: 'line',
