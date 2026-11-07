@@ -31,8 +31,8 @@ export class EagService {
      * position. The listing is the session's own account and namespace: it shows what the session can then
      * address, rather than everything the gateway serves.
      */
-    listRoutes(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'path', sortDirection: 'asc' | 'desc' = 'asc'): Observable<Page<Route>> {
-        return this.http.all<Route>(TARGET, 'list-routes', 'routes', {prefix: prefix}).pipe(
+    listRoutes(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'path', sortDirection: 'asc' | 'desc' = 'asc', matchType = ''): Observable<Page<Route>> {
+        return this.http.all<Route>(TARGET, 'list-routes', 'routes', {prefix: prefix, matchType: matchType}).pipe(
             map((items: Route[]) => {
                 const sorted = [...items].sort((left, right) => {
                     const a = (left as unknown as Record<string, unknown>)[sortColumn];

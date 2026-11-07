@@ -9,6 +9,7 @@ import {SortColumn} from '../sorting/sorting.component';
 import {AutoReloadComponent, MIN_AUTO_RELOAD_MS} from '../autoreload/auto-reload.component';
 import {EuclidResourceComponent} from '../resource/euclid-resource.component';
 import {ListFeature} from './list-feature';
+import {MatchType} from './match-type';
 
 /**
  * How long a listing may take before the view says it is waiting.
@@ -70,6 +71,17 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
     // The query this view is showing.
     prefixValue = '';
     prefixSet = false;
+
+    /**
+     * How the prefix is matched, and whether this listing can be asked that at all.
+     *
+     * Fifteen of euclid's list actions read a match type; `list-nodes` does not, and a listing paged in
+     * the client has nothing to pass it to. Those set {@link matchTypes} false and keep the plain box -
+     * offering a choice the server ignores is worse than not offering it, because the page then quietly
+     * answers a different question from the one that was asked.
+     */
+    matchTypeValue: MatchType = 'prefix';
+    matchTypes = true;
     protected pageSize = 10;
     protected pageIndex = 0;
     protected sortColumn: SortColumn = {column: 'name', direction: 'asc'};
@@ -132,6 +144,7 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
             sortDirection: this.sortColumn.direction,
             parent: this.parent,
             delimiter: this.delimiter,
+            matchType: this.matchTypeValue,
         }));
     }
 
@@ -145,6 +158,22 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
     unsetPrefix(): void {
         this.prefixValue = '';
         this.prefixSet = false;
+        this.pageIndex = 0;
+        this.load();
+    }
+
+    /**
+     * Changes how the text is matched, and asks again if there is any.
+     *
+     * Back to the first page, for the same reason a new search is: page four of "starts with" says
+     * nothing about "contains". With an empty box nothing is asked - there is no search to redo - and
+     * the choice simply waits for one.
+     */
+    setMatchType(type: MatchType): void {
+        this.matchTypeValue = type;
+        if (this.prefixValue.length === 0) {
+            return;
+        }
         this.pageIndex = 0;
         this.load();
     }

@@ -7,7 +7,7 @@
               module's figures and the way into its other lists above it - naming the twenty-odd lists
               beneath ten modules here made this page a menu of everything and a view of nothing.
             -->
-            <mat-card class="mat-elevation-z4">
+            <mat-card class="tile mat-elevation-z4">
                 <mat-card-header>
                     <mat-card-title>Modules</mat-card-title>
                 </mat-card-header>
@@ -29,7 +29,7 @@
                 </mat-card-content>
             </mat-card>
 
-            <mat-card class="mat-elevation-z4">
+            <mat-card class="tile mat-elevation-z4">
                 <mat-card-header>
                     <mat-card-title>Monitoring</mat-card-title>
                 </mat-card-header>
@@ -42,12 +42,12 @@
                 </mat-card-content>
             </mat-card>
 
-            <mat-card class="mat-elevation-z4">
+            <mat-card class="tile mat-elevation-z4">
                 <mat-card-header>
                     <mat-card-title>Session</mat-card-title>
                 </mat-card-header>
                 <mat-card-content>
-                    <mat-list class="two-columns">
+                    <mat-list>
                         <mat-list-item>User: {{ session.session?.userId }}</mat-list-item>
                         <mat-list-item>Account: {{ session.session?.accountId }}</mat-list-item>
                         <mat-list-item>Region: {{ session.session?.region }}</mat-list-item>
@@ -57,6 +57,42 @@
                 </mat-card-content>
             </mat-card>
         </div>
+
+        <!--
+          What the machines are doing, under what euclid is running on them. The host's figures rather
+          than any module's: a module's own CPU is on its monitoring page and answers a different
+          question. See SystemLoadComponent.
+        -->
+        <!--
+          What the machines are doing, what they have been asked to do, and what is running to do it.
+          Three answers to "is this installation well", which is why they share a row.
+        -->
+        <div class="wrapper charts">
+            <system-load/>
+            <weekly-traffic/>
+            <module-instances/>
+        </div>
+
+        <!--
+          The gateway's own pair, recorded by one timer around every request it routes: how much was
+          asked of it, and how long it took to answer. Side by side because neither says much alone -
+          a rising response time under falling traffic is a different thing from one under rising.
+        -->
+        <div class="wrapper charts pair">
+            <gateway-series series="time"/>
+            <gateway-series series="count"/>
+        </div>
+
+        <!--
+          What the manager process itself costs, which is the one process no module page covers: it
+          serves the gateway every request goes through and is not a module. Its share of the machine,
+          so a busy host with an idle manager reads low here and high in the gauges above.
+        -->
+        <div class="wrapper charts pair">
+            <manager-usage usage="cpu"/>
+            <manager-usage usage="memory"/>
+        </div>
+
         <footer-component [lastUpdate]="lastUpdate"/>
     </mat-card-content>
 </mat-card>

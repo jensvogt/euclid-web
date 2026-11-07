@@ -8,6 +8,7 @@ import {byteConversion} from '../../../shared/byte-utils.component';
 import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
+import {ListSearch, MatchType} from '../../../shared/list/match-type';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EsmObjectUploadDialog, ObjectUploadData} from '../object-upload/esm-object-upload.component';
 import {
@@ -105,6 +106,20 @@ export class EsmObjectListComponent extends EuclidListComponent<EsmObject> {
     levelValue = '';
     search = '';
 
+    /**
+     * The search box's view of this page, which is not quite the list's own.
+     *
+     * What is typed here is not the prefix sent: the prefix is this folder plus the text, composed in
+     * {@link apply}. So the box binds to the text and the page keeps the two apart - see the fields
+     * above - which is also why the match type is only sometimes on offer.
+     *
+     * Inside a folder it is a prefix and nothing else. The server refuses any other match type when a
+     * delimiter is given, and a `contains` over a composed prefix would mean "a key containing
+     * 2026/01/order" rather than "under 2026/01/, containing order" - which is not what the box says.
+     * At the root, and in a flat search, the text is the whole prefix and all four mean what they say.
+     */
+    readonly searchBox: ListSearch;
+
     protected readonly levelName = levelName;
     protected readonly separator = LEVEL_SEPARATOR;
 
@@ -119,6 +134,34 @@ export class EsmObjectListComponent extends EuclidListComponent<EsmObject> {
 
     constructor(private readonly esmService: EsmService) {
         super();
+        // Built here rather than as a field initialiser, because its getters need the component and a
+        // `get` in an object literal has a `this` of its own.
+        const page = this;
+        this.searchBox = {
+            get prefixValue(): string {
+                return page.search;
+            },
+            set prefixValue(text: string) {
+                page.search = text;
+            },
+            get prefixSet(): boolean {
+                return page.search !== '';
+            },
+            get matchTypeValue(): MatchType {
+                return page.matchTypeValue;
+            },
+            get matchTypes(): boolean {
+                return !page.tree || page.levelValue === '';
+            },
+            setPrefix: () => page.setSearch(),
+            unsetPrefix: () => page.unsetSearch(),
+            setMatchType: (type: MatchType) => {
+                page.matchTypeValue = type;
+                if (page.search !== '') {
+                    page.apply();
+                }
+            },
+        };
     }
 
     override ngOnInit(): void {
@@ -163,11 +206,16 @@ export class EsmObjectListComponent extends EuclidListComponent<EsmObject> {
      * is what makes the answer the whole subtree rather than one floor of it. The level is still in the
      * prefix, so a search finds what is below the folder on screen and nothing outside it.
      */
-    private apply(): void {
+    apply(): void {
         const searching = this.tree && this.search.trim() !== '';
         this.delimiter = this.tree && !searching ? LEVEL_SEPARATOR : '';
         if (this.tree) {
             this.prefixValue = this.levelValue + this.search.trim();
+        }
+        // A prefix is the only thing the server will match while a delimiter is given, and the only
+        // thing a folder-plus-text prefix can honestly be. See `searchBox` for the rest of why.
+        if (!this.searchBox.matchTypes) {
+            this.matchTypeValue = 'prefix';
         }
         this.prefixSet = this.prefixValue !== '';
         this.pageIndex = 0;

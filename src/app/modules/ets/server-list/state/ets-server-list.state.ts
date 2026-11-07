@@ -14,5 +14,5 @@ export const etsServerListFeature = createListFeature<TransferServer>('ets-serve
  */
 export const loadServers$ = createListEffect(etsServerListFeature, () => {
     const service = inject(EtsService);
-    return query => service.listServers(query.prefix, query.pageSize, query.pageIndex, query.sortColumn, query.sortDirection);
+    return query => service.listServers(query.prefix, query.pageSize, query.pageIndex, query.sortColumn, query.sortDirection, query.matchType);
 });

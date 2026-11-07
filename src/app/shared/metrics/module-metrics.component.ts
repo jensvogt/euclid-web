@@ -13,7 +13,7 @@ import {GridComponent, LegendComponent, TitleComponent, TooltipComponent} from '
 import {CanvasRenderer} from 'echarts/renderers';
 import {forkJoin, interval, Subscription} from 'rxjs';
 
-import {dateConversion} from '../date-utils.component';
+import {dateConversion, timeConversion} from '../date-utils.component';
 import {FooterComponent} from '../footer/footer.component';
 import {autoReloadPeriod} from '../list/euclid-list.component';
 import {EuclidModule, moduleOf, parentRouteOf} from './euclid-modules';
@@ -239,7 +239,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
             grid: {left: '3%', right: '4%', bottom: 30, top: 60, containLabel: true},
             xAxis: {
                 type: 'category',
-                data: buckets.map(bucket => new Date(bucket).toLocaleTimeString()),
+                data: buckets.map(bucket => timeConversion(bucket)),
                 axisLabel: {fontSize: 10},
             },
             yAxis: [
@@ -304,7 +304,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
             grid: {left: '3%', right: '4%', bottom: '3%', top: 60, containLabel: true},
             xAxis: {
                 type: 'category',
-                data: cpu.map(point => new Date(point.timestamp).toLocaleTimeString()),
+                data: cpu.map(point => timeConversion(point.timestamp)),
                 axisLabel: {fontSize: 10},
             },
             // Fixed to a hundred: a process idling at two per cent should look idle rather than fill the
@@ -347,7 +347,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
             grid: {left: '3%', right: '4%', bottom: 30, top: 60, containLabel: true},
             xAxis: {
                 type: 'category',
-                data: buckets.map(bucket => new Date(bucket).toLocaleTimeString()),
+                data: buckets.map(bucket => timeConversion(bucket)),
                 axisLabel: {fontSize: 10},
             },
             yAxis: {type: 'value', min: 0, name: 'MB', nameTextStyle: {fontSize: 10}, axisLabel: {fontSize: 10}},
@@ -405,7 +405,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
             grid: {left: '3%', right: '4%', bottom: '3%', top: 60, containLabel: true},
             xAxis: {
                 type: 'category',
-                data: buckets.map(bucket => new Date(bucket).toLocaleTimeString()),
+                data: buckets.map(bucket => timeConversion(bucket)),
                 axisLabel: {fontSize: 10},
             },
             yAxis: {type: 'value'},

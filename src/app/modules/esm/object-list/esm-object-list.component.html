@@ -58,35 +58,9 @@
                   through the whole bucket. What it is bound to is the only difference - see apply().
                 -->
                 @if (tree) {
-                    <mat-form-field style="width:100%">
-                        <mat-label>Find under this folder</mat-label>
-                        <input (keyup.enter)="setSearch()" [(ngModel)]="search" matInput name="levelSearch"
-                               placeholder="Key prefix" type="text">
-                        @if (search) {
-                            <button (click)="unsetSearch()" aria-label="Clear" mat-icon-button matSuffix
-                                    style="float: right">
-                                <mat-icon matSuffix>close</mat-icon>
-                            </button>
-                        }
-                        <button (click)="setSearch()" aria-label="Search" mat-icon-button matSuffix
-                                style="float: right">
-                            <mat-icon matSuffix>search</mat-icon>
-                        </button>
-                    </mat-form-field>
+                    <list-search [list]="searchBox" label="Find under this folder"/>
                 } @else {
-                    <mat-form-field style="width:100%">
-                        <mat-label>Key prefix</mat-label>
-                        <input (keyup.enter)="setPrefix()" [(ngModel)]="prefixValue" matInput name="search"
-                               placeholder="Search" type="text">
-                        @if (prefixSet) {
-                            <button (click)="unsetPrefix()" mat-icon-button matSuffix style="float: right">
-                                <mat-icon matSuffix>close</mat-icon>
-                            </button>
-                        }
-                        <button (click)="setPrefix()" mat-icon-button matSuffix style="float: right">
-                            <mat-icon matSuffix>search</mat-icon>
-                        </button>
-                    </mat-form-field>
+                    <list-search [list]="this" label="Key"/>
                 }
             </mat-card-actions>
 

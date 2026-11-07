@@ -23,6 +23,14 @@ export interface ListQueryProps {
     sortColumn: string;
     sortDirection: 'asc' | 'desc';
     /**
+     * How the prefix is matched: `prefix`, `endsWith`, `contains` or `regex`.
+     *
+     * Empty is a prefix, which is what every list action did before the field existed - so a listing
+     * whose action does not take one is unaffected by its being sent. See {@link MatchType}.
+     */
+    matchType?: string;
+
+    /**
      * The separator that turns a prefix into a level, for the one listing that browses rather than
      * searches: ESM's objects, where a key's path is cut at "/" and a bucket is shown a directory at a
      * time. Empty everywhere else, which is the flat listing every other module has.

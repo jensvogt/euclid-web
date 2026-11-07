@@ -1,14 +1,15 @@
 /*
  * Three tiles: what there is, how it is doing, and who is asking.
  *
- * `start` rather than the grid's usual stretch, because the three are not the same length and never
- * will be - ten modules beside five session lines - and a stretched session card is a card of empty
- * space. They fall to one column where three would be too narrow to read a module's name in.
+ * Stretched to one height, which is the grid's own default: three cards in a row are read as a row, and
+ * three different heights read as three things that went wrong rather than as three lists of different
+ * lengths. The session card is the short one and carries the slack - see `.tile`.
+ *
+ * They fall to one column where three would be too narrow to read a module's name in.
  */
 .wrapper {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  align-items: start;
   grid-gap: 10px;
   background-color: #fff;
   color: #444;
@@ -21,10 +22,28 @@
   }
 }
 
+/*
+ * One of the three, as tall as the tallest.
+ *
+ * `height: 100%` is what turns the grid's stretched cell into a stretched card: the cell is the right
+ * height either way, and without this the card sits at the top of it at its own.
+ */
 .tile {
-  margin-left: -10px;
   width: 100%;
   height: 100%;
+}
+
+/*
+ * The charts below the tiles. Three to a row where they are three answers to one question, two where
+ * they are a pair - and one column with the tiles above them, where three would be too narrow to read.
+ */
+.wrapper.charts {
+  grid-template-columns: 1fr 1fr 1fr;
+  padding-top: 0;
+}
+
+.wrapper.charts.pair {
+  grid-template-columns: 1fr 1fr;
 }
 
 .footer {

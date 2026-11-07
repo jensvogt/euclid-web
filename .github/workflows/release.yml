@@ -1,0 +1,111 @@
+# Builds the frontend and publishes it as one tarball euclid can unpack.
+#
+# euclid's own release workflow builds this project from source today - a checkout and an `npm ci`
+# inside every platform job, four Angular builds per release on runners that are there to compile
+# C++. What it actually needs is the bundle, which is the same bytes on every platform: Angular's
+# output is static files, so one build serves Windows, macOS and both Linux architectures.
+#
+# So this publishes that bundle as a release asset rather than as a workflow artifact. An artifact
+# is scoped to the run that made it and expires in ninety days; a release asset has a stable URL,
+# a version in its name, and is still there when somebody rebuilds a tag a year from now.
+name: Build + Publish frontend bundle
+
+on:
+  push:
+    branches: [ "master" ]
+    # Documentation and the licence do not change the bundle, so they do not rebuild it.
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      # Pinned rather than inherited from whatever the runner image ships, so the bundle is built on
+      # the same toolchain whenever the image is updated. The same version euclid's own jobs pin.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build:prod
+
+      # Angular's "application" builder writes to <outputPath>/browser, and angular.json sets
+      # outputPath to "dist/euclid-web" - so dist/euclid-web/browser is the bundle. A build that
+      # quietly emitted nothing, or emitted elsewhere because outputPath changed, would publish an
+      # archive whose gateway answers 404 for every page, which is only discovered on an installed
+      # system. Checked here instead.
+      - name: Check the bundle exists
+        run: |
+          test -f dist/euclid-web/browser/index.html \
+            || { echo "::error::build produced no dist/euclid-web/browser/index.html"; exit 1; }
+
+      - name: Read the version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # The archive holds the bundle's files at its root, with no directory around them: whoever
+      # unpacks it says where it goes - `tar -xzf … -C <euclid>/frontend` - rather than having to
+      # know what this repository calls its output directory. That name is this project's business
+      # and has changed before.
+      - name: Pack
+        run: |
+          tar -czf "euclid-web-${{ steps.version.outputs.version }}.tar.gz" \
+            -C dist/euclid-web/browser .
+          sha256sum "euclid-web-${{ steps.version.outputs.version }}.tar.gz" \
+            > "euclid-web-${{ steps.version.outputs.version }}.tar.gz.sha256"
+
+      # For a run somebody is looking at: the bundle, downloadable from the run's own page. The
+      # release below is what euclid consumes.
+      - name: Upload the run's artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: euclid-web-bundle
+          path: euclid-web-*.tar.gz*
+          retention-days: 14
+
+      # Replaced rather than added to, so "frontend-latest" always names one archive: the newest
+      # build of master. A consumer that wants a particular build pins the version tag instead -
+      # see the release created below it.
+      - name: Publish as the moving "latest" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete frontend-latest --yes --cleanup-tag || true
+          gh release create frontend-latest \
+            --title "Frontend bundle (latest)" \
+            --notes "The euclid-web bundle built from master, version ${{ steps.version.outputs.version }}. Unpack into <euclid>/frontend." \
+            --latest=false \
+            euclid-web-*.tar.gz euclid-web-*.tar.gz.sha256
+
+      # And one that does not move, named for the version in package.json. Bumping that version is
+      # what cuts a release somebody can pin; a push that does not bump it refreshes "latest" only.
+      - name: Publish the version's release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="frontend-v${{ steps.version.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists; leaving it alone."
+            exit 0
+          fi
+          gh release create "$TAG" \
+            --title "Frontend bundle ${{ steps.version.outputs.version }}" \
+            --notes "The euclid-web bundle at version ${{ steps.version.outputs.version }}. Unpack into <euclid>/frontend." \
+            euclid-web-*.tar.gz euclid-web-*.tar.gz.sha256

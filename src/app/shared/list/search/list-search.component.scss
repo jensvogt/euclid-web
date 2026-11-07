@@ -1,0 +1,28 @@
+/*
+ * The row a list is narrowed from: how to match, and what to match against.
+ *
+ * The host needs the width too, and that is the part a stylesheet alone would miss: a component's
+ * element is inline by default, so a field at 100% of it is 100% of a box already shrunk to its own
+ * content.
+ */
+:host {
+  display: block;
+  width: 100%;
+}
+
+.search-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Wide enough for "Starts with" and no wider: the text beside it is what the room is for. */
+.match-field {
+  flex: 0 0 auto;
+  width: 150px;
+}
+
+.search-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}

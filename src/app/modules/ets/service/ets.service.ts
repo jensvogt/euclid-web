@@ -40,8 +40,8 @@ export class EtsService {
      * ETS answers with every match at once, as EAP does - an installation has a handful of transfer
      * servers - so the page a list view needs is cut here, and the sorting with it.
      */
-    listServers(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'serverId', sortDirection: 'asc' | 'desc' = 'asc'): Observable<Page<TransferServer>> {
-        return this.http.all<TransferServer>(TARGET, 'list-servers', 'servers', {prefix: prefix}).pipe(
+    listServers(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'serverId', sortDirection: 'asc' | 'desc' = 'asc', matchType = ''): Observable<Page<TransferServer>> {
+        return this.http.all<TransferServer>(TARGET, 'list-servers', 'servers', {prefix: prefix, matchType: matchType}).pipe(
             map((servers: TransferServer[]) => {
                 const sorted = [...servers].sort((left, right) => compare(left, right, sortColumn));
                 if (sortDirection === 'desc') {

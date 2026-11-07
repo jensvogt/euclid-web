@@ -1,0 +1,37 @@
+<div class="search-row">
+
+    <!--
+      How the text is matched, beside the box rather than inside it: with four ways to read a search,
+      which one is in force is part of the question and belongs where it can be seen without opening
+      anything. Shown only where the listing's own action takes one - a picker over an action that
+      ignores it would answer a different question from the one it was asked.
+    -->
+    @if (list.matchTypes) {
+        <mat-form-field class="match-field">
+            <mat-label>Match</mat-label>
+            <mat-select (ngModelChange)="choose($event)" [ngModel]="list.matchTypeValue" name="matchType">
+                @for (type of matchTypes; track type.value) {
+                    <mat-option [value]="type.value">{{ type.label }}</mat-option>
+                }
+            </mat-select>
+        </mat-form-field>
+    }
+
+    <mat-form-field class="search-field">
+        <mat-label>{{ label }}</mat-label>
+        <input (keyup.enter)="search()" [(ngModel)]="list.prefixValue" [placeholder]="placeholder" matInput
+               name="search" type="text">
+        @if (list.prefixSet) {
+            <button (click)="list.unsetPrefix()" aria-label="Clear" mat-icon-button matSuffix type="button">
+                <mat-icon matSuffix>close</mat-icon>
+            </button>
+        }
+        <button (click)="search()" [disabled]="badPattern" aria-label="Search" mat-icon-button matSuffix
+                type="button">
+            <mat-icon matSuffix>search</mat-icon>
+        </button>
+        @if (badPattern) {
+            <mat-error>Not a regular expression this browser can read, so the server would refuse it too.</mat-error>
+        }
+    </mat-form-field>
+</div>

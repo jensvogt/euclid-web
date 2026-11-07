@@ -3,6 +3,39 @@ import {map, Observable} from 'rxjs';
 
 import {EuclidHttpService} from '../../services/euclid-http.service';
 
+/**
+ * What the monitoring module records about the machines euclid runs on, rather than about euclid.
+ *
+ * Sampled from the host and labelled by it - not the per-module `euclid-cpu-usage`, which answers what
+ * one process holds. A dashboard that read that one would report a module's own 0.02% as the machine's.
+ *
+ * Load is per core, which is the form that means the same thing on every host: one is saturation
+ * whatever the hardware, where a raw load of 8 is a third of a 24-core machine and four times a
+ * two-core one. Windows keeps no run-queue averages, so euclid records the processor queue there
+ * instead, under a deliberately different name and on a scale of its own - see SYSTEM_QUEUE_METRIC.
+ */
+export const SYSTEM_CPU_METRIC = 'system-cpu-usage';
+export const SYSTEM_MEMORY_METRIC = 'system-memory-usage-percent';
+export const SYSTEM_LOAD_METRIC = 'system-load-per-core';
+export const SYSTEM_QUEUE_METRIC = 'system-processor-queue-per-core';
+
+/**
+ * What the gateway records about every request it routes, whatever module it was for.
+ *
+ * Recorded once per request in the gateway's own router and labelled by HTTP method, which makes it
+ * the closest thing the monitoring module keeps to the traffic of an installation as a whole. A rate,
+ * so folding its labels sums them.
+ */
+export const GATEWAY_COUNT_METRIC = 'gateway-service-count';
+
+/**
+ * How long the gateway took to answer, in milliseconds, recorded beside the count by the same timer.
+ *
+ * A gauge, so folding its method labels gives the mean weighted by how often each method was called -
+ * which is the figure a caller actually saw, rather than the average of the methods.
+ */
+export const GATEWAY_TIME_METRIC = 'gateway-service-time';
+
 /** The paired metrics every module records around each action it serves: `MonitoringTimer`'s two names. */
 export function serviceTimeMetric(target: string): string {
     return `${target}-service-time`;
@@ -23,6 +56,8 @@ export function serviceCountMetric(target: string): string {
 export const PROCESS_CPU_METRIC = 'euclid-cpu-usage';
 export const PROCESS_MEMORY_REAL_METRIC = 'euclid-memory-usage-real-mb';
 export const PROCESS_MEMORY_VIRTUAL_METRIC = 'euclid-memory-usage-virtual-mb';
+/** The same process's resident memory as a share of the machine's, which is the figure to plot over time. */
+export const PROCESS_MEMORY_PERCENT_METRIC = 'euclid-memory-usage-percent';
 export const MODULE_LABEL = 'module';
 
 /**
@@ -229,6 +264,20 @@ export class MetricsService {
     readings(target: string, limit: number = ROW_SCAN): Observable<ModuleReadings> {
         return this.http.all<MonitoringRow>('emo', 'list', 'items', {limit: limit, resolution: 'RAW'}).pipe(
             map((rows: MonitoringRow[]) => readingsOf(rows.filter(row => belongsTo(row, target)))),
+        );
+    }
+
+    /**
+     * The newest reading of one metric, folded across everything it is labelled by.
+     *
+     * One figure for the installation rather than one per host: a gauge folds as a sample-weighted
+     * mean, which is what makes "the machines are at 60%" a sentence rather than a list. Null when
+     * nothing has been recorded - a metric this platform does not keep, or an installation whose
+     * monitoring has not run yet - which reads as a dash and not as zero.
+     */
+    latest(metric: string): Observable<number | null> {
+        return this.history(metric, 1).pipe(
+            map((points: MetricPoint[]) => points.length === 0 ? null : points[points.length - 1].value),
         );
     }
 

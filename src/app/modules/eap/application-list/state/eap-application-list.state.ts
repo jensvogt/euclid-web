@@ -14,5 +14,5 @@ export const eapApplicationListFeature = createListFeature<Application>('eap-app
  */
 export const loadApplications$ = createListEffect(eapApplicationListFeature, () => {
     const service = inject(EapService);
-    return query => service.listApplications(query.prefix, query.pageSize, query.pageIndex, query.sortColumn, query.sortDirection);
+    return query => service.listApplications(query.prefix, query.pageSize, query.pageIndex, query.sortColumn, query.sortDirection, query.matchType);
 });
