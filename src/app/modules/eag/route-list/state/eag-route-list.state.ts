@@ -9,5 +9,5 @@ export const eagRouteListFeature = createListFeature<Route>('eag-route-list', {c
 /** By path, because a gateway's routes are read as a map of what it serves. Paging is local - see the service. */
 export const loadRoutes$ = createListEffect(eagRouteListFeature, () => {
     const service = inject(EagService);
-    return query => service.listRoutes(query.prefix, query.pageSize, query.pageIndex, query.sortColumn, query.sortDirection);
+    return query => service.listRoutes(query.prefix, query.pageSize, query.pageIndex, query.sortColumn, query.sortDirection, query.matchType);
 });

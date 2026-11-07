@@ -1,0 +1,11 @@
+@use '../charts/chart';
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.nothing {
+  padding: 16px;
+  opacity: 0.75;
+}

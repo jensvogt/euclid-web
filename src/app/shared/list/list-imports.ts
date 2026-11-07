@@ -17,6 +17,7 @@ import {MatTooltip} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
 
 import {FooterComponent} from '../footer/footer.component';
+import {ListSearchComponent} from './search/list-search.component';
 import {ModuleStatsComponent} from '../module-stats/module-stats.component';
 
 /**
@@ -50,6 +51,7 @@ export const EUCLID_LIST_IMPORTS = [
     FormsModule,
     RouterLink,
     AsyncPipe,
+    ListSearchComponent,
     ModuleStatsComponent,
     FooterComponent,
 ];

@@ -1,0 +1,33 @@
+/*
+ * One height for every chart on the dashboard.
+ *
+ * Held in one place because the point of it is that they agree: four cards in two rows, each drawing a
+ * different thing, read as one view only while their plots line up. A card can still be taller than its
+ * neighbour - a summary line or a legend takes what it takes - and the grid stretches the cards to
+ * match, which is a different thing from the charts matching.
+ *
+ * Tall enough for the densest of them, which is the instance chart at ten rows: the others have height
+ * to spare, and a chart with room is better than a row of bars too thin to see.
+ */
+$chart-height: 220px;
+
+.dashboard-chart {
+  width: 100%;
+  height: $chart-height;
+}
+
+/*
+ * The line between a card's heading and its chart.
+ *
+ * Two lines' worth of room whether it needs one or two, because the charts below these lines are meant
+ * to line up: a summary that wraps on one card and not on its neighbour moves one plot down by a line
+ * and the two stop agreeing, which is the whole thing the shared height is for.
+ */
+.chart-summary {
+  display: block;
+  margin: 0 0 4px 0;
+  min-height: 2.6em;
+  font-size: small;
+  line-height: 1.3;
+  opacity: 0.75;
+}

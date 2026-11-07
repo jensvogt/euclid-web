@@ -27,6 +27,8 @@ export interface PageQuery {
 /** How a listing is paged, ordered and narrowed. Most listings take a prefix; message pages do not. */
 export interface ListQuery extends PageQuery {
     prefix?: string;
+    /** How the prefix is matched - see {@link MatchType}. Empty, and absent, mean a prefix. */
+    matchType?: string;
 }
 
 /** Every listing answers with a page: `total` is how many exist, the items are the page. */
@@ -182,9 +184,19 @@ export function pagePayload(query: PageQuery, defaultSortColumn: string): Record
     };
 }
 
-/** The same, for the listings that also narrow by prefix. */
+/**
+ * The same, for the listings that also narrow by prefix.
+ *
+ * `matchType` goes with it: fifteen of euclid's list actions read it and the rest ignore an unknown
+ * field, so it travels with every prefix rather than being threaded through the services that happen
+ * to support it. Empty is a prefix match, which is what they all did before the field existed.
+ */
 export function listPayload(query: ListQuery, defaultSortColumn: string): Record<string, unknown> {
-    return {prefix: query.prefix ?? '', ...pagePayload(query, defaultSortColumn)};
+    return {
+        prefix: query.prefix ?? '',
+        matchType: query.matchType ?? '',
+        ...pagePayload(query, defaultSortColumn),
+    };
 }
 
 /**

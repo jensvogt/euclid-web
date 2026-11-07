@@ -109,8 +109,8 @@ export class EapService {
      * so the page a list view needs is cut here. Sorting and paging are therefore local to the browser for
      * this module, unlike the eight that page at the server.
      */
-    listApplications(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'applicationId', sortDirection: 'asc' | 'desc' = 'asc'): Observable<Page<Application>> {
-        return this.http.all<Application>(TARGET, 'list-applications', 'applications', {prefix: prefix}).pipe(
+    listApplications(prefix = '', pageSize = 10, pageIndex = 0, sortColumn = 'applicationId', sortDirection: 'asc' | 'desc' = 'asc', matchType = ''): Observable<Page<Application>> {
+        return this.http.all<Application>(TARGET, 'list-applications', 'applications', {prefix: prefix, matchType: matchType}).pipe(
             map((items: Application[]) => {
                 const sorted = [...items].sort((left, right) => compare(left, right, sortColumn));
                 if (sortDirection === 'desc') {

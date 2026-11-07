@@ -43,6 +43,9 @@ export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
     /** What a sortable column is called on the record, where the column shows more than one field. */
     protected override readonly sortFields: Record<string, string> = {platform: 'os', state: 'live'};
 
+    /** `list-nodes` is the one listing with a search box that takes no match type: its prefix is a prefix. */
+    override readonly matchTypes = false;
+
     protected readonly dateConversion = dateConversion;
 
     constructor(private readonly eapService: EapService) {
