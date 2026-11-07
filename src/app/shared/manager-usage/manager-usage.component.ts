@@ -108,9 +108,13 @@ export class ManagerUsageComponent implements OnInit, OnDestroy {
 /**
  * The line.
  *
- * The axis stops at a hundred rather than at the highest reading: a process using two per cent of a
- * machine should look like one, where an axis fitted to the data draws the shape of its own rounding
- * and reads as a process in trouble.
+ * The axis is fitted to the readings rather than fixed at a hundred: the manager uses a few per cent
+ * of a machine, and against the whole of one its line is flat on the floor and says nothing about
+ * what it has been doing. Where it stands against the machine is the gauges' question, and the
+ * summary above gives the figure in full.
+ *
+ * It still starts at zero, so the shape stays proportional: an axis fitted at both ends turns a
+ * reading that moved from 1.9 to 2.1 per cent into a chart that looks like a doubling.
  */
 function chartOf(usage: ManagerUsage, points: MetricPoint[]): Record<string, unknown> {
     return {
@@ -124,7 +128,6 @@ function chartOf(usage: ManagerUsage, points: MetricPoint[]): Record<string, unk
         yAxis: {
             type: 'value',
             min: 0,
-            max: 100,
             name: '%',
             nameTextStyle: {fontSize: 10},
             axisLabel: {fontSize: 10},
