@@ -1,5 +1,5 @@
 import {Component, inject} from '@angular/core';
-import {defer, mergeMap, Observable} from 'rxjs';
+import {concat, defer, last, mergeMap, Observable, throwError} from 'rxjs';
 import type {Application, RebalanceResult} from 'euclid-ndk';
 
 import {byteConversion} from '../../../shared/byte-utils.component';
@@ -14,6 +14,9 @@ import {
     DEFAULT_MIN_INSTANCES,
     EapService,
     LOG_LEVELS,
+    MIN_CPU_LIMIT,
+    MIN_MEMORY_LIMIT_MB,
+    NO_LIMIT,
     RUNTIMES,
     RUNTIME_JAVA,
     STATE_RUNNING,
@@ -137,6 +140,109 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
             'Redeploy requested',
             'Redeploy',
         );
+    }
+
+    /**
+     * How big the pool may be, and what one instance of it may use.
+     *
+     * One dialog for the four, because they are one decision: a ceiling of ten instances at 2 GiB each
+     * is a promise of 20 GiB from the fleet, and the server checks it that way - raising the floor is
+     * admitted against the memory limit, so the two cannot usefully be set apart.
+     *
+     * Neither half restarts anything. The pool is moved toward its new bounds on the next reconcile, and
+     * a changed memory or CPU ceiling reaches an instance when that instance next starts: a process that
+     * sized itself for the old ceiling - a JVM's heap, say - is not squeezed under a lower one behind its
+     * back. Restart is how running instances are handed the new figures.
+     */
+    setScaleAndLimits(application: Application): void {
+        this.addThen(
+            'Scale and limits of ' + application.applicationId,
+            [
+                {
+                    name: 'minInstances',
+                    label: 'Min instances',
+                    type: 'number',
+                    required: true,
+                    value: application.minInstances,
+                    hint: 'The floor the manager keeps. At least 1 - stopping it is how one is taken out of service.',
+                },
+                {
+                    name: 'maxInstances',
+                    label: 'Max instances',
+                    type: 'number',
+                    required: true,
+                    value: application.maxInstances,
+                    hint: "The autoscaler's room to grow. The same number as the floor pins the pool at that size.",
+                },
+                {
+                    name: 'memoryLimitMb',
+                    label: 'Memory per instance (MiB)',
+                    type: 'number',
+                    value: application.memoryLimitMb,
+                    hint: `${NO_LIMIT} is no limit, otherwise at least ${MIN_MEMORY_LIMIT_MB} MiB. Admitted against`
+                        + " the account's nodes as it is set, so a promise the fleet could not keep is refused here."
+                        + ' Held only on a node whose worker has cgroup delegation; anywhere else the instance'
+                        + ' runs unlimited and says so in its log.',
+                },
+                {
+                    name: 'cpuLimit',
+                    label: 'CPUs per instance',
+                    type: 'number',
+                    step: MIN_CPU_LIMIT,
+                    value: application.cpuLimit,
+                    hint: `1.5 is a CPU and a half. ${NO_LIMIT} is no limit, otherwise at least ${MIN_CPU_LIMIT}.`
+                        + ' An instance over its CPU limit is throttled until the next period, never stopped -'
+                        + ' unlike memory, where the kernel kills it.',
+                },
+            ],
+            values => this.applyScaleAndLimits(application, values),
+            'Scale and limits changed',
+            'Save',
+        );
+    }
+
+    /**
+     * Sends what the dialog actually changed, and only that.
+     *
+     * Two actions rather than one, because euclid has two and `update-application` - which could write
+     * all four fields - stamps the modification date, and the manager restarts a pool whose application
+     * changed under it. Asking for capacity is the last moment to want every instance cycled.
+     *
+     * A field left as it was is left out of the call, which is what the server reads as "leave it alone".
+     * The limits go first for two reasons: a raised floor is admitted against the memory limit, so the
+     * limit has to be the new one by then, and a refusal arrives before anything has been changed.
+     *
+     * `last` because the two calls are one action to whoever asked for it - without it the snackbar and
+     * the reload would fire once per call.
+     */
+    private applyScaleAndLimits(application: Application, values: Record<string, FieldValue>): Observable<unknown> {
+        const scale: {minInstances?: number; maxInstances?: number} = {};
+        if (Number(values['minInstances']) !== application.minInstances) {
+            scale.minInstances = Number(values['minInstances']);
+        }
+        if (Number(values['maxInstances']) !== application.maxInstances) {
+            scale.maxInstances = Number(values['maxInstances']);
+        }
+
+        const limits: {memoryLimitMb?: number; cpuLimit?: number} = {};
+        if (Number(values['memoryLimitMb']) !== application.memoryLimitMb) {
+            limits.memoryLimitMb = Number(values['memoryLimitMb']);
+        }
+        if (Number(values['cpuLimit']) !== application.cpuLimit) {
+            limits.cpuLimit = Number(values['cpuLimit']);
+        }
+
+        const calls: Observable<unknown>[] = [];
+        if (Object.keys(limits).length > 0) {
+            calls.push(this.eapService.setApplicationLimits(application.applicationId, limits));
+        }
+        if (Object.keys(scale).length > 0) {
+            calls.push(this.eapService.scaleApplication(application.applicationId, scale));
+        }
+        if (calls.length === 0) {
+            return throwError(() => new Error('Nothing was changed, so nothing was sent.'));
+        }
+        return concat(...calls).pipe(last());
     }
 
     /**

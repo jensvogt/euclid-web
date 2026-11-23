@@ -149,6 +149,14 @@ export const EUCLID_MODULES: EuclidModule[] = [
         ],
     },
     {
+        target: 'eds',
+        label: 'Domain Names (EDS)',
+        route: '/eds-zone-list',
+        resources: [
+            {label: 'Hosted zones', route: '/eds-zone-list', action: 'list-zones', field: 'zones', paged: true},
+        ],
+    },
+    {
         // No list view yet: the registry is counted and the modules themselves are read from the status
         // panel above it. A page for starting, stopping and scaling them is EMM's to gain next.
         target: 'emm',

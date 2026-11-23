@@ -150,6 +150,14 @@ export const routes: Routes = [
                 loadChildren: () => import('./modules/ets/ets.routes').then(m => m.etsRoutes),
             },
             //=========================================================================
+            // EDS - domain names
+            //=========================================================================
+            {
+                path: 'eds-zone-list',
+                canActivate: [authGuard],
+                loadChildren: () => import('./modules/eds/eds.routes').then(m => m.edsRoutes),
+            },
+            //=========================================================================
             // Monitoring - one page, nine modules, because get-metrics is one action
             //=========================================================================
             {

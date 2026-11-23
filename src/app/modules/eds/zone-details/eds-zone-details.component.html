@@ -1,0 +1,322 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Zone &mdash; {{ name }}</span>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/eds-zone-list']" aria-label="Zones" mat-icon-button
+                matTooltip="All hosted zones">
+            <mat-icon>dns</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Read the zone and its records again">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eds']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EDS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        @if (zone$ | async; as zone) {
+            <mat-card appearance="outlined" class="section">
+                <mat-card-header>
+                    <span class="section-title">Properties</span>
+                    <button [matMenuTriggerFor]="zonemenu" [matTooltipShowDelay]="1000" aria-label="Zone menu"
+                            mat-icon-button matTooltip="More...">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #zonemenu="matMenu" xPosition="before">
+                        <button (click)="askAnswer(zone)" mat-menu-item
+                                matTooltip="Put a question to the resolver without a DNS client">
+                            <mat-icon>help_outline</mat-icon>
+                            <span>What would it answer?</span>
+                        </button>
+                        <mat-divider/>
+                        <button (click)="deleteZone(zone)" mat-menu-item
+                                matTooltip="The name server stops answering for the whole zone">
+                            <mat-icon>delete</mat-icon>
+                            <span>Delete zone</span>
+                        </button>
+                    </mat-menu>
+                </mat-card-header>
+                <mat-card-content>
+                    <div class="properties">
+
+                        <span class="property" matTooltip="The zone's apex, which is what every EDS action takes">
+                            Zone
+                        </span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="zone.name" class="text">{{ zone.name }}</span>
+                            <button [cdkCopyToClipboard]="zone.name" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the zone name to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property">ERN</span>
+                        <span class="value">
+                            <span [matTooltipShowDelay]="1000" [matTooltip]="zone.ern" class="text">{{ zone.ern }}</span>
+                            <button [cdkCopyToClipboard]="zone.ern" [matTooltipShowDelay]="1000" aria-label="Copy"
+                                    mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                <mat-icon class="inline-icon">content_copy</mat-icon>
+                            </button>
+                        </span>
+
+                        <span class="property" matTooltip="A zone name is unique within an account and namespace">
+                            Namespace
+                        </span>
+                        <span class="value">
+                            <span class="text">{{ zone.namespace || 'account root' }}</span>
+                        </span>
+
+                        <span class="property">Description</span>
+                        <span class="value"><span class="text">{{ zone.description || '-' }}</span></span>
+
+                        <span class="property"
+                              matTooltip="What a record with no TTL of its own is answered with, and how long a negative answer is kept">
+                            Default TTL
+                        </span>
+                        <span class="value"><span class="text">{{ zone.ttl }}s</span></span>
+
+                        <span class="property" matTooltip="Record sets stored in this zone">Records</span>
+                        <span class="value"><span class="text">{{ zone.recordCount }}</span></span>
+
+                        <span class="property"
+                              matTooltip="The zone's modification time in seconds, which is what a secondary compares. Not a counter anybody sets.">
+                            Serial
+                        </span>
+                        <span class="value"><span class="text">{{ zone.serial }}</span></span>
+
+                        <span class="property">Created</span>
+                        <span class="value"><span class="text">{{ dateConversion(zone.created) }}</span></span>
+
+                        <span class="property">Modified</span>
+                        <span class="value"><span class="text">{{ dateConversion(zone.modified) }}</span></span>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined" class="section">
+                <mat-card-content>
+                    <mat-tab-group>
+
+                        <mat-tab label="Records ({{ records.length }})">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        A row is a record <em>set</em>: every value answered for one name and
+                                        type, since one answer carries all of them. So editing a row opens the
+                                        whole set and saving replaces it &mdash; there is no "add one more A
+                                        record" in DNS. Names are shown relative to the zone, with
+                                        <em>{{ apex }}</em> for the apex itself.
+                                    </p>
+                                    <button (click)="putRecord(zone)" [matTooltipShowDelay]="1000"
+                                            aria-label="Add record" mat-icon-button
+                                            matTooltip="Add a record set to this zone">
+                                        <mat-icon>add</mat-icon>
+                                    </button>
+                                </div>
+                                <table [dataSource]="records" class="mat-elevation-z8 euclid-table sized-to-content"
+                                       mat-table>
+                                    <ng-container matColumnDef="name">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="The owner name, relative to the zone">Name
+                                        </th>
+                                        <td *matCellDef="let record" mat-cell>
+                                            <span [matTooltipShowDelay]="1000" [matTooltip]="record.name"
+                                                  class="text">{{ owner(record) }}</span>
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="type">
+                                        <th *matHeaderCellDef mat-header-cell>Type</th>
+                                        <td *matCellDef="let record" mat-cell>{{ record.type }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="ttl">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="How long a resolver may cache it. A set with none takes the zone's.">
+                                            TTL
+                                        </th>
+                                        <td *matCellDef="let record" mat-cell>
+                                            @if (record.ttl > 0) {
+                                                <span class="text">{{ record.ttl }}s</span>
+                                            } @else {
+                                                <span [matTooltip]="'From the zone: ' + zone.ttl + 's'"
+                                                      class="text unfinished">{{ effectiveTtl(record, zone) }}s</span>
+                                            }
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="values">
+                                        <th *matHeaderCellDef mat-header-cell
+                                            matTooltip="Everything this name and type answers with">Values
+                                        </th>
+                                        <td *matCellDef="let record" mat-cell>
+                                            @for (value of values(record); track value) {
+                                                <div class="text">{{ value }}</div>
+                                            } @empty {
+                                                <span class="text">-</span>
+                                            }
+                                        </td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="modified">
+                                        <th *matHeaderCellDef mat-header-cell>Modified</th>
+                                        <td *matCellDef="let record" mat-cell>{{ dateConversion(record.modified) }}</td>
+                                    </ng-container>
+                                    <ng-container matColumnDef="actions">
+                                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                                        <td *matCellDef="let record" mat-cell>
+                                            <button (click)="putRecord(zone, record)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Edit" mat-icon-button
+                                                    matTooltip="Change the whole set">
+                                                <mat-icon>edit</mat-icon>
+                                            </button>
+                                            <button (click)="deleteRecord(zone, record)" [matTooltipShowDelay]="1000"
+                                                    aria-label="Delete" mat-icon-button
+                                                    matTooltip="Stop answering for this name and type">
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </td>
+                                    </ng-container>
+                                    <tr *matHeaderRowDef="recordColumns" mat-header-row></tr>
+                                    <tr *matRowDef="let row; columns: recordColumns;" mat-row></tr>
+                                    <tr *matNoDataRow class="mat-row">
+                                        <td [attr.colspan]="recordColumns.length" class="mat-cell">
+                                            Nothing is stored in this zone. It still answers its own SOA and NS,
+                                            which is what makes it a zone rather than a name.
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </mat-tab>
+
+                        <mat-tab label="Answer">
+                            <div class="tab-body">
+                                <div class="tab-actions">
+                                    <p class="note">
+                                        What the resolver would answer, asked inside the module rather than over
+                                        port 53. This is the check worth making after an edit: a stored set is not
+                                        an answer &mdash; a CNAME redirects the question and a wildcard covers names
+                                        nobody wrote down. Any name can be asked, not only one in this zone: EDS
+                                        also answers under the configured service domain, where
+                                        <em>manager</em>, <em>&lt;node&gt;.node</em> and <em>&lt;app&gt;.app</em>
+                                        are built from what is registered and stored nowhere.
+                                    </p>
+                                    <button (click)="askAnswer(zone)" [matTooltipShowDelay]="1000" aria-label="Ask"
+                                            mat-icon-button matTooltip="Ask the resolver a question">
+                                        <mat-icon>help_outline</mat-icon>
+                                    </button>
+                                </div>
+
+                                @if (answerError) {
+                                    <p class="nothing">{{ answerError }}</p>
+                                } @else if (answer) {
+                                    <div class="properties">
+                                        <span class="property">Question</span>
+                                        <span class="value">
+                                            <span class="text">{{ answer.name }} {{ answer.type }}</span>
+                                        </span>
+
+                                        <span class="property" matTooltip="The result code a client would be sent">
+                                            Result
+                                        </span>
+                                        <span class="value">
+                                            <span [class.unfinished]="answer.rcode !== 'NOERROR'"
+                                                  class="text">{{ answer.rcode }}</span>
+                                        </span>
+
+                                        <span class="property"
+                                              matTooltip="Whether this installation hosts the zone the name falls in">
+                                            Authoritative
+                                        </span>
+                                        <span class="value">
+                                            <span class="text">{{ answer.authoritative ? 'yes' : 'no' }}</span>
+                                        </span>
+
+                                        @if (answer.zone) {
+                                            <span class="property" matTooltip="The zone the answer came out of">
+                                                Zone
+                                            </span>
+                                            <span class="value"><span class="text">{{ answer.zone }}</span></span>
+                                        }
+                                    </div>
+
+                                    <p class="note">{{ rcodeNote(answer) }}</p>
+
+                                    <table [dataSource]="answer.answers"
+                                           class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                        <ng-container matColumnDef="name">
+                                            <th *matHeaderCellDef mat-header-cell>Name</th>
+                                            <td *matCellDef="let record" mat-cell>{{ record.name }}</td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="type">
+                                            <th *matHeaderCellDef mat-header-cell>Type</th>
+                                            <td *matCellDef="let record" mat-cell>{{ record.type }}</td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="ttl">
+                                            <th *matHeaderCellDef mat-header-cell
+                                                matTooltip="How long the client may cache this answer">TTL
+                                            </th>
+                                            <td *matCellDef="let record" mat-cell>{{ record.ttl }}s</td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="value">
+                                            <th *matHeaderCellDef mat-header-cell>Value</th>
+                                            <td *matCellDef="let record" mat-cell>{{ record.value }}</td>
+                                        </ng-container>
+                                        <tr *matHeaderRowDef="answerColumns" mat-header-row></tr>
+                                        <tr *matRowDef="let row; columns: answerColumns;" mat-row></tr>
+                                        <tr *matNoDataRow class="mat-row">
+                                            <td [attr.colspan]="answerColumns.length" class="mat-cell">
+                                                Nothing in the answer section. What there is instead is below.
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <!-- Shown because for every answer without records it is the whole answer:
+                                         the SOA is what tells a resolver how long to remember the absence. -->
+                                    @if ((answer.authority ?? []).length > 0) {
+                                        <p class="note">
+                                            Authority section &mdash; what the zone sends about itself alongside,
+                                            or instead of, records.
+                                        </p>
+                                        <table [dataSource]="answer.authority ?? []"
+                                               class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                                            <ng-container matColumnDef="name">
+                                                <th *matHeaderCellDef mat-header-cell>Name</th>
+                                                <td *matCellDef="let record" mat-cell>{{ record.name }}</td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="type">
+                                                <th *matHeaderCellDef mat-header-cell>Type</th>
+                                                <td *matCellDef="let record" mat-cell>{{ record.type }}</td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="ttl">
+                                                <th *matHeaderCellDef mat-header-cell
+                                                    matTooltip="For an SOA, its last field is how long a resolver caches the absence">
+                                                    TTL
+                                                </th>
+                                                <td *matCellDef="let record" mat-cell>{{ record.ttl }}s</td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="value">
+                                                <th *matHeaderCellDef mat-header-cell>Value</th>
+                                                <td *matCellDef="let record" mat-cell>{{ record.value }}</td>
+                                            </ng-container>
+                                            <tr *matHeaderRowDef="answerColumns" mat-header-row></tr>
+                                            <tr *matRowDef="let row; columns: answerColumns;" mat-row></tr>
+                                        </table>
+                                    }
+                                } @else {
+                                    <p class="nothing">Nothing asked yet.</p>
+                                }
+                            </div>
+                        </mat-tab>
+
+                    </mat-tab-group>
+                </mat-card-content>
+            </mat-card>
+        } @else {
+            <p class="nothing">{{ (error$ | async) ?? 'Reading the zone...' }}</p>
+        }
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

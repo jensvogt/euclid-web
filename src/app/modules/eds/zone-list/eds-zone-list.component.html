@@ -1,0 +1,119 @@
+<mat-card appearance="outlined" style="margin: 3px;">
+    <mat-card-header>
+        <button (click)="back()" aria-label="Back" mat-icon-button>
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="fill-remaining-space">Zones ({{ total$ | async }})</span>
+        <button (click)="createZone()" [matTooltipShowDelay]="1000" aria-label="Create" mat-icon-button
+                matTooltip="Create a zone this installation answers for">
+            <mat-icon>add</mat-icon>
+        </button>
+        <button (click)="refresh()" [matTooltipShowDelay]="1000" aria-label="Refresh" mat-icon-button
+                matTooltip="Refresh the zone list">
+            <mat-icon>refresh</mat-icon>
+        </button>
+        <button [matTooltipShowDelay]="1000" [routerLink]="['/metrics/eds']" aria-label="Monitoring" mat-icon-button
+                matTooltip="Monitoring of the EDS counters">
+            <mat-icon>
+                <span class="material-symbols-outlined">monitoring</span>
+            </mat-icon>
+        </button>
+        <button [matMenuTriggerFor]="mainmenu" [matTooltipShowDelay]="1000" aria-label="Main menu" mat-icon-button
+                matTooltip="More...">
+            <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #mainmenu="matMenu" xPosition="before">
+            <button (click)="autoReload()" mat-menu-item>
+                <mat-icon>
+                    <span class="material-symbols-outlined">hourglass</span>
+                </mat-icon>
+                <span>Auto Reload</span>
+            </button>
+        </mat-menu>
+    </mat-card-header>
+    <mat-card-content>
+        <module-stats/>
+        <mat-card appearance="outlined" style="margin: -10px;">
+            <mat-card-actions align="start">
+                <list-search [list]="this" label="Apex"/>
+            </mat-card-actions>
+            <div class="table-container">
+                <!-- No matSort: EDS lists zones by name and reads no sort field, so a sortable header
+                     would promise an order the module does not give. -->
+                <table [dataSource]="(items$ | async) ?? []"
+                       class="mat-elevation-z8 euclid-table sized-to-content" mat-table>
+                    <ng-container matColumnDef="name">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="The zone's apex, by name">Zone</th>
+                        <td *matCellDef="let zone" mat-cell>
+                            <div class="with-icon">
+                                <mat-nav-list>
+                                    <a [matTooltipShowDelay]="1000" mat-list-item
+                                       matTooltip="Show the zone and the records in it"
+                                       routerLink="./zone/{{ zone.name }}">{{ zone.name }}</a>
+                                </mat-nav-list>
+                                <button [cdkCopyToClipboard]="zone.ern" [matTooltipShowDelay]="1000"
+                                        aria-label="Copy" mat-icon-button matTooltip="Copy the ERN to the clipboard">
+                                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container matColumnDef="records">
+                        <th *matHeaderCellDef mat-header-cell
+                            matTooltip="How many record sets the zone holds. A set is every value answered for one name and type.">
+                            Records
+                        </th>
+                        <td *matCellDef="let zone" mat-cell>{{ zone.recordCount }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="ttl">
+                        <th *matHeaderCellDef mat-header-cell
+                            matTooltip="What a record with no TTL of its own is answered with, and how long a negative answer is kept">
+                            TTL
+                        </th>
+                        <td *matCellDef="let zone" mat-cell>{{ zone.ttl }}s</td>
+                    </ng-container>
+                    <ng-container matColumnDef="description">
+                        <th *matHeaderCellDef mat-header-cell>Description</th>
+                        <td *matCellDef="let zone" mat-cell>{{ zone.description || '-' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="created">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="When the zone was created">Created</th>
+                        <td *matCellDef="let zone" mat-cell>{{ dateConversion(zone.created) }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                        <th *matHeaderCellDef mat-header-cell matTooltip="Actions">Actions</th>
+                        <td *matCellDef="let zone" mat-cell>
+                            <button [matTooltipShowDelay]="1000" aria-label="Records" mat-icon-button
+                                    matTooltip="Show the zone and the records in it"
+                                    routerLink="./zone/{{ zone.name }}">
+                                <mat-icon>dns</mat-icon>
+                            </button>
+                            <button (click)="deleteZone(zone)" [matTooltipShowDelay]="1000" aria-label="Delete"
+                                    mat-icon-button matTooltip="Delete the zone and every record in it">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                    <tr *matHeaderRowDef="columns" mat-header-row></tr>
+                    <tr *matRowDef="let row; columns: columns;" mat-row></tr>
+                    <tr *matNoDataRow class="mat-row">
+                        <td [attr.colspan]="columns.length" class="mat-cell">No zones, so this installation answers
+                            for nothing.
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator (page)="handlePageEvent($event)"
+                           [disabled]="disabled"
+                           [hidePageSize]="hidePageSize"
+                           [length]="(total$ | async) ?? 0"
+                           [pageIndex]="(pageIndex$ | async) ?? 0"
+                           [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+                           [pageSize]="(pageSize$ | async) ?? 10"
+                           [showFirstLastButtons]="showFirstLastButtons"
+                           aria-label="Select page" style="width:99%; margin-left:15px">
+            </mat-paginator>
+        </mat-card>
+        <footer-component [lastUpdate]="lastUpdate"/>
+    </mat-card-content>
+</mat-card>

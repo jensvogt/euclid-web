@@ -46,8 +46,8 @@
         } @else {
             <mat-form-field class="field">
                 <mat-label>{{ field.label }}</mat-label>
-                <input (keyup.enter)="save()" [(ngModel)]="values[field.name]" [name]="field.name"
-                       [type]="field.type ?? 'text'" matInput>
+                <input (keyup.enter)="save()" [(ngModel)]="values[field.name]" [attr.step]="field.step ?? null"
+                       [name]="field.name" [type]="field.type ?? 'text'" matInput>
                 @if (field.hint) {
                     <mat-hint>{{ field.hint }}</mat-hint>
                 }

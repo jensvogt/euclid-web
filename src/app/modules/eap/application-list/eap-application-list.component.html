@@ -122,6 +122,11 @@
                                     <mat-icon>upgrade</mat-icon>
                                     <span>Redeploy</span>
                                 </button>
+                                <button (click)="setScaleAndLimits(application)" mat-menu-item
+                                        matTooltip="How many instances the pool is kept between, and the memory and CPU one instance may use. Nothing is restarted: new ceilings reach an instance when it next starts.">
+                                    <mat-icon>tune</mat-icon>
+                                    <span>Scale and limits</span>
+                                </button>
                                 <button (click)="rebalance(application)" mat-menu-item
                                         matTooltip="Move its instances to where placement would put them now - onto a node that has joined, off one holding more than its share. Refused for a job.">
                                     <mat-icon>balance</mat-icon>
