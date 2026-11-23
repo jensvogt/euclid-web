@@ -95,6 +95,18 @@ export const DEFAULT_MIN_INSTANCES = 1;
 export const DEFAULT_MAX_INSTANCES = 1;
 export const DEFAULT_READY_TIMEOUT_MS = 30000;
 
+/**
+ * The smallest limits the server will store, and the figure that removes a limit.
+ *
+ * Both floors are the server's own - `kMinimumMemoryLimitMb` and `kMinimumCpuLimit` - and are here so a
+ * dialog can say them before a round trip rather than after a refusal. They are low bars with a reason:
+ * under 64 MiB nothing euclid runs gets as far as loading a class, and the kernel cannot throttle a
+ * process to less than one millisecond in a hundred. A limit below either is a typo, not a setting.
+ */
+export const NO_LIMIT = 0;
+export const MIN_MEMORY_LIMIT_MB = 64;
+export const MIN_CPU_LIMIT = 0.01;
+
 /** EAP - euclid's application platform: deployed applications and the instances answering for them. */
 @Injectable({providedIn: 'root'})
 export class EapService {
@@ -263,6 +275,61 @@ export class EapService {
      */
     restartApplication(applicationId: string): Observable<RestartResult> {
         return this.http.call<RestartResult>(TARGET, 'restart-application', {applicationId: applicationId});
+    }
+
+    /**
+     * Changes the range the pool is kept within, without restarting what is running.
+     *
+     * Its own action rather than two fields on {@link updateApplication}, and the difference is the
+     * whole point: an update writes the definition and stamps its modification date, and the manager
+     * restarts a pool whose application changed since it started it. Scaling that way stops every
+     * instance and starts it again - at the moment somebody asked for more capacity, which is the worst
+     * moment for it.
+     *
+     * A bound left out is left as it stands, so a ceiling can be raised without touching the floor. The
+     * pair is checked as it *will* stand, so raising only the floor past the stored ceiling is refused;
+     * a floor of zero is refused too, since an application desired RUNNING with no instances reads
+     * everywhere as a pool that failed to start, and stopping it is how one is taken out of service.
+     *
+     * Nothing is started or stopped by this call: what is set is the room the autoscaler works in, and
+     * it moves toward it on the next reconcile.
+     */
+    scaleApplication(applicationId: string, bounds: {minInstances?: number; maxInstances?: number}): Observable<Application> {
+        const payload: Record<string, unknown> = {applicationId: applicationId};
+        if (bounds.minInstances !== undefined) {
+            payload['minInstances'] = bounds.minInstances;
+        }
+        if (bounds.maxInstances !== undefined) {
+            payload['maxInstances'] = bounds.maxInstances;
+        }
+        return this.http.call<Application>(TARGET, 'scale-application', payload);
+    }
+
+    /**
+     * Sets what one instance may use: memory in MiB, CPUs as a fraction.
+     *
+     * Zero removes a limit and a field left out is left as it stands - so a memory ceiling can be set
+     * without saying anything about CPU. Below 64 MiB, or below 0.01 CPUs, is refused rather than stored:
+     * nothing euclid runs reaches the point of starting under either, so it is a typo and not a setting.
+     *
+     * A memory limit is admitted against the account's nodes as it is set: the server adds up what every
+     * running application has committed and refuses with HTTP 409 a promise the fleet could not keep,
+     * rather than letting it be found out when an instance has nowhere to go.
+     *
+     * Running instances keep the limit they started under. The ceiling is not lowered under a process
+     * that already sized itself for the old one - a JVM's heap is the case this is for, where a lower
+     * ceiling than it planned for is an OOM kill waiting for the next busy minute - so a restart is what
+     * hands running instances the new figure.
+     */
+    setApplicationLimits(applicationId: string, limits: {memoryLimitMb?: number; cpuLimit?: number}): Observable<Application> {
+        const payload: Record<string, unknown> = {applicationId: applicationId};
+        if (limits.memoryLimitMb !== undefined) {
+            payload['memoryLimitMb'] = limits.memoryLimitMb;
+        }
+        if (limits.cpuLimit !== undefined) {
+            payload['cpuLimit'] = limits.cpuLimit;
+        }
+        return this.http.call<Application>(TARGET, 'set-application-limits', payload);
     }
 
     /**

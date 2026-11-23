@@ -192,7 +192,15 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
         );
     }
 
-    /** How many instances the manager keeps. Both at once, since the pair has to make sense together. */
+    /**
+     * How many instances the manager keeps. Both at once, since the pair has to make sense together.
+     *
+     * Through `scale-application` rather than `update-application`, though the latter writes the same two
+     * fields: an update stamps the modification date, and the manager restarts a pool whose application
+     * changed since it started it. Scaling that way stopped and started every instance - at the moment
+     * somebody asked for more capacity, which is the worst moment for it. This changes the bounds and
+     * leaves the running instances alone; the pool moves toward them on the next reconcile.
+     */
     setScale(application: Application): void {
         this.addThen(
             'Instances of ' + application.applicationId,
@@ -204,10 +212,11 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
                     type: 'number',
                     required: true,
                     value: application.maxInstances,
-                    hint: 'The manager keeps at least the minimum and never more than the maximum.',
+                    hint: 'The manager keeps at least the minimum and never more than the maximum.'
+                        + ' Nothing is restarted by this.',
                 },
             ],
-            values => this.eapService.updateApplication(application.applicationId, {
+            values => this.eapService.scaleApplication(application.applicationId, {
                 minInstances: Number(values['minInstances']),
                 maxInstances: Number(values['maxInstances']),
             }),

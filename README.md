@@ -5,9 +5,11 @@ An Angular admin UI for the [euclid](https://github.com/jensvogt/euclid) server,
 dashboard of navigation cards, and the same list views - a card header with the count and its action icons, a
 prefix box, a sortable Material table, a paginator, and a footer saying when the figures were read.
 
-Nine modules so far, which is what euclid-ndk wraps. EAM (access management), ESM (storage), EQS (queues), ENS
-(notifications), EKM (keys), EKV (tables), EAP (applications), ESS (secrets) and EAG (the API gateway). EES and
-ETS speak the same protocol over the same gateway and will follow.
+Eleven modules so far. EAM (access management), ESM (storage), EQS (queues), ENS (notifications), EKM (keys),
+EKV (tables), EAP (applications), ESS (secrets), EAG (the API gateway), ETS (transfer servers) and EDS (domain
+names). Nine of them are what euclid-ndk wraps; ETS and EDS are covered here with the DTOs declared in the
+module's own service, since the protocol is the same one request either way. EES and EMM speak it too - EMM is
+read for the figures above every list, and neither has a page of its own yet.
 
 ![The main dashboard](docs/images/main-dashboard.png)
 
@@ -75,10 +77,10 @@ src/app/
     auth.guard.ts               keeps the module views behind a login
   shared/
     list/                       the generic paged list - see below
-    metrics/                    one monitoring page, nine modules
+    metrics/                    one monitoring page, every module
     footer, spinner, autoreload, confirm, resource-add
   modules/
-    eam, esm, eqs, ens, ekm, ekv, eap, ess, eag
+    eam, esm, eqs, ens, ekm, ekv, eap, ess, eag, ets, eds
       <module>.routes.ts        lazy routes, with the module's store slices provided at the route
       service/                  the module's actions
       <thing>-list/             the view, and its store slice
@@ -107,7 +109,7 @@ parent's ERN carried on the load action; see `ListQueryProps.parent`.
 ### Monitoring
 
 `HttpActionServer::MetricsResponse` answers `{items: [...]}` for every module, so there is one monitoring page
-at `/metrics/:target` rather than nine chart components. euclid's monitoring hands out a reading rather than a
+at `/metrics/:target` rather than one chart component per module. euclid's monitoring hands out a reading rather than a
 history, so the time series on that page is the one it has watched since you opened it - reloading starts it
 again, which is honest: nothing was recorded while nobody was looking.
 

@@ -33,6 +33,13 @@ export interface ResourceField {
     hint?: string;
     required?: boolean;
     options?: string[];
+    /**
+     * What the arrows move a number field by, and what counts as a valid value in it.
+     *
+     * Numbers only, and only worth giving where the field is not whole: an input left to itself steps
+     * by one, which marks a CPU limit of `1.5` invalid and offers no way to reach it with the arrows.
+     */
+    step?: number;
     /** What the file picker offers by default, as an `accept` list: `.jar,.zip`. Files only. */
     accept?: string;
     value?: string | number | boolean;
