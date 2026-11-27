@@ -1,4 +1,4 @@
-import {Component, ContentChild, Input, OnInit, TemplateRef} from '@angular/core';
+import {Component, ContentChild, Input, OnInit, TemplateRef, ChangeDetectionStrategy} from '@angular/core';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {AsyncPipe, NgTemplateOutlet} from '@angular/common';
 import {Observable, tap} from 'rxjs';
@@ -11,6 +11,7 @@ import {LoadingService} from './loading-service.component';
     templateUrl: './loading-spinner.component.html',
     styleUrls: ['./loading-spinner.component.scss'],
     imports: [MatProgressSpinnerModule, AsyncPipe, NgTemplateOutlet],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: true,
 })
 export class LoadingIndicatorComponent implements OnInit {

@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -30,6 +30,7 @@ import {
     topicNameOf,
 } from '../service/ens.service';
 import {ensTopicDetailsActions, ensTopicDetailsSelectors} from './state/ens-topic-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One topic: what it holds, what it is set to, and who is listening.
@@ -44,6 +45,7 @@ import {ensTopicDetailsActions, ensTopicDetailsSelectors} from './state/ens-topi
     templateUrl: './ens-topic-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -136,7 +138,7 @@ export class EnsTopicDetailsComponent extends EuclidResourceComponent implements
         this.addThen(
             'Publish to ' + topic.name,
             [{name: 'body', label: 'Body', required: true}],
-            values => this.ensService.publishMessage(topic.ern, String(values['body'])),
+            values => this.ensService.publishMessage(topic.ern, textOf(values['body'])),
             'Message published',
             'Publish',
         );
@@ -245,8 +247,8 @@ export class EnsTopicDetailsComponent extends EuclidResourceComponent implements
             ],
             values => this.ensService.subscribe(
                 topic.ern,
-                String(values['targetErn']),
-                String(values['type']) === 'topic' ? TOPIC : QUEUE,
+                textOf(values['targetErn']),
+                textOf(values['type']) === 'topic' ? TOPIC : QUEUE,
             ),
             'Subscribed',
             'Subscribe',
@@ -281,7 +283,7 @@ export class EnsTopicDetailsComponent extends EuclidResourceComponent implements
                 {name: 'key', label: 'Key', required: true},
                 {name: 'value', label: 'Value'},
             ],
-            values => this.ensService.addTopicTag(topic.ern, String(values['key']), String(values['value'])),
+            values => this.ensService.addTopicTag(topic.ern, textOf(values['key']), textOf(values['value'])),
             'Tag added',
             'Add',
         );
@@ -292,7 +294,7 @@ export class EnsTopicDetailsComponent extends EuclidResourceComponent implements
         this.addThen(
             'Edit ' + tag.key,
             [{name: 'value', label: 'Value', value: tag.value, hint: 'Currently ' + (tag.value || 'empty')}],
-            values => this.ensService.setTopicTag(topic.ern, tag.key, String(values['value'])),
+            values => this.ensService.setTopicTag(topic.ern, tag.key, textOf(values['value'])),
             'Tag changed',
             'Save',
         );

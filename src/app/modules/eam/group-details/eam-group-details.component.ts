@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -21,6 +21,7 @@ import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.
 import {EamGrantsComponent} from '../grants/eam-grants.component';
 import {EamService} from '../service/eam.service';
 import {eamGroupDetailsActions, eamGroupDetailsSelectors} from './state/eam-group-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** One member, as the table shows them: what the group recorded, and the ID to address them by. */
 export interface GroupMember {
@@ -43,6 +44,7 @@ export interface GroupMember {
     templateUrl: './eam-group-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -135,7 +137,7 @@ export class EamGroupDetailsComponent extends EuclidResourceComponent implements
                 required: true,
                 hint: 'The ERN, which the user list can copy.',
             }],
-            values => this.eamService.addUserToUserGroup(group.ern, String(values['user'])),
+            values => this.eamService.addUserToUserGroup(group.ern, textOf(values['user'])),
             'User added to group',
             'Add',
         );

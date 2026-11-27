@@ -1,6 +1,6 @@
 import {Observable, throwError} from 'rxjs';
 
-import {FieldValue, ResourceField} from '../../../shared/resource-add/resource-add.component';
+import {FieldValue, ResourceField, textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * What setting a password asks for: the new one twice, and the old one when it is your own.
@@ -51,8 +51,8 @@ export function withMatchingPassword(
     values: Record<string, FieldValue>,
     change: (password: string) => Observable<unknown>,
 ): Observable<unknown> {
-    const password = String(values['password']);
-    if (password !== String(values['repeat'])) {
+    const password = textOf(values['password']);
+    if (password !== textOf(values['repeat'])) {
         return throwError(() => new Error('The two passwords do not match.'));
     }
     return change(password);

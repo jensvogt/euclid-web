@@ -1,4 +1,4 @@
-import {Component, Inject} from '@angular/core';
+import {Component, Inject, ChangeDetectionStrategy} from '@angular/core';
 import {
     MAT_DIALOG_DATA,
     MatDialogActions,
@@ -24,6 +24,34 @@ import {byteConversion} from '../byte-utils.component';
  * page where a file came from, only what is in it.
  */
 export type FieldValue = string | number | boolean | File | null;
+
+/**
+ * A field's answer as text, which is what nearly every action behind a dialog sends.
+ *
+ * Rather than `String(value)`, which turns a picked file into `"[object File]"` and an unpicked one into
+ * `"null"` - neither of them anything a server should be handed as a name or a description. Both come
+ * back empty here; a field that wants the file itself reads it as one.
+ */
+export function textOf(value: FieldValue | undefined): string {
+    if (value === null || value === undefined || value instanceof File) {
+        return '';
+    }
+    return String(value);
+}
+
+/** What a field starts as when it was given no value: unticked, zero, no file, or empty text. */
+function emptyValueOf(type: ResourceField['type']): FieldValue {
+    switch (type) {
+        case 'boolean':
+            return false;
+        case 'number':
+            return 0;
+        case 'file':
+            return null;
+        default:
+            return '';
+    }
+}
 
 /** One thing a create dialog asks for. */
 export interface ResourceField {
@@ -65,6 +93,7 @@ export interface ResourceAddData {
     templateUrl: './resource-add.component.html',
     styleUrls: ['./resource-add.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         FormsModule,
         MatDialogTitle,
@@ -93,8 +122,7 @@ export class ResourceAddDialog {
         @Inject(MAT_DIALOG_DATA) public readonly data: ResourceAddData,
     ) {
         for (const field of data.fields) {
-            this.values[field.name] = field.value
-                ?? (field.type === 'boolean' ? false : field.type === 'number' ? 0 : field.type === 'file' ? null : '');
+            this.values[field.name] = field.value ?? emptyValueOf(field.type);
         }
     }
 
@@ -104,7 +132,7 @@ export class ResourceAddDialog {
             .filter(field => field.required)
             .every(field => field.type === 'file'
                 ? this.fileOf(field.name) !== null
-                : String(this.values[field.name] ?? '').trim().length > 0);
+                : textOf(this.values[field.name]).trim().length > 0);
     }
 
     /** The file picked for one field, or null while none has been. */

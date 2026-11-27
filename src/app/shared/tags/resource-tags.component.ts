@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnChanges, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnChanges, Output, ChangeDetectionStrategy} from '@angular/core';
 import {NgTemplateOutlet} from '@angular/common';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatIconButton} from '@angular/material/button';
@@ -31,6 +31,7 @@ export interface ResourceTag {
     templateUrl: './resource-tags.component.html',
     styleUrls: ['../resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [MatCard, MatCardHeader, MatCardContent, MatIconButton, MatIcon, MatTooltip, MatTableModule, NgTemplateOutlet],
 })
 export class ResourceTagsComponent implements OnChanges {

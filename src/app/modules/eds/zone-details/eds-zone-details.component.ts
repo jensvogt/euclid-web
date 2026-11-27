@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
 import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
@@ -26,6 +26,7 @@ import {
     ResourceRecord,
 } from '../service/eds.service';
 import {edsZoneDetailsActions, edsZoneDetailsSelectors} from './state/eds-zone-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** How several values of one set are written in a dialog, and read back out of it. */
 const VALUE_SEPARATOR = ',';
@@ -48,6 +49,7 @@ const VALUE_SEPARATOR = ',';
     templateUrl: './eds-zone-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -206,9 +208,9 @@ export class EdsZoneDetailsComponent extends EuclidResourceComponent implements 
             ],
             values => this.edsService.putRecord(
                 zone.name,
-                record ? record.name : String(values['name'] ?? APEX).trim(),
-                record ? record.type : String(values['type']),
-                String(values['values'])
+                record ? record.name : textOf(values['name'] ?? APEX).trim(),
+                record ? record.type : textOf(values['type']),
+                textOf(values['values'])
                     .split(VALUE_SEPARATOR)
                     .map(value => value.trim())
                     .filter(value => value.length > 0),
@@ -291,7 +293,7 @@ export class EdsZoneDetailsComponent extends EuclidResourceComponent implements 
             values => {
                 this.answer = null;
                 this.answerError = '';
-                this.edsService.getAnswer(String(values['name']).trim(), String(values['type'])).subscribe({
+                this.edsService.getAnswer(textOf(values['name']).trim(), textOf(values['type'])).subscribe({
                     next: (answer: DnsAnswer) => this.answer = answer,
                     error: (error: Error) => this.answerError = error.message,
                 });

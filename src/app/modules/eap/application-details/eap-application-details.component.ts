@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -22,6 +22,7 @@ import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.
 import {ResourceTag} from '../../../shared/tags/resource-tags.component';
 import {EapService, EGRESS_ALL_SITES, LOG_LEVELS, STATE_RUNNING} from '../service/eap.service';
 import {eapApplicationDetailsActions, eapApplicationDetailsSelectors} from './state/eap-application-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One deployed application: what euclid runs, as what, how much of it, and what is answering now.
@@ -39,6 +40,7 @@ import {eapApplicationDetailsActions, eapApplicationDetailsSelectors} from './st
     templateUrl: './eap-application-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -139,7 +141,7 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
 
     /** The command line as it would be typed, which is what a `command` and its arguments amount to. */
     commandLine(application: Application): string {
-        return [application.command, ...(application.arguments ?? [])].filter(part => part).join(' ') || '-';
+        return [application.command, ...(application.arguments ?? [])].filter(Boolean).join(' ') || '-';
     }
 
     // -- running it ----------------------------------------------------------------------------------
@@ -184,8 +186,8 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
             ],
             values => this.eapService.redeployApplication(
                 application.applicationId,
-                String(values['artifact']),
-                String(values['version']),
+                textOf(values['artifact']),
+                textOf(values['version']),
             ),
             'Redeploy requested',
             'Redeploy',
@@ -237,7 +239,7 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
                 value: application.logLevel,
                 hint: "Empty puts it back under the installation's own logging configuration.",
             }],
-            values => this.eapService.setLogLevel(application.applicationId, String(values['level'])),
+            values => this.eapService.setLogLevel(application.applicationId, textOf(values['level'])),
             'Log level changed',
             'Save',
         );
@@ -285,7 +287,7 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
             values => this.eapService.updateApplication(application.applicationId, {
                 environment: {
                     ...(application.environment ?? {}),
-                    [variable ? variable.key : String(values['key'])]: String(values['value']),
+                    [variable ? variable.key : textOf(values['key'])]: textOf(values['value']),
                 },
             }),
             variable ? 'Variable changed' : 'Variable added',
@@ -383,7 +385,7 @@ export class EapApplicationDetailsComponent extends EuclidResourceComponent impl
             ],
             values => this.eapService.setEgressLimit(
                 application.applicationId,
-                site ? site.site : String(values['site']).trim(),
+                site ? site.site : textOf(values['site']).trim(),
                 {
                     requestsPerSecond: Number(values['requestsPerSecond']),
                     burst: Number(values['burst']),

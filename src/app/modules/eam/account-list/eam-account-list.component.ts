@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Account} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -7,6 +7,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EamService} from '../service/eam.service';
 import {eamAccountListFeature} from './state/eam-account-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * The accounts.
@@ -19,6 +20,7 @@ import {eamAccountListFeature} from './state/eam-account-list.state';
     templateUrl: './eam-account-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EamAccountListComponent extends EuclidListComponent<Account> {
@@ -41,9 +43,9 @@ export class EamAccountListComponent extends EuclidListComponent<Account> {
                 {name: 'description', label: 'Description'},
             ],
             values => this.eamService.createAccount(
-                String(values['accountId']),
-                String(values['name']),
-                String(values['description']),
+                textOf(values['accountId']),
+                textOf(values['name']),
+                textOf(values['description']),
             ),
             'Account created',
         );

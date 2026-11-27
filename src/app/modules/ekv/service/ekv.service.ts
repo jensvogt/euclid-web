@@ -3,6 +3,7 @@ import {map, Observable} from 'rxjs';
 import type {Item, ScanResult, TableDescription} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, Page} from '../../../services/euclid-http.service';
+import {textFrom} from '../../../shared/text-utils';
 
 export const TARGET = 'ekv';
 
@@ -217,7 +218,7 @@ function itemOf(document: Record<string, unknown>): Item {
 
     return {
         attributes: attributes,
-        created: String(document[CREATED_ATTRIBUTE] ?? ''),
-        modified: String(document[MODIFIED_ATTRIBUTE] ?? ''),
+        created: textFrom(document[CREATED_ATTRIBUTE]),
+        modified: textFrom(document[MODIFIED_ATTRIBUTE]),
     };
 }

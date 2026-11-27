@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {ActivatedRoute, RouterLink} from '@angular/router';
@@ -20,6 +20,7 @@ import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.
 import {prettyPrint} from '../../../shared/text-utils.component';
 import {EnsService, topicNameOf} from '../service/ens.service';
 import {ensMessageDetailsActions, ensMessageDetailsSelectors} from './state/ens-message-details.state';
+import {textFrom} from '../../../shared/text-utils';
 
 /** One attribute, as the table shows it: euclid keys them by name, and a table wants rows. */
 export interface MessageAttributeRow {
@@ -48,6 +49,7 @@ export interface MessageAttributeRow {
     templateUrl: './ens-message-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -266,7 +268,7 @@ function attributeRows(attributes: Record<string, Variant> | undefined): Message
         .map(([name, variant]) => ({
             name: name,
             type: variant?.type ?? 'string',
-            value: variant?.value === null || variant?.value === undefined ? '' : String(variant.value),
+            value: textFrom(variant?.value),
         }))
         .sort((left, right) => left.name.localeCompare(right.name));
 }

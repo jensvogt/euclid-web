@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnChanges, Output, inject} from '@angular/core';
+import {Component, EventEmitter, Input, OnChanges, Output, inject, ChangeDetectionStrategy} from '@angular/core';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatIcon} from '@angular/material/icon';
@@ -10,6 +10,7 @@ import type {Grant, Role} from 'euclid-ndk';
 import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {EamService} from '../service/eam.service';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** What `["*"]` means in a grant's scope, and what an empty scope is shown as. */
 const EVERYTHING = '*';
@@ -32,6 +33,7 @@ const EVERYTHING = '*';
     templateUrl: './eam-grants.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [MatIconButton, MatIcon, MatTooltip, MatTableModule, MatPaginator, CdkCopyToClipboard],
 })
 export class EamGrantsComponent extends EuclidResourceComponent implements OnChanges {
@@ -171,10 +173,10 @@ export class EamGrantsComponent extends EuclidResourceComponent implements OnCha
                 },
             ],
             values => this.eamService.grantRole(
-                String(values['role']),
+                textOf(values['role']),
                 this.principal,
-                listOf(String(values['namespaces'])),
-                listOf(String(values['resources'])),
+                listOf(textOf(values['namespaces'])),
+                listOf(textOf(values['resources'])),
             ),
             'Role granted',
             'Grant',

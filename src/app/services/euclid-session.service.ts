@@ -276,9 +276,9 @@ function expiryOf(token: string): number | null {
 
 /** base64url to a UTF-8 string, which is what a JWT payload is encoded as. */
 function decodeBase64Url(value: string): string {
-    const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+    const base64 = value.replaceAll('-', '+').replaceAll('_', '/');
     const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
     const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    const bytes = Uint8Array.from(binary, char => char.codePointAt(0) ?? 0);
     return new TextDecoder().decode(bytes);
 }

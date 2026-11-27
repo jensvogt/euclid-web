@@ -1,4 +1,4 @@
-import {Component, Input, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, Input, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {MatCard, MatCardContent, MatCardHeader, MatCardTitle} from '@angular/material/card';
 import {NgxEchartsDirective, provideEchartsCore} from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -47,6 +47,7 @@ export type GatewaySeries = 'time' | 'count';
     styleUrls: ['./gateway-series.component.scss'],
     standalone: true,
     imports: [MatCard, MatCardHeader, MatCardTitle, MatCardContent, NgxEchartsDirective],
+    changeDetection: ChangeDetectionStrategy.Eager,
     providers: [provideEchartsCore({echarts})],
 })
 export class GatewaySeriesComponent implements OnInit, OnDestroy {
@@ -96,7 +97,7 @@ export class GatewaySeriesComponent implements OnInit, OnDestroy {
 
 /** Where it stands and where it has been, in the words the figure is read in. */
 function summaryOf(series: GatewaySeries, points: MetricPoint[]): string {
-    const latest = points[points.length - 1].value;
+    const latest = points.at(-1)?.value ?? 0;
     const worst = Math.max(...points.map(point => point.value));
     const cadence = ` — one point per ${RAW_PERIOD_MINUTES} minutes`;
     return series === 'time'

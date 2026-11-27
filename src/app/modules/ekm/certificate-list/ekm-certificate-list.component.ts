@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Certificate} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -14,6 +14,7 @@ import {ekmCertificateListFeature} from './state/ekm-certificate-list.state';
     templateUrl: './ekm-certificate-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EkmCertificateListComponent extends EuclidListComponent<Certificate> {

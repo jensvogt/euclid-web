@@ -61,7 +61,7 @@
                     <ng-container matColumnDef="expires">
                         <th *matHeaderCellDef mat-header-cell matTooltip="When that certificate expires">Expires</th>
                         <td *matCellDef="let listener" mat-cell>
-                            {{ dateConversion(listener.certificate?.notAfter) }}
+                            {{ dateConversion($safeNavigationMigration(listener.certificate?.notAfter)) }}
                             @if (expired(listener)) {
                                 <mat-icon class="copy-icon" matTooltip="This certificate has expired">warning</mat-icon>
                             }

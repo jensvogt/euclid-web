@@ -3,6 +3,7 @@ import {map, Observable} from 'rxjs';
 import type {Listener, Route} from 'euclid-ndk';
 
 import {EuclidHttpService, namespaceOf, Page} from '../../../services/euclid-http.service';
+import {textFrom} from '../../../shared/text-utils';
 
 export const TARGET = 'eag';
 
@@ -37,7 +38,7 @@ export class EagService {
                 const sorted = [...items].sort((left, right) => {
                     const a = (left as unknown as Record<string, unknown>)[sortColumn];
                     const b = (right as unknown as Record<string, unknown>)[sortColumn];
-                    return String(a ?? '').localeCompare(String(b ?? ''));
+                    return textFrom(a).localeCompare(textFrom(b));
                 });
                 if (sortDirection === 'desc') {
                     sorted.reverse();
@@ -131,21 +132,21 @@ function listenerOf(wire: Record<string, unknown>): Listener {
     return {
         namespace: namespaceOf(wire),
         port: Number(wire['port'] ?? 0),
-        protocol: String(wire['protocol'] ?? ''),
+        protocol: textFrom(wire['protocol']),
         serving: Boolean(wire['serving']),
-        certificateName: String(wire['certificate'] ?? ''),
-        certificateConfigured: String(wire['certificateConfigured'] ?? ''),
+        certificateName: textFrom(wire['certificate']),
+        certificateConfigured: textFrom(wire['certificateConfigured']),
         certificate: found
             ? {
-                ern: String(wire['certificateErn'] ?? ''),
-                subject: String(wire['certificateSubject'] ?? ''),
-                issuer: String(wire['certificateIssuer'] ?? ''),
-                serialNumber: String(wire['certificateSerialNumber'] ?? ''),
-                fingerprint: String(wire['certificateFingerprint'] ?? ''),
+                ern: textFrom(wire['certificateErn']),
+                subject: textFrom(wire['certificateSubject']),
+                issuer: textFrom(wire['certificateIssuer']),
+                serialNumber: textFrom(wire['certificateSerialNumber']),
+                fingerprint: textFrom(wire['certificateFingerprint']),
                 subjectAltNames: (wire['certificateSubjectAltNames'] as string[]) ?? [],
                 generated: Boolean(wire['certificateGenerated']),
-                notBefore: String(wire['certificateNotBefore'] ?? ''),
-                notAfter: String(wire['certificateNotAfter'] ?? ''),
+                notBefore: textFrom(wire['certificateNotBefore']),
+                notAfter: textFrom(wire['certificateNotAfter']),
                 expired: Boolean(wire['certificateExpired']),
             }
             : null,

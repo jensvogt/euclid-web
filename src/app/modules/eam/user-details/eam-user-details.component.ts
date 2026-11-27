@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -23,6 +23,7 @@ import {EamGrantsComponent} from '../grants/eam-grants.component';
 import {passwordFields, withMatchingPassword} from '../password/change-password';
 import {EamService} from '../service/eam.service';
 import {eamUserDetailsActions, eamUserDetailsSelectors} from './state/eam-user-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One user: who they are, what they may do, and what they are a member of.
@@ -40,6 +41,7 @@ import {eamUserDetailsActions, eamUserDetailsSelectors} from './state/eam-user-d
     templateUrl: './eam-user-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -117,7 +119,7 @@ export class EamUserDetailsComponent extends EuclidResourceComponent implements 
             own ? 'Change your password' : 'Reset the password for ' + user.userId,
             passwordFields(own),
             values => withMatchingPassword(values, password => own
-                ? this.eamService.changeOwnPassword(String(values['oldPassword']), password)
+                ? this.eamService.changeOwnPassword(textOf(values['oldPassword']), password)
                 : this.eamService.resetPassword(user.userId, password)),
             own ? 'Password changed' : 'Password reset',
             own ? 'Change' : 'Reset',
@@ -152,7 +154,7 @@ export class EamUserDetailsComponent extends EuclidResourceComponent implements 
                 required: true,
                 hint: 'The ERN, which the user group list can copy.',
             }],
-            values => this.eamService.addUserToUserGroup(String(values['group']), user.ern),
+            values => this.eamService.addUserToUserGroup(textOf(values['group']), user.ern),
             'Added to group',
             'Add',
         );

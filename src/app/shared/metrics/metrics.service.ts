@@ -138,7 +138,8 @@ function displayOf(row: MonitoringRow): string {
     if (labels.length === 0) {
         return row.name;
     }
-    return `${row.name}{${labels.map(([label, value]) => `${label}=${value}`).join(',')}}`;
+    const dimensions = labels.map(([label, value]) => `${label}=${value}`).join(',');
+    return `${row.name}{${dimensions}}`;
 }
 
 /**
@@ -177,7 +178,7 @@ function foldIntoBuckets(rows: MonitoringRow[], limit: number): MetricPoint[] {
     }
 
     // Fixed-width UTC ISO8601, so sorting the keys as text puts the buckets in order without parsing a date.
-    const ordered = [...buckets.keys()].sort();
+    const ordered = [...buckets.keys()].sort((left, right) => left.localeCompare(right));
 
     // A response that hit the row cap was cut newest-first, which leaves its oldest bucket holding only
     // some of its labels. It would plot as a dip that never happened, so it goes.
@@ -191,10 +192,14 @@ function foldIntoBuckets(rows: MonitoringRow[], limit: number): MetricPoint[] {
         if (!bucket) {
             continue;
         }
-        points.push({
-            timestamp: timestamp,
-            value: bucket.rate ? bucket.total : bucket.samples > 0 ? bucket.weighted / bucket.samples : 0,
-        });
+        // A counter's bucket is its sum; a gauge's is its sample-weighted mean, or nothing when unsampled.
+        let value = 0;
+        if (bucket.rate) {
+            value = bucket.total;
+        } else if (bucket.samples > 0) {
+            value = bucket.weighted / bucket.samples;
+        }
+        points.push({timestamp: timestamp, value: value});
     }
     return points;
 }
@@ -229,11 +234,11 @@ function readingsOf(rows: MonitoringRow[]): ModuleReadings {
 
     return {
         asOf: asOf,
-        latest: latest.sort((left, right) => left.display.localeCompare(right.display)),
+        latest: latest.toSorted((left, right) => left.display.localeCompare(right.display)),
         series: [...series.entries()]
             .map(([display, points]) => ({
                 display: display,
-                points: points.sort((left, right) => left.timestamp.localeCompare(right.timestamp)),
+                points: points.toSorted((left, right) => left.timestamp.localeCompare(right.timestamp)),
             }))
             .sort((left, right) => left.display.localeCompare(right.display)),
     };
@@ -277,7 +282,7 @@ export class MetricsService {
      */
     latest(metric: string): Observable<number | null> {
         return this.history(metric, 1).pipe(
-            map((points: MetricPoint[]) => points.length === 0 ? null : points[points.length - 1].value),
+            map((points: MetricPoint[]) => points.at(-1)?.value ?? null),
         );
     }
 

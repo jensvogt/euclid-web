@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {WorkerNode} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -30,6 +30,7 @@ import {eapNodeListFeature} from './state/eap-node-list.state';
     templateUrl: './eap-node-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
@@ -63,7 +64,7 @@ export class EapNodeListComponent extends EuclidListComponent<WorkerNode> {
     /** The host as a machine: what it runs on, and how much of it there is. */
     platform(node: WorkerNode): string {
         // The CPU count has its own column now, as it has in euclid-rui: this one is the machine.
-        return [node.os, node.arch].filter(part => part).join('/') || '-';
+        return [node.os, node.arch].filter(Boolean).join('/') || '-';
     }
 
     /** The machine's memory in use against what is installed, as of the node's last renewal. */

@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Topic} from 'euclid-ndk';
 
 import {byteConversion} from '../../../shared/byte-utils.component';
@@ -8,6 +8,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EnsService, INSTALLATION_RETENTION, RETENTION_FOREVER, retentionLabel, STOPPED} from '../service/ens.service';
 import {ensTopicListFeature} from './state/ens-topic-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The topics in the current namespace: what they hold, and whether they are delivering. */
 @Component({
@@ -15,6 +16,7 @@ import {ensTopicListFeature} from './state/ens-topic-list.state';
     templateUrl: './ens-topic-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EnsTopicListComponent extends EuclidListComponent<Topic> {
@@ -42,7 +44,7 @@ export class EnsTopicListComponent extends EuclidListComponent<Topic> {
         this.addThen(
             'Create topic',
             [{name: 'name', label: 'Name', required: true}],
-            values => this.ensService.createTopic(String(values['name'])),
+            values => this.ensService.createTopic(textOf(values['name'])),
             'Topic created',
         );
     }
@@ -51,7 +53,7 @@ export class EnsTopicListComponent extends EuclidListComponent<Topic> {
         this.addThen(
             'Publish to ' + topic.name,
             [{name: 'body', label: 'Body', required: true}],
-            values => this.ensService.publishMessage(topic.ern, String(values['body'])),
+            values => this.ensService.publishMessage(topic.ern, textOf(values['body'])),
             'Message published',
         );
     }

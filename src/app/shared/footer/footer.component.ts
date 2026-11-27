@@ -1,4 +1,4 @@
-import {Component, Input} from '@angular/core';
+import {Component, Input, ChangeDetectionStrategy} from '@angular/core';
 import {DatePipe} from '@angular/common';
 
 import {environment} from '../../../environments/environment';
@@ -9,6 +9,7 @@ import {EuclidSessionService} from '../../services/euclid-session.service';
     templateUrl: './footer.component.html',
     styleUrls: ['./footer.component.scss'],
     imports: [DatePipe],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: true,
 })
 export class FooterComponent {

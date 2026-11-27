@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -21,6 +21,7 @@ import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {DEFAULT_ADDRESS, EtsService, PROTOCOL_FTP, STATE_RUNNING} from '../service/ets.service';
 import {etsServerDetailsActions, etsServerDetailsSelectors} from './state/ets-server-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** Which of the three lists an entry belongs to, which is also the field `update-server` takes. */
 type Membership = 'userIds' | 'userGroups' | 'directories';
@@ -43,6 +44,7 @@ type Membership = 'userIds' | 'userGroups' | 'directories';
     templateUrl: './ets-server-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -141,7 +143,7 @@ export class EtsServerDetailsComponent extends EuclidResourceComponent implement
                 },
             ],
             values => this.etsService.updateServer(server.serverId, {
-                address: String(values['address']),
+                address: textOf(values['address']),
                 port: Number(values['port']),
             }),
             'Listener changed',
@@ -169,8 +171,8 @@ export class EtsServerDetailsComponent extends EuclidResourceComponent implement
                 },
             ],
             values => this.etsService.updateServer(server.serverId, {
-                bucket: String(values['bucket']),
-                homeDirectory: String(values['homeDirectory']),
+                bucket: textOf(values['bucket']),
+                homeDirectory: textOf(values['homeDirectory']),
             }),
             'Bucket changed',
             'Save',
@@ -187,7 +189,7 @@ export class EtsServerDetailsComponent extends EuclidResourceComponent implement
                 value: server.hostKey,
                 hint: 'The key this server presents to an SFTP client. Named, not carried - euclid keeps the material.',
             }],
-            values => this.etsService.updateServer(server.serverId, {hostKey: String(values['hostKey'])}),
+            values => this.etsService.updateServer(server.serverId, {hostKey: textOf(values['hostKey'])}),
             'Host key changed',
             'Save',
         );
@@ -256,7 +258,7 @@ export class EtsServerDetailsComponent extends EuclidResourceComponent implement
             title,
             [{name: 'entry', label: label, required: true, hint: hint}],
             values => {
-                const entry = String(values['entry']).trim();
+                const entry = textOf(values['entry']).trim();
                 const entries = server[membership] ?? [];
                 return this.etsService.updateServer(server.serverId, {
                     [membership]: entries.includes(entry) ? [...entries] : [...entries, entry],

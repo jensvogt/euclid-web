@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {Router, RouterLink} from '@angular/router';
 import {MatCard, MatCardContent} from '@angular/material/card';
 import {catchError, forkJoin, interval, map, Observable, of, Subscription} from 'rxjs';
@@ -51,6 +51,7 @@ export interface ModuleStatus {
     templateUrl: './module-stats.component.html',
     styleUrls: ['./module-stats.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [MatCard, MatCardContent, RouterLink],
 })
 export class ModuleStatsComponent implements OnInit, OnDestroy {
@@ -86,6 +87,14 @@ export class ModuleStatsComponent implements OnInit, OnDestroy {
     }
 
     /** Whether the module is running as asked - the one state worth colouring. */
+    /** The module's state in one word: held stopped on purpose, running, or neither. */
+    stateOf(status: ModuleStatus): string {
+        if (status.desiredStopped) {
+            return 'stopped';
+        }
+        return status.active ? 'active' : 'off';
+    }
+
     get unwell(): boolean {
         return this.status !== undefined && (!this.status.active || this.status.desiredStopped);
     }

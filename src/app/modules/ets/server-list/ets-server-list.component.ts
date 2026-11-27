@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {TransferServer} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -7,6 +7,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {DEFAULT_ADDRESS, EtsService, PROTOCOLS, PROTOCOL_SFTP, STATE_RUNNING} from '../service/ets.service';
 import {etsServerListFeature} from './state/ets-server-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * The transfer servers: FTP and SFTP in front of a bucket.
@@ -23,6 +24,7 @@ import {etsServerListFeature} from './state/ets-server-list.state';
     templateUrl: './ets-server-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EtsServerListComponent extends EuclidListComponent<TransferServer> {
@@ -72,13 +74,13 @@ export class EtsServerListComponent extends EuclidListComponent<TransferServer> 
                 },
             ],
             values => this.etsService.createServer(
-                String(values['serverId']),
-                String(values['bucket']),
+                textOf(values['serverId']),
+                textOf(values['bucket']),
                 Number(values['port']),
                 {
-                    protocol: String(values['protocol']),
-                    address: String(values['address']),
-                    homeDirectory: String(values['homeDirectory']),
+                    protocol: textOf(values['protocol']),
+                    address: textOf(values['address']),
+                    homeDirectory: textOf(values['homeDirectory']),
                 },
             ),
             'Transfer server created',

@@ -1,12 +1,13 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Secret, SecretValue} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {EssService} from '../service/ess.service';
+import {EssService, secretNamespace} from '../service/ess.service';
 import {essSecretListFeature} from './state/ess-secret-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * The secrets in the current namespace, as metadata.
@@ -20,6 +21,7 @@ import {essSecretListFeature} from './state/ess-secret-list.state';
     templateUrl: './ess-secret-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EssSecretListComponent extends EuclidListComponent<Secret> {
@@ -31,6 +33,7 @@ export class EssSecretListComponent extends EuclidListComponent<Secret> {
     revealed: {name: string; value: string} | null = null;
 
     protected readonly dateConversion = dateConversion;
+    protected readonly secretNamespace = secretNamespace;
 
     constructor(private readonly essService: EssService) {
         super();
@@ -55,10 +58,10 @@ export class EssSecretListComponent extends EuclidListComponent<Secret> {
                 },
             ],
             values => this.essService.createSecret(
-                String(values['name']),
-                String(values['value']),
-                String(values['description']),
-                String(values['keyErn']),
+                textOf(values['name']),
+                textOf(values['value']),
+                textOf(values['description']),
+                textOf(values['keyErn']),
             ),
             'Secret created',
         );
@@ -66,7 +69,7 @@ export class EssSecretListComponent extends EuclidListComponent<Secret> {
 
     /** Fetches one value. The only call in the app that brings a secret into the browser. */
     reveal(secret: Secret): void {
-        this.essService.getSecret(secret.name).subscribe({
+        this.essService.getSecret(secret).subscribe({
             next: (result: SecretValue) => {
                 this.revealed = {name: secret.name, value: result.value};
             },
@@ -82,7 +85,7 @@ export class EssSecretListComponent extends EuclidListComponent<Secret> {
         this.addThen(
             'Rotate ' + secret.name,
             [{name: 'value', label: 'New value', type: 'password', required: true}],
-            values => this.essService.rotateSecret(secret.name, String(values['value'])),
+            values => this.essService.rotateSecret(secret, textOf(values['value'])),
             'Secret rotated',
         );
     }
@@ -91,7 +94,7 @@ export class EssSecretListComponent extends EuclidListComponent<Secret> {
         this.addThen(
             'Description of ' + secret.name,
             [{name: 'description', label: 'Description', required: true, value: secret.description}],
-            values => this.essService.updateSecret(secret.name, {description: String(values['description'])}),
+            values => this.essService.updateSecret(secret, {description: textOf(values['description'])}),
             'Description changed',
         );
     }
@@ -102,7 +105,7 @@ export class EssSecretListComponent extends EuclidListComponent<Secret> {
                 title: 'Delete secret',
                 message: `Delete ${secret.name}? The value is gone for good; the key it was under is left alone.`,
             },
-            this.essService.deleteSecret(secret.name),
+            this.essService.deleteSecret(secret),
             'Secret deleted',
         );
     }

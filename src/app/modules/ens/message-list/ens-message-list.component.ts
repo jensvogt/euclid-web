@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import type {TopicMessage} from 'euclid-ndk';
 
@@ -8,6 +8,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EnsService} from '../service/ens.service';
 import {ensMessageListFeature} from './state/ens-message-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * The messages one topic has kept.
@@ -20,6 +21,7 @@ import {ensMessageListFeature} from './state/ens-message-list.state';
     templateUrl: './ens-message-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EnsMessageListComponent extends EuclidListComponent<TopicMessage> {
@@ -75,7 +77,7 @@ export class EnsMessageListComponent extends EuclidListComponent<TopicMessage> {
         this.addThen(
             'Publish a message',
             [{name: 'body', label: 'Body', required: true}],
-            values => this.ensService.publishMessage(this.topicErn, String(values['body'])),
+            values => this.ensService.publishMessage(this.topicErn, textOf(values['body'])),
             'Message published',
         );
     }

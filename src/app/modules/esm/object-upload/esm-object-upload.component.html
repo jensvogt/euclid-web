@@ -2,7 +2,7 @@
 <mat-dialog-content class="mat-typography">
 
     <!-- The input itself is never shown: a file picker is a button everywhere except in HTML. -->
-    <input #picker (change)="pick($event)" hidden type="file">
+    <input #picker (change)="pick($event)" aria-label="File to upload" hidden type="file">
     <div class="chosen">
         <button (click)="picker.click()" [disabled]="phase !== 'choosing'" mat-stroked-button type="button">
             Choose file
@@ -17,7 +17,7 @@
     <mat-form-field class="field" subscriptSizing="dynamic">
         <mat-label>Key</mat-label>
         <input (keyup.enter)="send()" (ngModelChange)="keyChanged()" [(ngModel)]="key"
-               [disabled]="phase !== 'choosing'" matInput name="key" type="text">
+               [disabled]="phase !== 'choosing'" aria-label="Key" matInput name="key" type="text">
         <mat-hint>What the object is called in the bucket. Slashes are part of the name, not directories.</mat-hint>
     </mat-form-field>
 
@@ -31,7 +31,7 @@
     <mat-form-field class="field" subscriptSizing="dynamic">
         <mat-label>Content type</mat-label>
         <input (keyup.enter)="send()" [(ngModel)]="contentType" [disabled]="phase !== 'choosing' || multipart"
-               matInput name="contentType" type="text">
+               aria-label="Content type" matInput name="contentType" type="text">
         @if (multipart) {
             <mat-hint>Not sent for a file this size: nothing in the multipart sequence carries one, so the
                 server decides.
@@ -78,7 +78,7 @@
             <mat-form-field class="field" subscriptSizing="dynamic">
                 <mat-label>Password for {{ userId }}</mat-label>
                 <input (keyup.enter)="signInAndResume()" [(ngModel)]="password" autocomplete="current-password"
-                       matInput name="password" type="password">
+                       aria-label="Password" matInput name="password" type="password">
             </mat-form-field>
         </div>
     }

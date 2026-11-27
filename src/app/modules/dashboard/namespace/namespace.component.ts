@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import {MatDialogActions, MatDialogClose, MatDialogContent, MatDialogRef, MatDialogTitle} from '@angular/material/dialog';
 import {FormsModule} from '@angular/forms';
 import {MatButton} from '@angular/material/button';
@@ -32,6 +32,7 @@ const NAMESPACE_PAGE_SIZE = 500;
     templateUrl: './namespace.component.html',
     styleUrls: ['./namespace.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         FormsModule,
         MatDialogTitle,

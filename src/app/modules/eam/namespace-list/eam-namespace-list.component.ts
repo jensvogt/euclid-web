@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import type {Namespace} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -8,6 +8,7 @@ import {ListFeature} from '../../../shared/list/list-feature';
 import {EuclidSessionService} from '../../../services/euclid-session.service';
 import {EamService} from '../service/eam.service';
 import {eamNamespaceListFeature} from './state/eam-namespace-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * The namespaces of the session's account.
@@ -20,6 +21,7 @@ import {eamNamespaceListFeature} from './state/eam-namespace-list.state';
     templateUrl: './eam-namespace-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EamNamespaceListComponent extends EuclidListComponent<Namespace> {
@@ -49,9 +51,9 @@ export class EamNamespaceListComponent extends EuclidListComponent<Namespace> {
                 {name: 'description', label: 'Description'},
             ],
             values => this.eamService.createNamespace(
-                String(values['accountId']),
-                String(values['name']),
-                String(values['description']),
+                textOf(values['accountId']),
+                textOf(values['name']),
+                textOf(values['description']),
             ),
             'Namespace created',
         );

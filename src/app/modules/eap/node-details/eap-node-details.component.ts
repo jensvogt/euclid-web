@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -41,6 +41,7 @@ import {eapNodeDetailsActions, eapNodeDetailsSelectors} from './state/eap-node-d
     templateUrl: './eap-node-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -108,7 +109,7 @@ export class EapNodeDetailsComponent extends EuclidResourceComponent implements 
 
     /** The host as a machine: what it runs on. */
     platform(node: WorkerNode): string {
-        return [node.os, node.arch].filter(part => part).join('/') || '-';
+        return [node.os, node.arch].filter(Boolean).join('/') || '-';
     }
 
     /** What the node offers, as the manager matches it against an application's node labels. */

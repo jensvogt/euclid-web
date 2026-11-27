@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {TableDescription} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -7,6 +7,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EkvService, KEY_STRING, KEY_TYPES} from '../service/ekv.service';
 import {ekvTableListFeature} from './state/ekv-table-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The tables in the current namespace, and the keys each is addressed by. */
 @Component({
@@ -14,6 +15,7 @@ import {ekvTableListFeature} from './state/ekv-table-list.state';
     templateUrl: './ekv-table-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EkvTableListComponent extends EuclidListComponent<TableDescription> {
@@ -44,11 +46,11 @@ export class EkvTableListComponent extends EuclidListComponent<TableDescription>
                 {name: 'sortKeyType', label: 'Sort key type', type: 'select', options: KEY_TYPES, value: KEY_STRING},
             ],
             values => this.ekvService.createTable(
-                String(values['name']),
-                String(values['partitionKey']),
-                String(values['partitionKeyType']),
-                String(values['sortKey']),
-                String(values['sortKeyType']),
+                textOf(values['name']),
+                textOf(values['partitionKey']),
+                textOf(values['partitionKeyType']),
+                textOf(values['sortKey']),
+                textOf(values['sortKeyType']),
             ),
             'Table created',
         );

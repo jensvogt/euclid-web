@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -28,6 +28,7 @@ import {
     MIN_LIFECYCLE_DAYS,
 } from '../service/esm.service';
 import {esmBucketDetailsActions, esmBucketDetailsSelectors} from './state/esm-bucket-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One bucket: everything it records, and everything that can be changed about it.
@@ -42,6 +43,7 @@ import {esmBucketDetailsActions, esmBucketDetailsSelectors} from './state/esm-bu
     templateUrl: './esm-bucket-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -145,7 +147,7 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
         this.addThen(
             'Rename ' + bucket.name,
             [{name: 'newName', label: 'New name', required: true, value: bucket.name}],
-            values => this.esmService.renameBucket(bucket.ern, String(values['newName'])).pipe(
+            values => this.esmService.renameBucket(bucket.ern, textOf(values['newName'])).pipe(
                 tap((result: RenameBucketResult) => {
                     this.ern = result.ern;
                     void this.router.navigate(['/esm-bucket-list', 'bucket', result.ern], {replaceUrl: true});
@@ -170,7 +172,7 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
                 label: 'Key ID',
                 hint: 'Leave empty and ESM creates a key for this bucket.',
             }],
-            values => this.esmService.enableEncryption(bucket.ern, String(values['keyId'])),
+            values => this.esmService.enableEncryption(bucket.ern, textOf(values['keyId'])),
             'Encryption enabled',
             'Encrypt',
         );
@@ -280,7 +282,7 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
                 {name: 'key', label: 'Key', required: true},
                 {name: 'value', label: 'Value'},
             ],
-            values => this.esmService.addBucketTag(bucket.ern, String(values['key']), String(values['value'])),
+            values => this.esmService.addBucketTag(bucket.ern, textOf(values['key']), textOf(values['value'])),
             'Tag added',
             'Add',
         );
@@ -297,7 +299,7 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
         this.addThen(
             'Edit ' + tag.key,
             [{name: 'value', label: 'Value', value: tag.value, hint: 'Currently ' + (tag.value || 'empty')}],
-            values => this.esmService.setBucketTag(bucket.ern, tag.key, String(values['value'])),
+            values => this.esmService.setBucketTag(bucket.ern, tag.key, textOf(values['value'])),
             'Tag changed',
             'Save',
         );
@@ -353,8 +355,8 @@ export class EsmBucketDetailsComponent extends EuclidResourceComponent implement
             ],
             values => {
                 const changed: LifecycleRule = {
-                    id: rule ? rule.id : String(values['id']).trim(),
-                    prefix: String(values['prefix'] ?? ''),
+                    id: rule ? rule.id : textOf(values['id']).trim(),
+                    prefix: textOf(values['prefix'] ?? ''),
                     archiveAfterDays: Number(values['archiveAfterDays']),
                     restoreDays: Number(values['restoreDays']),
                     enabled: values['enabled'] === true,

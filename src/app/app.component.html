@@ -3,7 +3,7 @@
         <a href="/dashboard" style="color:white;text-decoration:none">Euclid Web</a>
         <mat-form-field class="input-parent" style="margin-left:40px; margin-right: 10px; font-size: 12px;" subscriptSizing="dynamic">
             <mat-label>Module</mat-label>
-            <input (keyup.enter)="navigateMenu()" [(ngModel)]="module" matInput name="search" placeholder="eqs, esm, ens..." type="text">
+            <input (keyup.enter)="navigateMenu()" [(ngModel)]="module" matInput name="search" aria-label="Module" placeholder="eqs, esm, ens..." type="text">
         </mat-form-field>
     </div>
     <div style="display: flex; flex-direction: row; align-content: center; justify-content: right; align-items: end;width: 100%;">

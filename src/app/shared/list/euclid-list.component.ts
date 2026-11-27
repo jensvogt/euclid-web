@@ -210,7 +210,7 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
 
         this.dialog.open(AutoReloadComponent, dialogConfig).afterClosed().subscribe(result => {
             if (result) {
-                this.startAutoReload(parseInt(result, 10));
+                this.startAutoReload(Number.parseInt(result, 10));
             }
         });
     }
@@ -223,6 +223,6 @@ export abstract class EuclidListComponent<T> extends EuclidResourceComponent imp
 
 /** The configured reload period, or a minute when nothing sensible is configured. */
 export function autoReloadPeriod(): number {
-    const stored = parseInt(localStorage.getItem('autoReload') ?? '', 10);
+    const stored = Number.parseInt(localStorage.getItem('autoReload') ?? '', 10);
     return Number.isFinite(stored) && stored >= MIN_AUTO_RELOAD_MS ? stored : 60000;
 }

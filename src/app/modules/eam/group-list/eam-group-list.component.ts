@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {UserGroup} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -7,6 +7,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EamService} from '../service/eam.service';
 import {eamGroupListFeature} from './state/eam-group-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The user groups, and who is in them. Creating and deleting one is administrator-only. */
 @Component({
@@ -14,6 +15,7 @@ import {eamGroupListFeature} from './state/eam-group-list.state';
     templateUrl: './eam-group-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EamGroupListComponent extends EuclidListComponent<UserGroup> {
@@ -34,7 +36,7 @@ export class EamGroupListComponent extends EuclidListComponent<UserGroup> {
                 {name: 'name', label: 'Name', required: true},
                 {name: 'description', label: 'Description'},
             ],
-            values => this.eamService.createUserGroup(String(values['name']), String(values['description'])),
+            values => this.eamService.createUserGroup(textOf(values['name']), textOf(values['description'])),
             'User group created',
         );
     }
@@ -44,7 +46,7 @@ export class EamGroupListComponent extends EuclidListComponent<UserGroup> {
         this.addThen(
             'Add a user to ' + group.name,
             [{name: 'user', label: 'User ERN', required: true, hint: 'The ERN, which the user list can copy.'}],
-            values => this.eamService.addUserToUserGroup(group.ern, String(values['user'])),
+            values => this.eamService.addUserToUserGroup(group.ern, textOf(values['user'])),
             'User added to group',
         );
     }
@@ -53,7 +55,7 @@ export class EamGroupListComponent extends EuclidListComponent<UserGroup> {
         this.addThen(
             'Remove a user from ' + group.name,
             [{name: 'user', label: 'User ERN', required: true}],
-            values => this.eamService.removeUserFromUserGroup(group.ern, String(values['user'])),
+            values => this.eamService.removeUserFromUserGroup(group.ern, textOf(values['user'])),
             'User removed from group',
         );
     }

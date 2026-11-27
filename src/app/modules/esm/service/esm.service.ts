@@ -88,7 +88,7 @@ export function isLevel(prefix: string): boolean {
 /** The last segment of a directory path: `2026/01/` is `01`. */
 export function levelName(path: string): string {
     const segments = path.split(LEVEL_SEPARATOR).filter(segment => segment !== '');
-    return segments.length === 0 ? '' : segments[segments.length - 1];
+    return segments.at(-1) ?? '';
 }
 
 /** What the server holds a rule's two periods to. */
@@ -249,9 +249,9 @@ export class EsmService {
             // and names the figure `count` or `objects` depending on the action. This UI reads the raw
             // answer, so the renaming is its own to do.
             map((result: Record<string, unknown>) => ({
-                ern: String(result['ern'] ?? ''),
+                ern: typeof result['ern'] === 'string' ? result['ern'] : '',
                 count: Number(result['count'] ?? result['objects'] ?? 0),
-                jobId: String(result['jobId'] ?? ''),
+                jobId: typeof result['jobId'] === 'string' ? result['jobId'] : '',
                 background: Boolean(result['async']),
             })),
         );

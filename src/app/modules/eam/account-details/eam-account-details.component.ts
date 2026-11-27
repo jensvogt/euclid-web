@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -22,6 +22,7 @@ import {EuclidSessionService} from '../../../services/euclid-session.service';
 import {EamGrantsComponent} from '../grants/eam-grants.component';
 import {EamService} from '../service/eam.service';
 import {eamAccountDetailsActions, eamAccountDetailsSelectors} from './state/eam-account-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One account: what is under it, and what is granted in it.
@@ -36,6 +37,7 @@ import {eamAccountDetailsActions, eamAccountDetailsSelectors} from './state/eam-
     templateUrl: './eam-account-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -138,8 +140,8 @@ export class EamAccountDetailsComponent extends EuclidResourceComponent implemen
             ],
             values => this.eamService.createNamespace(
                 account.accountId,
-                String(values['name']),
-                String(values['description']),
+                textOf(values['name']),
+                textOf(values['description']),
             ),
             'Namespace created',
             'Create',

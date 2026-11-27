@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {RouterLink} from '@angular/router';
 import {MatCard, MatCardContent, MatCardHeader, MatCardTitle} from '@angular/material/card';
 import {MatButton} from '@angular/material/button';
@@ -8,6 +8,7 @@ import {MatButton} from '@angular/material/button';
     templateUrl: './not-found.component.html',
     styleUrls: ['./not-found.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [MatCard, MatCardHeader, MatCardTitle, MatCardContent, MatButton, RouterLink],
 })
 export class NotFoundComponent {

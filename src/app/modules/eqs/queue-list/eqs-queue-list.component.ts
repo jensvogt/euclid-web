@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Queue} from 'euclid-ndk';
 
 import {byteConversion} from '../../../shared/byte-utils.component';
@@ -8,6 +8,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {DEFAULT_MAX_RETRIES, DEFAULT_VISIBILITY, EqsService, STOPPED} from '../service/eqs.service';
 import {eqsQueueListFeature} from './state/eqs-queue-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The queues in the current namespace: how deep each is, and what can be done about it. */
 @Component({
@@ -15,6 +16,7 @@ import {eqsQueueListFeature} from './state/eqs-queue-list.state';
     templateUrl: './eqs-queue-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EqsQueueListComponent extends EuclidListComponent<Queue> {
@@ -44,10 +46,10 @@ export class EqsQueueListComponent extends EuclidListComponent<Queue> {
                 {name: 'delay', label: 'Delivery delay (s)', type: 'number', value: 0},
             ],
             values => this.eqsService.createQueue(
-                String(values['name']),
+                textOf(values['name']),
                 Number(values['visibility']),
                 Number(values['maxRetries']),
-                String(values['dlqName']),
+                textOf(values['dlqName']),
                 Number(values['delay']),
             ),
             'Queue created',
@@ -58,7 +60,7 @@ export class EqsQueueListComponent extends EuclidListComponent<Queue> {
         this.addThen(
             'Send a message to ' + queue.name,
             [{name: 'body', label: 'Body', required: true}],
-            values => this.eqsService.sendMessage(queue.ern, String(values['body'])),
+            values => this.eqsService.sendMessage(queue.ern, textOf(values['body'])),
             'Message sent',
         );
     }

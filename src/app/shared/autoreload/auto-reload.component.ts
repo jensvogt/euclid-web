@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {MatDialogActions, MatDialogClose, MatDialogContent, MatDialogRef, MatDialogTitle} from '@angular/material/dialog';
 import {FormsModule} from '@angular/forms';
 import {MatFormField, MatLabel} from '@angular/material/form-field';
@@ -12,6 +12,7 @@ export const MIN_AUTO_RELOAD_MS = 10000;
     selector: 'auto-reload-component',
     templateUrl: './auto-reload.component.html',
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         FormsModule,
         MatDialogTitle,
@@ -31,7 +32,7 @@ export class AutoReloadComponent {
     constructor(private readonly dialogRef: MatDialogRef<AutoReloadComponent>) {
         const stored = localStorage.getItem('autoReload');
         if (stored !== null) {
-            this.autoReload = parseInt(stored, 10) / 1000;
+            this.autoReload = Number.parseInt(stored, 10) / 1000;
         }
     }
 

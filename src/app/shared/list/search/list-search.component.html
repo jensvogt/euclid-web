@@ -19,7 +19,7 @@
 
     <mat-form-field class="search-field">
         <mat-label>{{ label }}</mat-label>
-        <input (keyup.enter)="search()" [(ngModel)]="list.prefixValue" [placeholder]="placeholder" matInput
+        <input (keyup.enter)="search()" [(ngModel)]="list.prefixValue" [attr.aria-label]="label" [placeholder]="placeholder" matInput
                name="search" type="text">
         @if (list.prefixSet) {
             <button (click)="list.unsetPrefix()" aria-label="Clear" mat-icon-button matSuffix type="button">

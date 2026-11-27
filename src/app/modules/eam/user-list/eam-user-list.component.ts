@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import type {User} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -9,6 +9,7 @@ import {ListFeature} from '../../../shared/list/list-feature';
 import {passwordFields, withMatchingPassword} from '../password/change-password';
 import {EamService} from '../service/eam.service';
 import {eamUserListFeature} from './state/eam-user-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The users, and what each of them has been granted. */
 @Component({
@@ -16,6 +17,7 @@ import {eamUserListFeature} from './state/eam-user-list.state';
     templateUrl: './eam-user-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EamUserListComponent extends EuclidListComponent<User> {
@@ -46,9 +48,9 @@ export class EamUserListComponent extends EuclidListComponent<User> {
                 {name: 'isAdmin', label: 'Administrator', type: 'boolean'},
             ],
             values => this.eamService.register(
-                String(values['userId']),
-                String(values['password']),
-                String(values['email']),
+                textOf(values['userId']),
+                textOf(values['password']),
+                textOf(values['email']),
                 Boolean(values['isAdmin']),
             ),
             'User created',
@@ -69,7 +71,7 @@ export class EamUserListComponent extends EuclidListComponent<User> {
             own ? 'Change your password' : 'Reset the password for ' + user.userId,
             passwordFields(own),
             values => withMatchingPassword(values, password => own
-                ? this.eamService.changeOwnPassword(String(values['oldPassword']), password)
+                ? this.eamService.changeOwnPassword(textOf(values['oldPassword']), password)
                 : this.eamService.resetPassword(user.userId, password)),
             own ? 'Password changed' : 'Password reset',
             own ? 'Change' : 'Reset',

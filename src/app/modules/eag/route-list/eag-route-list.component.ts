@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Route} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -7,6 +7,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EagService, HTTP_METHODS, ROUTE_AUTHENTICATION, ROUTE_AUTH_NONE} from '../service/eag.service';
 import {eagRouteListFeature} from './state/eag-route-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The paths the gateway publishes, and what each of them reaches. */
 @Component({
@@ -14,6 +15,7 @@ import {eagRouteListFeature} from './state/eag-route-list.state';
     templateUrl: './eag-route-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EagRouteListComponent extends EuclidListComponent<Route> {
@@ -45,11 +47,11 @@ export class EagRouteListComponent extends EuclidListComponent<Route> {
                 {name: 'authentication', label: 'Authentication', type: 'select', options: ROUTE_AUTHENTICATION, value: ROUTE_AUTH_NONE},
             ],
             values => this.eagService.createRoute(
-                String(values['routeId']),
-                String(values['path']),
-                String(values['applicationId']),
-                methodsOf(String(values['methods'])),
-                String(values['authentication']),
+                textOf(values['routeId']),
+                textOf(values['path']),
+                textOf(values['applicationId']),
+                methodsOf(textOf(values['methods'])),
+                textOf(values['authentication']),
             ),
             'Route published',
         );
@@ -68,12 +70,12 @@ export class EagRouteListComponent extends EuclidListComponent<Route> {
                 {name: 'authentication', label: 'Authentication', type: 'select', options: ROUTE_AUTHENTICATION, value: ROUTE_AUTH_NONE},
             ],
             values => this.eagService.createModuleRoute(
-                String(values['routeId']),
-                String(values['path']),
-                String(values['moduleTarget']),
-                String(values['moduleAction']),
-                methodsOf(String(values['methods'])),
-                String(values['authentication']),
+                textOf(values['routeId']),
+                textOf(values['path']),
+                textOf(values['moduleTarget']),
+                textOf(values['moduleAction']),
+                methodsOf(textOf(values['methods'])),
+                textOf(values['authentication']),
             ),
             'Module route published',
         );

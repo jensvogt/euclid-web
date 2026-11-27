@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {MatCard, MatCardContent, MatCardHeader, MatCardTitle} from '@angular/material/card';
 import {MatTooltip} from '@angular/material/tooltip';
 import {NgxEchartsDirective, provideEchartsCore} from 'ngx-echarts';
@@ -60,6 +60,7 @@ const TRACK = 'rgba(0, 0, 0, 0.08)';
     styleUrls: ['./system-load.component.scss'],
     standalone: true,
     imports: [MatCard, MatCardHeader, MatCardTitle, MatCardContent, NgxEchartsDirective, MatTooltip],
+    changeDetection: ChangeDetectionStrategy.Eager,
     providers: [provideEchartsCore({echarts})],
 })
 export class SystemLoadComponent implements OnInit, OnDestroy {

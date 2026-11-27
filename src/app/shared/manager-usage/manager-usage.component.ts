@@ -1,4 +1,4 @@
-import {Component, Input, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, Input, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {MatCard, MatCardContent, MatCardHeader, MatCardTitle} from '@angular/material/card';
 import {NgxEchartsDirective, provideEchartsCore} from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -55,6 +55,7 @@ export type ManagerUsage = 'cpu' | 'memory';
     styleUrls: ['./manager-usage.component.scss'],
     standalone: true,
     imports: [MatCard, MatCardHeader, MatCardTitle, MatCardContent, NgxEchartsDirective],
+    changeDetection: ChangeDetectionStrategy.Eager,
     providers: [provideEchartsCore({echarts})],
 })
 export class ManagerUsageComponent implements OnInit, OnDestroy {
@@ -91,7 +92,7 @@ export class ManagerUsageComponent implements OnInit, OnDestroy {
                     this.options = {};
                     return;
                 }
-                const latest = points[points.length - 1].value;
+                const latest = points.at(-1)?.value ?? 0;
                 const worst = Math.max(...points.map(point => point.value));
                 this.summary = `${latest.toFixed(1)}% last reading, ${worst.toFixed(1)}% at its highest`
                     + ` — one point per ${RAW_PERIOD_MINUTES} minutes`;

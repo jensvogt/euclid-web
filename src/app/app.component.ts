@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {Router} from '@angular/router';
 import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
 
@@ -25,6 +25,7 @@ const MODULE_LANDING: Record<string, string> = {
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false,
 })
 export class AppComponent {
@@ -40,7 +41,7 @@ export class AppComponent {
         if (!localStorage.getItem('namespace')) {
             localStorage.setItem('namespace', '');
         }
-        const autoReload = parseInt(localStorage.getItem('autoReload') ?? '', 10);
+        const autoReload = Number.parseInt(localStorage.getItem('autoReload') ?? '', 10);
         if (!Number.isFinite(autoReload) || autoReload < MIN_AUTO_RELOAD_MS) {
             localStorage.setItem('autoReload', '60000');
         }
@@ -58,17 +59,17 @@ export class AppComponent {
     /** Jumps to a module by name, the way awsmock-ui's toolbar jumps to a service. */
     navigateMenu() {
         const name = this.module.trim().toLowerCase();
-        this.router.navigate([MODULE_LANDING[name] ?? '/' + name]);
+        void this.router.navigate([MODULE_LANDING[name] ?? '/' + name]);
         this.module = '';
     }
 
     home() {
-        this.router.navigate(['/']);
+        void this.router.navigate(['/']);
     }
 
     logout() {
         this.session.logout();
-        this.router.navigate(['/login']);
+        void this.router.navigate(['/login']);
     }
 
     /** The namespace every namespace-scoped call is restricted to. A round trip - the server validates it. */

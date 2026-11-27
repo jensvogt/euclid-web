@@ -2,7 +2,7 @@
 <mat-dialog-content class="mat-typography">
     <mat-form-field style="width: 100%">
         <mat-label>Auto Reload (s)</mat-label>
-        <input (keyup.enter)="save()" [(ngModel)]="autoReload" matInput type="number">
+        <input (keyup.enter)="save()" [(ngModel)]="autoReload" aria-label="Auto reload period in seconds" matInput type="number">
     </mat-form-field>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

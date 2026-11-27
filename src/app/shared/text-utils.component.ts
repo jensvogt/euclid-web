@@ -103,7 +103,7 @@ function writeElement(element: Element, depth: number, lines: string[]): void {
 /** An element's attributes, in the order the document had them, with their values escaped. */
 function attributesOf(element: Element): string {
     return Array.from(element.attributes)
-        .map(attribute => ` ${attribute.name}="${escapeText(attribute.value).replace(/"/g, '&quot;')}"`)
+        .map(attribute => ` ${attribute.name}="${escapeText(attribute.value).replaceAll('"', '&quot;')}"`)
         .join('');
 }
 
@@ -130,5 +130,5 @@ function textOf(node: ChildNode): string {
 
 /** The three characters that cannot appear in XML text as themselves. */
 function escapeText(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }

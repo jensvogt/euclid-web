@@ -4,6 +4,7 @@ import type {Queue, QueueMessage} from 'euclid-ndk';
 
 import {EuclidHttpService, ListQuery, listPayload, PageQuery, pagePayload, Page} from '../../../services/euclid-http.service';
 import {EuclidSessionService} from '../../../services/euclid-session.service';
+import {textFrom} from '../../../shared/text-utils';
 
 export const TARGET = 'eqs';
 
@@ -220,5 +221,5 @@ export function queueNameOf(ern: string): string {
  */
 function queueOf(queue: Queue): Queue {
     const wire = queue as unknown as Record<string, unknown>;
-    return {...queue, deadLetterQueueErn: queue.deadLetterQueueErn ?? String(wire['deadLetterQueueArn'] ?? '')};
+    return {...queue, deadLetterQueueErn: queue.deadLetterQueueErn ?? textFrom(wire['deadLetterQueueArn'])};
 }

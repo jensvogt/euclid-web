@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {MatCard, MatCardContent, MatCardHeader, MatCardTitle} from '@angular/material/card';
 import {NgxEchartsDirective, provideEchartsCore} from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -41,6 +41,7 @@ const TODAY_COLOUR = '#004a9f';
     styleUrls: ['./weekly-traffic.component.scss'],
     standalone: true,
     imports: [MatCard, MatCardHeader, MatCardTitle, MatCardContent, NgxEchartsDirective],
+    changeDetection: ChangeDetectionStrategy.Eager,
     providers: [provideEchartsCore({echarts})],
 })
 export class WeeklyTrafficComponent implements OnInit, OnDestroy {

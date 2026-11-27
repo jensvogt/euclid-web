@@ -15,7 +15,7 @@
                 </div>
                 <div class="figure">
                     <span class="number" [class.unfinished]="unwell">
-                        {{ status.desiredStopped ? 'stopped' : status.active ? 'active' : 'off' }}
+                        {{ stateOf(status) }}
                     </span>
                     <span class="caption">
                         @if (status.desiredStopped) {

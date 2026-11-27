@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -19,6 +19,8 @@ import {FooterComponent} from '../../../shared/footer/footer.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {EkvService, keyValueOf, SORT_OPERATORS, SortOperator} from '../service/ekv.service';
 import {ekvTableDetailsActions, ekvTableDetailsSelectors, ItemRequest} from './state/ekv-table-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
+import {textFrom} from '../../../shared/text-utils';
 
 /**
  * One table: what it is keyed on, and what is in it.
@@ -36,6 +38,7 @@ import {ekvTableDetailsActions, ekvTableDetailsSelectors, ItemRequest} from './s
     templateUrl: './ekv-table-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -136,12 +139,12 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
     get reading(): string {
         if (this.request.mode === 'query') {
             const sort = this.request.sortOperator
-                ? `, sort key ${this.request.sortOperator} ${String(this.request.sortValue)}`
+                ? `, sort key ${this.request.sortOperator} ${textFrom(this.request.sortValue)}`
                 : '';
-            return `Partition ${String(this.request.partitionKey)}${sort}`;
+            return `Partition ${textFrom(this.request.partitionKey)}${sort}`;
         }
         const narrowed = this.request.attributeName
-            ? `${this.request.attributeName} ${this.request.attributeOperator} ${String(this.request.attributeValue)}`
+            ? `${this.request.attributeName} ${this.request.attributeOperator} ${textFrom(this.request.attributeValue)}`
             : '';
         const since = this.request.modifiedFrom || this.request.modifiedTo
             ? `modified ${this.request.modifiedFrom || 'any'} to ${this.request.modifiedTo || 'now'}`
@@ -186,18 +189,18 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
             ],
             'Query',
             values => {
-                const operator = String(values['sortOperator'] ?? '') as SortOperator | '';
+                const operator = textOf(values['sortOperator'] ?? '') as SortOperator | '';
                 this.pageIndex = 0;
                 this.request = {
                     mode: 'query',
                     table: table.name,
                     pageSize: this.pageSize,
                     pageIndex: 0,
-                    partitionKey: keyValueOf(table.partitionKeyType, String(values['partitionKey']).trim()),
+                    partitionKey: keyValueOf(table.partitionKeyType, textOf(values['partitionKey']).trim()),
                     sortOperator: operator === '' ? undefined : operator,
-                    sortValue: operator === '' ? undefined : keyValueOf(table.sortKeyType, String(values['sortValue'] ?? '')),
+                    sortValue: operator === '' ? undefined : keyValueOf(table.sortKeyType, textOf(values['sortValue'] ?? '')),
                     sortUpper: operator === 'between'
-                        ? keyValueOf(table.sortKeyType, String(values['sortUpper'] ?? ''))
+                        ? keyValueOf(table.sortKeyType, textOf(values['sortUpper'] ?? ''))
                         : undefined,
                     forward: values['forward'] === true,
                 };
@@ -245,25 +248,25 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
             ],
             'Scan',
             values => {
-                const name = String(values['attributeName'] ?? '').trim();
-                const text = String(values['attributeValue'] ?? '');
+                const name = textOf(values['attributeName'] ?? '').trim();
+                const text = textOf(values['attributeValue'] ?? '');
                 this.pageIndex = 0;
                 this.request = {
                     mode: 'scan',
                     table: table.name,
                     pageSize: this.pageSize,
                     pageIndex: 0,
-                    sortColumn: String(values['sortColumn'] ?? ''),
+                    sortColumn: textOf(values['sortColumn'] ?? ''),
                     sortDirection: values['sortDirection'] === 'desc' ? 'desc' : 'asc',
-                    modifiedFrom: String(values['modifiedFrom'] ?? '').trim(),
-                    modifiedTo: String(values['modifiedTo'] ?? '').trim(),
+                    modifiedFrom: textOf(values['modifiedFrom'] ?? '').trim(),
+                    modifiedTo: textOf(values['modifiedTo'] ?? '').trim(),
                     attributeName: name,
-                    attributeOperator: name ? String(values['attributeOperator'] ?? 'eq') as SortOperator : undefined,
+                    attributeOperator: name ? textOf(values['attributeOperator'] ?? 'eq') as SortOperator : undefined,
                     // Typed the way the key it may be is declared, and left as text otherwise: an
                     // attribute is whatever was written, and the server compares it as what it is.
                     attributeValue: name ? typedAttribute(table, name, text) : undefined,
                     attributeUpper: name && values['attributeOperator'] === 'between'
-                        ? typedAttribute(table, name, String(values['attributeUpper'] ?? ''))
+                        ? typedAttribute(table, name, textOf(values['attributeUpper'] ?? ''))
                         : undefined,
                 };
                 this.scan();
@@ -283,7 +286,10 @@ export class EkvTableDetailsComponent extends EuclidResourceComponent implements
     /** One key attribute of an item, as text. A key is a string, a number or bytes; a cell is text. */
     keyValue(item: Item, key: string): string {
         const value = item.attributes?.[key];
-        return value === null || value === undefined ? '-' : String(value);
+        if (value === null || value === undefined) {
+            return '-';
+        }
+        return textFrom(value);
     }
 
     /**

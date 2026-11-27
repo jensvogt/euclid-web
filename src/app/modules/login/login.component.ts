@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 import {MatButton} from '@angular/material/button';
@@ -41,6 +41,7 @@ const NAMESPACE_PAGE_SIZE = 500;
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         FormsModule,
         MatCard,
@@ -205,9 +206,13 @@ export class LoginComponent {
                 this.accounts = mine.accounts;
                 this.homeAccountId = mine.homeAccountId;
                 const known = (id: string) => mine.accounts.some((account: Account) => account.accountId === id);
-                this.accountId = known(this.rememberedAccount) ? this.rememberedAccount
-                    : known(mine.homeAccountId) ? mine.homeAccountId
-                        : mine.accounts[0]?.accountId ?? this.session.session?.accountId ?? '';
+                if (known(this.rememberedAccount)) {
+                    this.accountId = this.rememberedAccount;
+                } else if (known(mine.homeAccountId)) {
+                    this.accountId = mine.homeAccountId;
+                } else {
+                    this.accountId = mine.accounts[0]?.accountId ?? this.session.session?.accountId ?? '';
+                }
                 this.useAccount(this.accountId);
             },
             error: () => {
@@ -252,6 +257,6 @@ export class LoginComponent {
 
     private navigate(): void {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-        this.router.navigateByUrl(returnUrl ?? '/dashboard');
+        void this.router.navigateByUrl(returnUrl ?? '/dashboard');
     }
 }

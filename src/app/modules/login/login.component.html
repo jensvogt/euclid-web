@@ -7,11 +7,11 @@
             @if (!signedIn) {
                 <mat-form-field class="field">
                     <mat-label>User</mat-label>
-                    <input (keyup.enter)="login()" [(ngModel)]="userId" autocomplete="username" matInput name="userId">
+                    <input (keyup.enter)="login()" [(ngModel)]="userId" aria-label="User" autocomplete="username" matInput name="userId">
                 </mat-form-field>
                 <mat-form-field class="field">
                     <mat-label>Password</mat-label>
-                    <input (keyup.enter)="login()" [(ngModel)]="password" autocomplete="current-password" matInput
+                    <input (keyup.enter)="login()" [(ngModel)]="password" aria-label="Password" autocomplete="current-password" matInput
                            name="password" type="password">
                 </mat-form-field>
             } @else {

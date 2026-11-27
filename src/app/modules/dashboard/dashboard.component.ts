@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import {interval, Subscription} from 'rxjs';
 
 import {EuclidSessionService} from '../../services/euclid-session.service';
@@ -9,6 +9,7 @@ import {EUCLID_MODULES} from '../../shared/metrics/euclid-modules';
     selector: 'dashboard-component',
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false,
 })
 export class DashboardComponent implements OnInit, OnDestroy {

@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -20,6 +20,7 @@ import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.
 import {ResourceTag, ResourceTagsComponent} from '../../../shared/tags/resource-tags.component';
 import {EqsService, MAX_QUEUE_DELAY, queueNameOf, STOPPED} from '../service/eqs.service';
 import {eqsQueueDetailsActions, eqsQueueDetailsSelectors} from './state/eqs-queue-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One queue: what is on it, what it is set to, and everything that can be changed about it.
@@ -34,6 +35,7 @@ import {eqsQueueDetailsActions, eqsQueueDetailsSelectors} from './state/eqs-queu
     templateUrl: './eqs-queue-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -108,7 +110,7 @@ export class EqsQueueDetailsComponent extends EuclidResourceComponent implements
         this.addThen(
             'Send a message to ' + queue.name,
             [{name: 'body', label: 'Body', required: true}],
-            values => this.eqsService.sendMessage(queue.ern, String(values['body'])),
+            values => this.eqsService.sendMessage(queue.ern, textOf(values['body'])),
             'Message sent',
             'Send',
         );
@@ -233,7 +235,7 @@ export class EqsQueueDetailsComponent extends EuclidResourceComponent implements
                 {name: 'key', label: 'Key', required: true},
                 {name: 'value', label: 'Value'},
             ],
-            values => this.eqsService.addQueueTag(queue.ern, String(values['key']), String(values['value'])),
+            values => this.eqsService.addQueueTag(queue.ern, textOf(values['key']), textOf(values['value'])),
             'Tag added',
             'Add',
         );
@@ -244,7 +246,7 @@ export class EqsQueueDetailsComponent extends EuclidResourceComponent implements
         this.addThen(
             'Edit ' + tag.key,
             [{name: 'value', label: 'Value', value: tag.value, hint: 'Currently ' + (tag.value || 'empty')}],
-            values => this.eqsService.setQueueTag(queue.ern, tag.key, String(values['value'])),
+            values => this.eqsService.setQueueTag(queue.ern, tag.key, textOf(values['value'])),
             'Tag changed',
             'Save',
         );

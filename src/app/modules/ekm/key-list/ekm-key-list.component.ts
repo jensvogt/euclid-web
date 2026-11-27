@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Key} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -7,6 +7,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {AES, DEFAULT_KEY_LENGTH, DEFAULT_PENDING_WINDOW_DAYS, EkmService} from '../service/ekm.service';
 import {ekmKeyListFeature} from './state/ekm-key-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The encryption keys in the current namespace. Never their material - that does not leave the server. */
 @Component({
@@ -14,6 +15,7 @@ import {ekmKeyListFeature} from './state/ekm-key-list.state';
     templateUrl: './ekm-key-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EkmKeyListComponent extends EuclidListComponent<Key> {
@@ -42,8 +44,8 @@ export class EkmKeyListComponent extends EuclidListComponent<Key> {
                 {name: 'length', label: 'Length (bits)', type: 'number', value: DEFAULT_KEY_LENGTH},
             ],
             values => this.ekmService.createKey(
-                String(values['description']),
-                String(values['algorithm']),
+                textOf(values['description']),
+                textOf(values['algorithm']),
                 Number(values['length']),
             ),
             'Key created',
@@ -54,7 +56,7 @@ export class EkmKeyListComponent extends EuclidListComponent<Key> {
         this.addThen(
             'Description of ' + key.name,
             [{name: 'description', label: 'Description', required: true, value: key.description}],
-            values => this.ekmService.setKeyDescription(key.ern, String(values['description'])),
+            values => this.ekmService.setKeyDescription(key.ern, textOf(values['description'])),
             'Description changed',
             );
     }

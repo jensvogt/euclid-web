@@ -11,6 +11,7 @@ import type {
 } from 'euclid-ndk';
 
 import {EuclidHttpService, Page} from '../../../services/euclid-http.service';
+import {textFrom} from '../../../shared/text-utils';
 
 export const TARGET = 'eap';
 
@@ -445,5 +446,5 @@ function compare(left: object, right: object, column: string): number {
     if (typeof a === 'number' && typeof b === 'number') {
         return a - b;
     }
-    return String(a ?? '').localeCompare(String(b ?? ''));
+    return textFrom(a).localeCompare(textFrom(b));
 }

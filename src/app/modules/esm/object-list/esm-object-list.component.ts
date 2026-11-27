@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {MatDialogConfig} from '@angular/material/dialog';
 import {of} from 'rxjs';
@@ -63,6 +63,7 @@ export function isFolderRow(row: ObjectRow): row is FolderRow {
     templateUrl: './esm-object-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EsmObjectListComponent extends EuclidListComponent<EsmObject> {

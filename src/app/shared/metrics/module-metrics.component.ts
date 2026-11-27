@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
 import {MatIconButton} from '@angular/material/button';
@@ -71,6 +71,7 @@ const RESPONSE_BUCKETS = 48;
         RouterLink,
         FooterComponent,
     ],
+    changeDetection: ChangeDetectionStrategy.Eager,
     providers: [provideEchartsCore({echarts})],
 })
 export class ModuleMetricsComponent implements OnInit, OnDestroy {
@@ -224,7 +225,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
     private buildResponseChart(times: MetricPoint[], calls: MetricPoint[]): Record<string, unknown> {
         const timeOf = new Map(times.map(point => [point.timestamp, point.value]));
         const callOf = new Map(calls.map(point => [point.timestamp, point.value]));
-        const buckets = [...new Set([...timeOf.keys(), ...callOf.keys()])].sort();
+        const buckets = [...new Set([...timeOf.keys(), ...callOf.keys()])].sort((left, right) => left.localeCompare(right));
 
         return {
             title: {
@@ -334,7 +335,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
     private buildMemoryChart(real: MetricPoint[], virtual: MetricPoint[]): Record<string, unknown> {
         const realOf = new Map(real.map(point => [point.timestamp, point.value]));
         const virtualOf = new Map(virtual.map(point => [point.timestamp, point.value]));
-        const buckets = [...new Set([...realOf.keys(), ...virtualOf.keys()])].sort();
+        const buckets = [...new Set([...realOf.keys(), ...virtualOf.keys()])].sort((left, right) => left.localeCompare(right));
 
         return {
             title: {
@@ -384,7 +385,7 @@ export class ModuleMetricsComponent implements OnInit, OnDestroy {
      * right labels instead of bunched up at the left.
      */
     private buildHistoryChart(series: StoredSeries[]): Record<string, unknown> {
-        const buckets = [...new Set(series.flatMap(one => one.points.map(point => point.timestamp)))].sort();
+        const buckets = [...new Set(series.flatMap(one => one.points.map(point => point.timestamp)))].sort((left, right) => left.localeCompare(right));
         const lines = series.map(one => {
             const valueOf = new Map(one.points.map(point => [point.timestamp, point.value]));
             return {

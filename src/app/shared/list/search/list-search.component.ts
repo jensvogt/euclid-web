@@ -1,4 +1,4 @@
-import {Component, Input} from '@angular/core';
+import {Component, Input, ChangeDetectionStrategy} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatIconButton} from '@angular/material/button';
 import {MatError, MatFormField, MatLabel, MatSuffix} from '@angular/material/form-field';
@@ -25,6 +25,7 @@ import {ListSearch, MATCH_TYPES, MatchType} from '../match-type';
     templateUrl: './list-search.component.html',
     styleUrls: ['./list-search.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         FormsModule,
         MatFormField,

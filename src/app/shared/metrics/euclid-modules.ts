@@ -227,6 +227,6 @@ export function parentRouteOf(url: string): string {
 
     const rest = path.slice(matched.route.length).split('/').filter(segment => segment !== '');
     return rest.length > 2
-        ? `${matched.route}/${rest.slice(0, rest.length - 1).join('/')}`
+        ? `${matched.route}/${rest.slice(0, -1).join('/')}`
         : matched.route;
 }

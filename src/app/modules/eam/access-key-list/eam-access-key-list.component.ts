@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {AccessKey} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -24,6 +24,7 @@ import {eamAccessKeyListFeature} from './state/eam-access-key-list.state';
     templateUrl: './eam-access-key-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EamAccessKeyListComponent extends EuclidListComponent<AccessKey> {

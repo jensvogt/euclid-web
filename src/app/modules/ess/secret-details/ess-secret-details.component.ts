@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -19,6 +19,7 @@ import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.
 import {ResourceTag, ResourceTagsComponent} from '../../../shared/tags/resource-tags.component';
 import {EssService} from '../service/ess.service';
 import {essSecretDetailsActions, essSecretDetailsSelectors} from './state/ess-secret-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One secret: everything about it except, until asked, the one thing it is.
@@ -34,6 +35,7 @@ import {essSecretDetailsActions, essSecretDetailsSelectors} from './state/ess-se
     templateUrl: './ess-secret-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -61,6 +63,12 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
     /** The secret this page is about, by name - which is what every ESS action takes. */
     name = '';
 
+    /**
+     * The namespace it is in, as the link here said - `undefined` when it did not, as an old bookmark won't.
+     * A listing from the account root holds every namespace's secrets, so a name alone can be ambiguous.
+     */
+    namespace: string | undefined;
+
     protected readonly dateConversion = dateConversion;
 
     private readonly store = inject(Store);
@@ -71,6 +79,7 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
 
     ngOnInit(): void {
         this.name = this.route.snapshot.paramMap.get('name') ?? '';
+        this.namespace = this.route.snapshot.queryParamMap.get('namespace') ?? undefined;
         this.secret$ = this.store.select(essSecretDetailsSelectors.selectSecret);
         this.error$ = this.store.select(essSecretDetailsSelectors.selectError);
         this.load();
@@ -88,14 +97,14 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
             return;
         }
         this.lastUpdate = new Date();
-        this.store.dispatch(essSecretDetailsActions.load({name: this.name}));
+        this.store.dispatch(essSecretDetailsActions.load({name: this.name, namespace: this.namespace}));
     }
 
     // -- the value -----------------------------------------------------------------------------------
 
     /** Fetches the value. The only call on this page that brings a secret into the browser. */
     reveal(secret: Secret): void {
-        this.essService.getSecret(secret.name).subscribe({
+        this.essService.getSecret(secret).subscribe({
             next: (result: SecretValue) => {
                 this.value = result.value;
             },
@@ -125,7 +134,7 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
                 required: true,
                 hint: 'The version goes up by one. The old value is not kept.',
             }],
-            values => this.essService.rotateSecret(secret.name, String(values['value'])),
+            values => this.essService.rotateSecret(secret, textOf(values['value'])),
             'Secret rotated',
             'Rotate',
             () => {
@@ -133,6 +142,44 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
                 this.load();
             },
         );
+    }
+
+    /**
+     * Changes the value, starting from the current one.
+     *
+     * Unlike {@link rotate}, which asks for a replacement blind, this decrypts the value first and offers it
+     * for editing - an explicit ask, like {@link reveal}. The value in the dialog lives only as long as the
+     * dialog does. If the value was on screen, the new one replaces it there; if it was hidden, it stays so.
+     */
+    editValue(secret: Secret): void {
+        this.essService.getSecret(secret).subscribe({
+            next: (current: SecretValue) => {
+                const wasShown = this.value !== null;
+                let edited = '';
+                this.addThen(
+                    'Edit ' + secret.name,
+                    [{
+                        name: 'value',
+                        label: 'Value',
+                        type: 'text',
+                        required: true,
+                        value: current.value,
+                        hint: 'Saving bumps the version by one. The old value is not kept.',
+                    }],
+                    values => {
+                        edited = textOf(values['value']);
+                        return this.essService.updateSecret(secret, {value: edited});
+                    },
+                    'Secret value changed',
+                    'Save',
+                    () => {
+                        this.value = wasShown ? edited : null;
+                        this.load();
+                    },
+                );
+            },
+            error: (error: Error) => this.snackBar.open(error.message, 'Failed', {duration: 10000}),
+        });
     }
 
     setDescription(secret: Secret): void {
@@ -144,7 +191,7 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
                 value: secret.description,
                 hint: 'What this secret is for. Empty clears it.',
             }],
-            values => this.essService.updateSecret(secret.name, {description: String(values['description'])}),
+            values => this.essService.updateSecret(secret, {description: textOf(values['description'])}),
             'Description changed',
             'Save',
         );
@@ -166,7 +213,7 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
                 value: secret.encryptionKeyErn,
                 hint: 'The value is re-encrypted under this key. The key list can copy an ERN.',
             }],
-            values => this.essService.updateSecret(secret.name, {keyErn: String(values['keyErn'])}),
+            values => this.essService.updateSecret(secret, {keyErn: textOf(values['keyErn'])}),
             'Secret re-encrypted',
             'Save',
         );
@@ -184,7 +231,7 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
                 title: 'Delete secret',
                 message: `Delete ${secret.name}? The value is gone for good; the key it was under is left alone.`,
             },
-            this.essService.deleteSecret(secret.name),
+            this.essService.deleteSecret(secret),
             'Secret deleted',
             () => {
                 this.hide();
@@ -211,9 +258,9 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
                     {name: 'value', label: 'Value'},
                 ],
             values => this.essService.addSecretTag(
-                secret.name,
-                tag ? tag.key : String(values['key']),
-                String(values['value']),
+                secret,
+                tag ? tag.key : textOf(values['key']),
+                textOf(values['value']),
             ),
             tag ? 'Tag changed' : 'Tag added',
             tag ? 'Save' : 'Add',
@@ -223,7 +270,7 @@ export class EssSecretDetailsComponent extends EuclidResourceComponent implement
     deleteTag(secret: Secret, tag: ResourceTag): void {
         this.confirmThen(
             {title: 'Delete tag', message: `Remove the tag ${tag.key} from ${secret.name}?`},
-            this.essService.deleteSecretTag(secret.name, tag.key),
+            this.essService.deleteSecretTag(secret, tag.key),
             'Tag deleted',
         );
     }

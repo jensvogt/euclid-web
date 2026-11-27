@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import type {QueueMessage} from 'euclid-ndk';
 
@@ -9,6 +9,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EqsService, queueNameOf} from '../service/eqs.service';
 import {eqsMessageListFeature} from './state/eqs-message-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /**
  * One queue's messages.
@@ -21,6 +22,7 @@ import {eqsMessageListFeature} from './state/eqs-message-list.state';
     templateUrl: './eqs-message-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EqsMessageListComponent extends EuclidListComponent<QueueMessage> {
@@ -59,7 +61,7 @@ export class EqsMessageListComponent extends EuclidListComponent<QueueMessage> {
         this.addThen(
             'Send a message',
             [{name: 'body', label: 'Body', required: true}],
-            values => this.eqsService.sendMessage(this.queueErn, String(values['body'])),
+            values => this.eqsService.sendMessage(this.queueErn, textOf(values['body'])),
             'Message sent',
         );
     }

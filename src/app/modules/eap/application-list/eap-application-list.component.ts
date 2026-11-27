@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import {concat, defer, last, mergeMap, Observable, throwError} from 'rxjs';
 import type {Application, RebalanceResult} from 'euclid-ndk';
 
@@ -7,7 +7,7 @@ import {dateConversion} from '../../../shared/date-utils.component';
 import {EuclidListComponent} from '../../../shared/list/euclid-list.component';
 import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
-import {FieldValue} from '../../../shared/resource-add/resource-add.component';
+import {FieldValue, textOf} from '../../../shared/resource-add/resource-add.component';
 import {bucketNameOf, EsmService} from '../../esm/service/esm.service';
 import {
     DEFAULT_MAX_INSTANCES,
@@ -38,6 +38,7 @@ const ARTIFACT_TYPES = '.jar,.war,.zip,.tar,.tar.gz,.tgz,.py,.js,.mjs,.cjs';
     templateUrl: './eap-application-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EapApplicationListComponent extends EuclidListComponent<Application> {
@@ -72,13 +73,13 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
                 {name: 'maxInstances', label: 'Max instances', type: 'number', value: DEFAULT_MAX_INSTANCES},
             ],
             values => this.eapService.createApplication(
-                String(values['applicationId']),
-                String(values['runtime']),
-                String(values['bucket']),
-                String(values['artifact']),
+                textOf(values['applicationId']),
+                textOf(values['runtime']),
+                textOf(values['bucket']),
+                textOf(values['artifact']),
                 {
-                    version: String(values['version']),
-                    command: String(values['command']),
+                    version: textOf(values['version']),
+                    command: textOf(values['command']),
                     minInstances: Number(values['minInstances']),
                     maxInstances: Number(values['maxInstances']),
                 },
@@ -288,8 +289,8 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
     private deploy(application: Application, values: Record<string, FieldValue>): Observable<unknown> {
         const chosen = values['file'];
         const file = chosen instanceof File ? chosen : null;
-        const key = String(values['artifact'] ?? '').trim() || file?.name || application.artifactKey;
-        const version = String(values['version'] ?? '').trim();
+        const key = textOf(values['artifact'] ?? '').trim() || file?.name || application.artifactKey;
+        const version = textOf(values['version'] ?? '').trim();
         const force = values['force'] === true;
 
         const redeploy = () => this.eapService.redeployApplication(application.applicationId, key, version, force);
@@ -319,7 +320,7 @@ export class EapApplicationListComponent extends EuclidListComponent<Application
                 options: LOG_LEVELS,
                 value: application.logLevel || 'info',
             }],
-            values => this.eapService.setLogLevel(application.applicationId, String(values['level'])),
+            values => this.eapService.setLogLevel(application.applicationId, textOf(values['level'])),
             'Log level changed',
         );
     }

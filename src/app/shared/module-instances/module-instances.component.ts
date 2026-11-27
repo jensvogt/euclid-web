@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {MatCard, MatCardContent, MatCardHeader, MatCardTitle} from '@angular/material/card';
 import {NgxEchartsDirective, provideEchartsCore} from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -58,6 +58,7 @@ const ROOM_COLOUR = 'rgba(0, 0, 0, 0.08)';
     styleUrls: ['./module-instances.component.scss'],
     standalone: true,
     imports: [MatCard, MatCardHeader, MatCardTitle, MatCardContent, NgxEchartsDirective],
+    changeDetection: ChangeDetectionStrategy.Eager,
     providers: [provideEchartsCore({echarts})],
 })
 export class ModuleInstancesComponent implements OnInit, OnDestroy {
@@ -102,10 +103,11 @@ export class ModuleInstancesComponent implements OnInit, OnDestroy {
                     (module) => (module.instances ?? []).filter(one => one.state === RUNNING).length < (module.minInstances ?? 0),
                 ).length;
                 const shown = counted.length > rows.length ? `, busiest ${rows.length} shown` : '';
+                const them = short === 1 ? 'it' : 'them';
                 this.summary = short === 0
                     ? `${running} instances across ${counted.length} modules, all at their minimum${shown}`
                     : `${running} instances across ${counted.length} modules,`
-                        + ` ${short} below the minimum asked of ${short === 1 ? 'it' : 'them'}${shown}`;
+                        + ` ${short} below the minimum asked of ${them}${shown}`;
                 this.options = chartOf(rows);
             },
             error: (error: Error) => {

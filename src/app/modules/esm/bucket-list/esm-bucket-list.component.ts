@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Bucket} from 'euclid-ndk';
 
 import {byteConversion} from '../../../shared/byte-utils.component';
@@ -8,6 +8,7 @@ import {EUCLID_LIST_IMPORTS} from '../../../shared/list/list-imports';
 import {ListFeature} from '../../../shared/list/list-feature';
 import {EsmService} from '../service/esm.service';
 import {esmBucketListFeature} from './state/esm-bucket-list.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The buckets in the current namespace: what they hold, and whether they are encrypted. */
 @Component({
@@ -15,6 +16,7 @@ import {esmBucketListFeature} from './state/esm-bucket-list.state';
     templateUrl: './esm-bucket-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EsmBucketListComponent extends EuclidListComponent<Bucket> {
@@ -35,7 +37,7 @@ export class EsmBucketListComponent extends EuclidListComponent<Bucket> {
         this.addThen(
             'Create bucket',
             [{name: 'name', label: 'Name', required: true}],
-            values => this.esmService.createBucket(String(values['name'])),
+            values => this.esmService.createBucket(textOf(values['name'])),
             'Bucket created',
         );
     }
@@ -44,7 +46,7 @@ export class EsmBucketListComponent extends EuclidListComponent<Bucket> {
         this.addThen(
             'Rename ' + bucket.name,
             [{name: 'newName', label: 'New name', required: true, value: bucket.name}],
-            values => this.esmService.renameBucket(bucket.ern, String(values['newName'])),
+            values => this.esmService.renameBucket(bucket.ern, textOf(values['newName'])),
             'Bucket renamed',
         );
     }
@@ -63,7 +65,7 @@ export class EsmBucketListComponent extends EuclidListComponent<Bucket> {
                 label: 'Key ID',
                 hint: 'Leave empty and ESM creates a key for this bucket.',
             }],
-            values => this.esmService.enableEncryption(bucket.ern, String(values['keyId'])),
+            values => this.esmService.enableEncryption(bucket.ern, textOf(values['keyId'])),
             'Encryption enabled',
         );
     }

@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {MatDialogActions, MatDialogClose, MatDialogContent, MatDialogTitle} from '@angular/material/dialog';
 import {MatButton} from '@angular/material/button';
 import {MatList, MatListItem} from '@angular/material/list';
@@ -21,6 +21,7 @@ import {EuclidSessionService} from '../../../services/euclid-session.service';
     templateUrl: './backend.component.html',
     styleUrls: ['./backend.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatDialogTitle,
         MatDialogContent,

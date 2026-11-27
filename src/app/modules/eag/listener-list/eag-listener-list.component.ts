@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import type {Listener} from 'euclid-ndk';
 
 import {dateConversion} from '../../../shared/date-utils.component';
@@ -19,6 +19,7 @@ import {eagListenerListFeature} from './state/eag-listener-list.state';
     templateUrl: './eag-listener-list.component.html',
     styleUrls: ['../../../shared/list/list.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [EUCLID_LIST_IMPORTS],
 })
 export class EagListenerListComponent extends EuclidListComponent<Listener> {

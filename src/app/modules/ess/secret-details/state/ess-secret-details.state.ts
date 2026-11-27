@@ -4,7 +4,7 @@ import {createAction, createFeatureSelector, createReducer, createSelector, on, 
 import {catchError, map, of, switchMap} from 'rxjs';
 import type {Secret} from 'euclid-ndk';
 
-import {EssService} from '../../service/ess.service';
+import {EssService, secretNamespace} from '../../service/ess.service';
 
 /**
  * One secret, as the details page shows it - which is to say its metadata and nothing else.
@@ -24,7 +24,8 @@ export interface EssSecretDetailsState {
 export const essSecretDetailsFeatureKey = 'ess-secret-details';
 
 export const essSecretDetailsActions = {
-    load: createAction(`[${essSecretDetailsFeatureKey}] Load`, props<{name: string}>()),
+    /** `namespace` is the one the secret is in, when the page was told; see `EssService.getSecretMetadata`. */
+    load: createAction(`[${essSecretDetailsFeatureKey}] Load`, props<{name: string; namespace?: string}>()),
     loadSuccess: createAction(`[${essSecretDetailsFeatureKey}] Load success`, props<{secret: Secret}>()),
     loadFailure: createAction(`[${essSecretDetailsFeatureKey}] Load failure`, props<{error: string}>()),
 };
@@ -40,8 +41,9 @@ export const essSecretDetailsReducer = createReducer(
 
     // What is held is dropped when a different secret is being asked for: the page would otherwise show
     // the one it was last about, or why that failed, under the new one's heading.
-    on(essSecretDetailsActions.load, (state: EssSecretDetailsState, {name}): EssSecretDetailsState => {
-        const same = state.secret?.name === name;
+    on(essSecretDetailsActions.load, (state: EssSecretDetailsState, {name, namespace}): EssSecretDetailsState => {
+        const same = state.secret !== null && state.secret.name === name
+            && (namespace === undefined || secretNamespace(state.secret) === namespace);
         return {
             secret: same ? state.secret : null,
             error: same ? state.error : null,
@@ -78,7 +80,7 @@ export const loadSecret$ = createEffect(
         const service = inject(EssService);
         return actions$.pipe(
             ofType(essSecretDetailsActions.load),
-            switchMap(({name}) => service.getSecretMetadata(name).pipe(
+            switchMap(({name, namespace}) => service.getSecretMetadata(name, namespace).pipe(
                 map((secret: Secret) => essSecretDetailsActions.loadSuccess({secret})),
                 catchError((error: Error) => of(essSecretDetailsActions.loadFailure({error: error.message}))),
             )),

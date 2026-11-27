@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
 import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
@@ -19,6 +19,7 @@ import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.
 import {ResourceTag, ResourceTagsComponent} from '../../../shared/tags/resource-tags.component';
 import {DEFAULT_PENDING_WINDOW_DAYS, EkmService} from '../service/ekm.service';
 import {ekmKeyDetailsActions, ekmKeyDetailsSelectors} from './state/ekm-key-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
 
 /** The one status in which a key still encrypts. The other two decrypt and no more. */
 const AVAILABLE = 'AVAILABLE';
@@ -36,6 +37,7 @@ const AVAILABLE = 'AVAILABLE';
     templateUrl: './ekm-key-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -101,7 +103,7 @@ export class EkmKeyDetailsComponent extends EuclidResourceComponent implements O
                 value: key.description,
                 hint: 'What this key protects. Empty clears it.',
             }],
-            values => this.ekmService.setKeyDescription(key.ern, String(values['description'])),
+            values => this.ekmService.setKeyDescription(key.ern, textOf(values['description'])),
             'Description changed',
             'Save',
         );
@@ -168,8 +170,8 @@ export class EkmKeyDetailsComponent extends EuclidResourceComponent implements O
                 ],
             values => this.ekmService.addKeyTag(
                 key.ern,
-                tag ? tag.key : String(values['key']),
-                String(values['value']),
+                tag ? tag.key : textOf(values['key']),
+                textOf(values['value']),
             ),
             tag ? 'Tag changed' : 'Tag added',
             tag ? 'Save' : 'Add',

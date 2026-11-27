@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, ChangeDetectionStrategy} from '@angular/core';
 import {AsyncPipe} from '@angular/common';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CdkCopyToClipboard} from '@angular/cdk/clipboard';
 import {MatIconButton} from '@angular/material/button';
 import {MatCard, MatCardContent, MatCardHeader} from '@angular/material/card';
@@ -22,6 +22,8 @@ import {autoReloadPeriod} from '../../../shared/list/euclid-list.component';
 import {EuclidResourceComponent} from '../../../shared/resource/euclid-resource.component';
 import {bucketNameOf, EsmService, MAX_INLINE_SIZE} from '../service/esm.service';
 import {esmObjectDetailsActions, esmObjectDetailsSelectors} from './state/esm-object-details.state';
+import {textOf} from '../../../shared/resource-add/resource-add.component';
+import {textFrom} from '../../../shared/text-utils';
 
 /** One attribute, as the table shows it: euclid keys them by name, and a table wants rows. */
 export interface ObjectAttributeRow {
@@ -85,6 +87,7 @@ const TEXT_TYPES = /^text\/|^application\/(json|xml|javascript|ecmascript|x-yaml
     templateUrl: './esm-object-details.component.html',
     styleUrls: ['../../../shared/resource/details.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         MatCard,
         MatCardHeader,
@@ -188,7 +191,7 @@ export class EsmObjectDetailsComponent extends EuclidResourceComponent implement
         this.addThen(
             'Rename ' + object.key,
             [{name: 'newKey', label: 'New key', required: true, value: object.key}],
-            values => this.esmService.renameObject(object.bucketErn, object.key, String(values['newKey'])).pipe(
+            values => this.esmService.renameObject(object.bucketErn, object.key, textOf(values['newKey'])).pipe(
                 tap((renamed: EsmObject) => this.follow(renamed)),
             ),
             'Object renamed',
@@ -207,8 +210,8 @@ export class EsmObjectDetailsComponent extends EuclidResourceComponent implement
             values => this.esmService.copyObject(
                 object.bucketErn,
                 object.key,
-                String(values['targetBucketErn']),
-                String(values['targetKey']),
+                textOf(values['targetBucketErn']),
+                textOf(values['targetKey']),
             ),
             'Object copied',
             'Copy',
@@ -226,8 +229,8 @@ export class EsmObjectDetailsComponent extends EuclidResourceComponent implement
             values => this.esmService.moveObject(
                 object.bucketErn,
                 object.key,
-                String(values['targetBucketErn']),
-                String(values['targetKey']),
+                textOf(values['targetBucketErn']),
+                textOf(values['targetKey']),
             ).pipe(tap((moved: EsmObject) => this.follow(moved))),
             'Object moved',
             'Move',
@@ -269,8 +272,8 @@ export class EsmObjectDetailsComponent extends EuclidResourceComponent implement
             ],
             values => this.esmService.addObjectAttribute(
                 object.ern,
-                String(values['name']),
-                variantOf(String(values['type']), String(values['value'])),
+                textOf(values['name']),
+                variantOf(textOf(values['type']), textOf(values['value'])),
             ),
             'Attribute added',
             'Add',
@@ -293,7 +296,7 @@ export class EsmObjectDetailsComponent extends EuclidResourceComponent implement
             values => this.esmService.setObjectAttribute(
                 object.ern,
                 attribute.name,
-                variantOf(String(values['type']), String(values['value'])),
+                variantOf(textOf(values['type']), textOf(values['value'])),
             ),
             'Attribute changed',
             'Save',
@@ -422,7 +425,7 @@ function attributeRows(attributes: Record<string, Variant>): ObjectAttributeRow[
         .map(([name, variant]) => ({
             name: name,
             type: variant?.type ?? 'string',
-            value: variant?.value === null || variant?.value === undefined ? '' : String(variant.value),
+            value: textFrom(variant?.value),
         }))
         .sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -553,7 +556,7 @@ function prettyXml(text: string): string {
     if (/^<\?xml[\s?]/.test(text)) {
         lines.push(text.slice(0, text.indexOf('?>') + 2));
     }
-    for (const node of [...parsed.childNodes]) {
+    for (const node of parsed.childNodes) {
         writeXml(node, 0, lines);
     }
     return lines.join('\n');
@@ -619,11 +622,11 @@ function writeXml(node: Node, depth: number, lines: string[]): void {
 /** The five characters that cannot be written as themselves in XML. */
 function escapeXml(text: string): string {
     return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;');
 }
 
 /** The bytes as UTF-8, or null when they are not valid UTF-8 - which is what `fatal` is for. */
@@ -648,7 +651,7 @@ function hexDump(buffer: ArrayBuffer): string {
     for (let offset = 0; offset < bytes.length; offset += HEX_COLUMNS) {
         const row = bytes.subarray(offset, offset + HEX_COLUMNS);
         const hex = [...row].map(byte => byte.toString(16).padStart(2, '0')).join(' ');
-        const printable = [...row].map(byte => (byte >= 0x20 && byte < 0x7f ? String.fromCharCode(byte) : '.')).join('');
+        const printable = [...row].map(byte => (byte >= 0x20 && byte < 0x7f ? String.fromCodePoint(byte) : '.')).join('');
         lines.push(`${offset.toString(16).padStart(8, '0')}  ${hex.padEnd(HEX_COLUMNS * 3 - 1, ' ')}  ${printable}`);
     }
     return lines.join('\n');

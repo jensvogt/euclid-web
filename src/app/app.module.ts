@@ -1,7 +1,6 @@
 import {NgModule} from '@angular/core';
 import {BrowserModule} from '@angular/platform-browser';
-import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
-import {HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
+import {HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, withXhr} from '@angular/common/http';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {RouterModule, RouterOutlet} from '@angular/router';
 import {MatToolbarModule} from '@angular/material/toolbar';
@@ -37,7 +36,7 @@ import {SessionExpiryInterceptor} from './services/session-expiry.interceptor';
      * same history.
      */
     providers: [
-        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClient(withXhr(), withInterceptorsFromDi()),
         provideStore(reducers, {}),
         // No root effects of its own - every effect belongs to a module and arrives with its route - but the
         // root has to exist for those to register against.
@@ -48,8 +47,9 @@ import {SessionExpiryInterceptor} from './services/session-expiry.interceptor';
         {provide: HTTP_INTERCEPTORS, useClass: SessionExpiryInterceptor, multi: true},
     ],
     imports: [
+        // No animations module: Angular Material animates with plain CSS since v20, and nothing here uses
+        // @angular/animations triggers. BrowserAnimationsModule and provideAnimations() are both deprecated.
         BrowserModule,
-        BrowserAnimationsModule,
         RouterModule,
         RouterOutlet,
         AppRoutingModule,

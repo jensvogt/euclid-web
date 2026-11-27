@@ -1,4 +1,4 @@
-import {Component, Inject, OnDestroy, inject} from '@angular/core';
+import {Component, Inject, OnDestroy, inject, ChangeDetectionStrategy} from '@angular/core';
 import {
     MAT_DIALOG_DATA,
     MatDialogActions,
@@ -59,6 +59,7 @@ const SESSION_WARNING_SECONDS = 30 * 60;
     templateUrl: './esm-object-upload.component.html',
     styleUrls: ['./esm-object-upload.component.scss'],
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [
         FormsModule,
         MatDialogTitle,
